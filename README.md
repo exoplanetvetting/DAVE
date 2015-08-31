@@ -1,2 +1,2 @@
 # dave™
-Discovery And Vetting of K2 Exoplanets™
+Discovery And Vetting of k2 Exoplanets™
