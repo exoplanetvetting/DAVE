@@ -3,4 +3,4 @@
 
 ![dave](http://oregonmusicnews.com/wp-content/uploads/2015/06/2015DAVEGROHL_FooFighters.jpg)
 
-*Because finding and vetting K2 planets is fun.*
+*Because finding and vetting K2 planets rocks.*
