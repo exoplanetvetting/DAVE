@@ -457,8 +457,8 @@ class K2Archive(MastArchive):
             remotePath = self.remoteFluxPath
             compressedOnServer = False
         else:
-            remotePath = self.remoteFluxPath
-            compressedOnServer = False
+            remotePath = self.remoteTpfPath
+            compressedOnServer = True
 
         remoteUrl = self.makeRemoteUrl(remotePath, kepid, campaign, filename, compressedOnServer)
         return self.getData(localUrl, remoteUrl, compressedOnServer, *args, **kwargs)
