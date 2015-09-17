@@ -457,10 +457,10 @@ class K2Archive(MastArchive):
             remotePath = self.remoteFluxPath
             compressedOnServer = False
         else:
-            remotePath = self.remoteFluxPath
-            compressedOnServer = False
+            remotePath = self.remoteTpfPath
+            compressedOnServer = True
 
-        remoteUrl = self.makeRemoteUrl(remotePath, kepid, filename, compressedOnServer)
+        remoteUrl = self.makeRemoteUrl(remotePath, kepid, campaign, filename, compressedOnServer)
         return self.getData(localUrl, remoteUrl, compressedOnServer, *args, **kwargs)
 
 
@@ -475,7 +475,7 @@ class K2Archive(MastArchive):
             if isFluxFile:
                 fType = 'slc'
 
-        return "kplr-%09i-%02i_%s.fits" % \
+        return "ktwo%09i-c%02i_%s.fits" % \
             (int(kepid), int(campaign), fType)
 
 
