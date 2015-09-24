@@ -39,7 +39,7 @@ def doSearch(time, flux, minPeriod, maxPeriod, ):
     uOdd, uEven = sigma / np.sqrt(nOddPoints), sigma / np.sqrt(nEvenPoints)
     depthDiffSigma = abs(depthOdd - depthEven) / np.sqrt(uOdd**2 + uEven**2)
 
-    return locals
+    return locals()
 
 
 def plotSearch():
