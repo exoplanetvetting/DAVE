@@ -20,6 +20,7 @@ class KeplerPrf():
 
     def __init__(self, path):
         self.path = path
+        self.cache = dict()
 
     def getPrfForImage(self, img, hdr, mod, out, col, row):
         """Figure out bbox then call getPrfForBbox"""
@@ -173,6 +174,24 @@ upr(i) = min( #prf, #out)
             tmp = self.getSingleRegularlySampledPrf(fullPrfArray[i], \
                 col, row)
             regArr.append(tmp)
+        return regArr
+
+
+    def trial_getRegularlySampledPrfs(self, fullPrfArray, col, row):
+        fracCol = np.remainder(col, 1)
+        fracRow = np.remainder(row, 1)
+        key = int(100*(fracCol*50) + fracRow*50)
+
+        if key in self.cache:
+            return self.cache[key]
+
+        regArr = []
+        for i in range(5):
+            tmp = self.getSingleRegularlySampledPrf(fullPrfArray[i], \
+                col, row)
+            regArr.append(tmp)
+
+        self.cache[key] = regArr
         return regArr
 
 
