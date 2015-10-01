@@ -16,11 +16,19 @@ class KeplerPrf():
 
     Other functions are in the works to map that PRF onto
     a given mask.
+
+    Note:
+    --------
+    For speed, this function caches some data for each module to
+    save reading it from file for each call. If you request the PRF
+    from many mod-outs you may find your memory increases dramatically.
+
     """
 
     def __init__(self, path):
         self.path = path
         self.cache = dict()
+
 
     def getPrfForImage(self, img, hdr, mod, out, col, row):
         """Figure out bbox then call getPrfForBbox"""
@@ -101,47 +109,36 @@ class KeplerPrf():
         return imgOut
 
 
+    def old_getPrfAtColRow(self, mod, out, col, row):
         """
-        c0 c1 bounded by 0, nColPrf
-
-eg
-colOffsetOut = -7
-colOffsetPrf = -2
-then out[5] = prf[0]
-     out[6] = prf[1]
-     ...
-     out[9] = prf[4]
-
-dl = colOffsetPrf - colOffsetOut = +5
-i = range(0.. max(#prf, #out))
-out[i+dl] = prf[i]
-
-
-but if
-colOffsetOut = -1 and
-colOffsetPrf = -3
-then out[0] = prf[2]
-     out[1] = prf[3]
-     ...
-     out[7] = prf[9]
-
-dl = colOffsetPRf - colOffsetOut = -2
-i = range(2, 9)
-
-out[i+dl] = prf[i]
-
-
-lwr(i) = max( -dl, 0)
-upr(i) = min( #prf, #out)
-"""
-
-
-
-
-    def getPrfAtColRow(self, mod, out, col, row):
+        Computes the prf without using the cache. Left behind for
+        debugging purposes.
+        """
         fullPrfArray = self.getSubSampledPrfs(mod, out)
         regPrfArray = self.getRegularlySampledPrfs(fullPrfArray, col,row)
         bestRegPrf = self.interpolateRegularlySampledPrf(regPrfArray, col, row)
+
+        return bestRegPrf
+
+
+    def getPrfAtColRow(self, mod, out, col, row):
+        """Compute the model prf for a given module, output, column row
+
+        This is the workhorse function of the class. For a given mod/out,
+        loads the subsampled PRFs at each corner of the mod-out, extracts
+        the appropriate image for the given subpixel position, then interpolates
+        those 4 images to the requested column and row.
+        """
+
+        #Load subsampled PRFs from cache, or from file if not previously read in
+        key = "%02i-%02i" %(mod, out)
+        if key not in self.cache:
+            self.cache[key] = self.getSubSampledPrfs(mod, out)
+
+        fullPrfArray = self.cache[key]
+        regPrfArray = self.getRegularlySampledPrfs(fullPrfArray, col,row)
+        bestRegPrf = self.interpolateRegularlySampledPrf(regPrfArray, \
+            col, row)
 
         return bestRegPrf
 
@@ -167,31 +164,12 @@ upr(i) = min( #prf, #out)
         return img
 
 
-
     def getRegularlySampledPrfs(self, fullPrfArray, col, row):
         regArr = []
         for i in range(5):
             tmp = self.getSingleRegularlySampledPrf(fullPrfArray[i], \
                 col, row)
             regArr.append(tmp)
-        return regArr
-
-
-    def trial_getRegularlySampledPrfs(self, fullPrfArray, col, row):
-        fracCol = np.remainder(col, 1)
-        fracRow = np.remainder(row, 1)
-        key = int(100*(fracCol*50) + fracRow*50)
-
-        if key in self.cache:
-            return self.cache[key]
-
-        regArr = []
-        for i in range(5):
-            tmp = self.getSingleRegularlySampledPrf(fullPrfArray[i], \
-                col, row)
-            regArr.append(tmp)
-
-        self.cache[key] = regArr
         return regArr
 
 
@@ -209,14 +187,18 @@ upr(i) = min( #prf, #out)
 
 
         *Sometimes a 15x15 pixel grid
+
+        Notes:
+        ---------
+        None of the details of how to write this function are availabe
+        in the external documents. It was all figured out by trial and error.
         """
         gridSize = 50.   #Defined in documentation
-        #This is a trial an error approach. If I try increaseing colIndex
-        #with fractional column value the prf shifts in the wrong direction
+
+        #The sub-pixel image from (0.00, 0.00) is stored at x[49,49].
+        #Go figure.
         colIndex = ((1-np.remainder(col, 1)) * gridSize).astype(np.int32)-1
         rowIndex = ((1-np.remainder(row, 1)) * gridSize).astype(np.int32)-1
-#        colIndex = (np.remainder(col, 1) * gridSize).astype(np.int32)-1
-#        rowIndex = (np.remainder(row, 1) * gridSize).astype(np.int32)-1
 
         nColOut, nRowOut = singleFullPrf.shape
         nColOut /= float(gridSize)
@@ -224,16 +206,6 @@ upr(i) = min( #prf, #out)
 
         iCol = colIndex + (np.arange(nColOut)*gridSize).astype(np.int)
         iRow = rowIndex + (np.arange(nRowOut)*gridSize).astype(np.int)
-
-#        print col
-#        print iCol
-        #This flipped the orientation for kepid 2155220 Q2 on mod out
-        #2.1. I need to debug this some more.
-
-#        #Conversion between working in image space (origin at bottom
-#        #left), to array space, 0,0 at top?
-#        iCol = iCol[::-1]
-#        iRow = iRow[::-1]
 
         #Don't understand why this must be a twoliner
         tmp = singleFullPrf[iRow, :]
