@@ -42,43 +42,43 @@ def doSearch(time, flux, minPeriod, maxPeriod, ):
     return locals()
 
 
-def plotSearch():
+def plotSearch(outs):
     gs = gridspec.GridSpec(3,2)
     ax1 = plt.subplot(gs[0,:])
     axOdd = plt.subplot(gs[1,0])
     axEven = plt.subplot(gs[1,1])
     ax3 = plt.subplot(gs[2,:])
     gs.update(wspace = 0, hspace = 0.5)
-    ax1.plot(time, flux, 'k')
+    ax1.plot(outs['time'], outs['flux'], 'k')
     y1, y2 = ax1.get_ylim()
-    ax1.vlines(np.arange(epoch, time[-1], period), y1, y2, 
+    ax1.vlines(np.arange(outs['epoch'], outs['time'][-1], outs['period']), y1, y2, 
                color = 'r', linestyles = 'dashed', linewidth = 0.5)
-    ax1.axis([time[0], time[-1], y1, y2])
-    ax1.set_title('kplr%s;    best period = %8.6g days;    SNR = %8.6g' %(name, period, SNR))
+    ax1.axis([outs['time'][0], outs['time'][-1], y1, y2])
+    ax1.set_title('kplr%s;    best period = %8.6g days;    SNR = %8.6g' %('K2', outs['period'], outs['SNR']))
     ax1.set_xlabel('days')
     axOdd.set_ylabel('flux')
-    axOdd.scatter(phaseOdd, fluxOdd, marker = '.', s = 1, color = 'k', alpha = 1)
-    axOdd.plot(phaseModel_odd, phasedFluxModel_odd, 'r')
-    axOdd.axhline(-depthOdd, x1, x2)
+    axOdd.scatter(outs['phaseOdd'], outs['fluxOdd'], marker = '.', s = 1, color = 'k', alpha = 1)
+    axOdd.plot(outs['phaseModel_odd'], outs['phasedFluxModel_odd'], 'r')
+    axOdd.axhline(-outs['depthOdd'], x1, x2)
     axOdd.axis([x1,x2,y1,y2])
     axOdd.set_title('odd')
-    axEven.scatter(phaseEven, fluxEven, marker = '.', s = 1, color = 'k', alpha = 1)
-    axEven.plot(phaseModel_even, phasedFluxModel_even, 'r')
-    axEven.axhline(-depthEven, x1, x2)
+    axEven.scatter(outs['phaseEven'], outs['fluxEven'], marker = '.', s = 1, color = 'k', alpha = 1)
+    axEven.plot(outs['phaseModel_even'], outs['phasedFluxModel_even'], 'r')
+    axEven.axhline(-outs['depthEven'], x1, x2)
     axEven.yaxis.tick_right()
     axEven.axis([x1,x2,y1,y2])
     axEven.set_title('even')
     if secondary:
-        plt.plot(secPhase[:idx], secPhaseModel[:idx], 'c')
-        plt.plot(secPhase[idx:], secPhaseModel[idx:], 'c')
-    ax3.scatter(phase, phasedFlux, marker = '.', s = 1, color = 'k')
-    ax3.plot(phaseModel, phasedFluxModel, 'r')
-    y1, y2 = -3*np.std(phasedFlux), 3*np.std(phasedFlux)
-    if min(phasedFlux) < y1:
-        y1 = min(phasedFlux) - np.std(phasedFlux)
-    ax3.axis([phase[0], phase[-1], y1, y2])
+        plt.plot(outs['secPhase'][:idx], outs['secPhaseModel'][:idx], 'c')
+        plt.plot(outs['secPhase'][idx:], outs['secPhaseModel'][idx:], 'c')
+    ax3.scatter(outs['phase'], outs['phasedFlux'], marker = '.', s = 1, color = 'k')
+    ax3.plot(outs['phaseModel'], outs['phasedFluxModel'], 'r')
+    y1, y2 = -3*np.std(outs['phasedFlux']), 3*np.std(outs['phasedFlux'])
+    if min(outs['phasedFlux']) < y1:
+        y1 = min(outs['phasedFlux']) - np.std(outs['phasedFlux'])
+    ax3.axis([outs['phase'][0], outs['phase'][-1], y1, y2])
     ax3.set_xlabel('phase [hours]')
-    ax3.text(0.5, 1.25, 'depth diff sigma = %.3f' %depthDiffSigma, horizontalalignment = 'center',
+    ax3.text(0.5, 1.25, 'depth diff sigma = %.3f' %outs['depthDiffSigma'], horizontalalignment = 'center',
         verticalalignment = 'center', transform = ax3.transAxes)
 
 
