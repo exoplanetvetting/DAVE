@@ -24,10 +24,16 @@ import dave.diffimg.diffimg as diffimg
 import dave.diffimg.arclen as arclen
 import dave.centroid.prf as prf
 
-def measureDiffOffset():
-    k2id = 206103150
+
+"""
+Question, am I better off fitting diff image or signif image?
+"""
+
+
+
+def example():
+    k2id =  206103150
     campaign = 3
-    rin =  489
 
     ar = mastio.K2Archive()
     fits, hdr = ar.getLongTpf(k2id, campaign, header=True)
@@ -42,6 +48,7 @@ def measureDiffOffset():
 
     #Compute roll phase
     llc = ar.getLongCadence(k2id, campaign)
+    time= llc['TIME']
     cent1 = llc['MOM_CENTR1']
     cent2 = llc['MOM_CENTR2']
     centColRow = np.vstack((cent1, cent2)).transpose()
@@ -52,10 +59,122 @@ def measureDiffOffset():
     prfObj = prf.KeplerPrf("/home/fergal/data/keplerprf")
     bbox = centroid.getBoundingBoxForImage(cube[0], hdr)
 
-    mp.clf()
-    print measureInTransitAndDiffCentroidForOneImg(\
-        prfObj, ccdMod, ccdOut, cube, rin, bbox, rollPhase, flags, \
-        hdr, plot=True)
+    period =  	4.1591409
+    epoch = fits['time'][491]
+    dur = 3.0
+
+    out = measureDiffOffset(period, epoch, dur, time, prfObj, \
+        ccdMod, ccdOut, cube, bbox, rollPhase, flags)
+    return out
+
+
+def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
+    time, prfObj, ccdMod, ccdOut, cube, bbox, rollPhase, flags):
+    """Measure Centroid shift between intransit and difference image
+    for every in-transit cadence
+
+    Inputs:
+    -----------
+    period_days, epoch_bkjd, duration_hrs
+        (floats) Properties of transit
+
+    time_bkjd
+        Array of times per cadence for the given campaign
+
+    prfObj
+        An object of the class prf.KeplerPrf()
+
+    ccdMod, ccdOut
+        (int) CCD module and output of image. Needed to
+        create the correct PRF model
+
+    cube
+        (3d np array) A data cube created from a TPF file.
+        See fileio.tpf.getTargetPixelArrayFromFits()
+
+    bbox
+        [c1, c2, r1, r2]. Define the range of columns (c1..c2)
+        and rows (r1..r2)  defined by the image.
+        An exception raised if the following equality not true
+        img.shape = (c2-c1), (r2-r1)
+
+    rollPhase
+        (1d np array) An array of roll phases for each row
+        of cube. len(rollPhase) == len(cube). Units of this
+        array don't matter, so long as cadences with similar
+        roll angles have similar values of rollPhase. Roll phases
+        for bad cadences should be set to a bad value
+
+    flags
+        (1d array) flag values indicating bad cadences.
+        Currently a non-zero value of flags indicates a bad
+        cadence.
+
+    Returns:
+    -------------
+    A array with 5 columns, and as many rows as there are
+    in transit cadences. The columns are
+
+    0: Relative cadence number
+    1: In transit centroid column
+    2: In transit centroid row
+    3: Diff img centroid column
+    4: Diff img centroid row
+
+    If there is a statisically significant difference between the intransit
+    and difference image centroids then the transit is most likely not
+    on the target.
+    """
+    idx = getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time)
+    wh = np.where(idx)[0]
+    out = -1 * np.ones((len(wh), 5))
+    for i,w in enumerate(wh):
+        out[i,0] = w
+        try:
+            out[i, 1:] = measureInTransitAndDiffCentroidForOneImg(\
+                prfObj, ccdMod, ccdOut, cube, w, bbox, rollPhase, flags, \
+                hdr=None, plot=False)
+        except ValueError:
+            pass
+        print i, len(wh)
+
+    return out
+
+
+def getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time_bkjd):
+    """
+    Find the cadences affected by a transit.
+
+    Inputs::
+    --------
+    period_days, epoch_bkjd, duration_hrs
+        (floats) Properties of transit
+
+    time_bkjd
+        Array of times per cadence for the given campaign
+
+
+    Returns:
+    ------------
+    An array of booleans of length equal to length of time_bkjd.
+    Cadences in transit are set to true, all other cadences to false
+    """
+
+    time = time_bkjd #Mneumonic
+    n1 = int(np.floor((time[0] - epoch_bkjd)/period_days))
+    n2 = int(np.ceil((time[-1] - epoch_bkjd)/period_days))
+    dur_days = duration_hrs/24.
+
+    inTransit = np.zeros_like(time, dtype=bool)
+    for n in range(n1, n2+1):
+        t0 = epoch_bkjd + n*period_days - .5*dur_days
+        t1 = epoch_bkjd + n*period_days + .5*dur_days
+
+        idx = (time >= t0) & (time <= t1)
+#        import pdb; pdb.set_trace()
+        inTransit |= idx
+
+    return inTransit
 
 
 def measureInTransitAndDiffCentroidForOneImg(prfObj, ccdMod, ccdOut, cube, rin, bbox, rollPhase, flags, hdr=None, plot=False):

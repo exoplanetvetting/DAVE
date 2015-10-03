@@ -30,7 +30,7 @@ def constructK2DifferenceImage(cube, indexOfCadenceInTransit, rollPhase, flags, 
     -------------
     cube
         (3d np array) A data cube created from a TPF file.
-        See io.tpf.getTargetPixelArrayFromFits()
+        See fileio.tpf.getTargetPixelArrayFromFits()
     indexOfCadenceInTransit
         (int) Specify which row of cube to construct a difference
         image for
