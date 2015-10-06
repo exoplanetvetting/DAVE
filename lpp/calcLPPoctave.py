@@ -34,15 +34,13 @@ def calcLPPone(time,flux,mapFile,period,duration,phase):
     -------
     Tlpp : LPP transit metric value
     
-    binneFlux :  The sorted, folded, binned flux values input to LPP
+    binnedFlux :  The sorted, folded, binned flux values input to LPP
     """
         
-    octave.addpath('/home/sthomp/DAVE/origLPP/transitLike/')
-    octave.addpath('/home/sthomp/DAVE/origLPP/createLightCurves/')
-    octave.addpath('/home/sthomp/DAVE/origLPP/drtoolbox/')
-    octave.addpath('/home/sthomp/DAVE/origLPP/drtoolbox/techniques/')
-    octave.addpath('/home/sthomp/DAVE/origLPP/stats/')
-    octave.addpath('/home/sthomp/DAVE/origLPP/createMatrix/')
+    octave.addpath('octave/transitLike/')
+    octave.addpath('octave/createLightCurves/')
+    octave.addpath('octavve/drtoolbox/')
+    octave.addpath('octave/drtoolbox/techniques/')
     
     Tlpp, Y, binnedFlux = octave.calcLPPMetricLCarray(time,flux,period,duration,phase,mapFile)
 
