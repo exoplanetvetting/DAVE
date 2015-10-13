@@ -1,14 +1,14 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
 
-from clean_and_search import Search
+from .clean_and_search import Search
 
 # call for bls search:
 # outs = doSearch(time, flux, minPeriod, maxPeriod, )
 #
 # outputs:
 #
-# outs = 
+# outs =
 # {convolved_bls': array([ 0.00033225,  0.00034177,  0.00035353, ...,  0.0001447 ,
 #          0.00013177,  0.00012505]),
 #  'depth': 0.011876680987410373,
@@ -62,7 +62,6 @@ def do_ktwo_bls(time, flux, min_period, max_period):
     #    self.approx_duration = approx_duration
 
 	return S.periods[0], S.epoch, S.duration, S.depth, S.f_1, S.convolved_bls
- 
 
 
 
@@ -73,5 +72,5 @@ def do_ktwo_bls(time, flux, min_period, max_period):
 
 
 
- 
- 
+
+
