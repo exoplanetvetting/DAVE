@@ -7,6 +7,7 @@ Created on Tue Oct  6 15:54:57 2015
 $Id$
 $URL$
 """
+from __future__ import division, print_function, absolute_import
 
 __version__ = "$Id$"
 __URL__ = "$URL$"
@@ -21,34 +22,27 @@ import numpy as np
 
 import dave.fileio.kplrfits as kplrfits
 import dave.fileio.mastio as mastio
-import task
-import clipboard
+#from ..fileio import mastio
+from . import task
+from . import clipboard
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
+import dave.pipeline.plotting as plotting
 
 
 def runList(k2idList):
 
     cfg = loadDefaultConfig()
 
-    #Tell the task module about the tasks.
-    for t in cfg['taskList']:
-        f = eval(t)
-        task.__dict__[f] = f
-
-    print task.__dict__.keys()
-
-
     parallel = cfg.get('debug', False)
 
     f = lambda x: runOne(x, cfg)
 
-    f(k2idList[0])
-#    out = map(f, k2idList)
-#    p = pool.Pool(count)
-#    count = multiprocessing.cpu_count() - 1
-#    with contextlib.closing(pool.Pool(count)) as p:
-#        out = task.parmap.map(task.runOne, k2idList, cfg, pool=p, parallel=parallel)
+    #out = f(k2idList[0])
+    #out = map(f, k2idList)
+    count = multiprocessing.cpu_count() - 1
+    with contextlib.closing(pool.Pool(count)) as p:
+        out = task.parmap.map(runOne, k2idList, cfg, pool=p, parallel=parallel)
 
     return out
 
@@ -76,7 +70,8 @@ def loadDefaultConfig():
     cfg['blsMaxPeriod'] = 30
 
     tasks = """serveTask extractLightcurveTask
-        computeCentroidsTask cotrendDataTask""".split()
+        computeCentroidsTask cotrendDataTask
+        detrendDataTask saveOnError""".split()
     cfg['taskList'] = tasks
     return cfg
 
@@ -119,7 +114,7 @@ def cotrendDataTask(clip):
     data = clip['serve.socData']
 
     clip['cotrend'] = {'cotrendedLightcurve': data[:, 'PDCSAP_FLUX']}
-    clip['cotrend.source'] = "SOC PDC Pipeline"
+    clip['cotrend']['source'] = "SOC PDC Pipeline"
 
     #Enforce contract
     clip['cotrend.cotrendedLightcurve']
@@ -134,11 +129,17 @@ def detrendDataTask(clip):
     #Stub function
     #Copy the cotrended data without alteration
     out = dict()
-    out['detrendedLightcurve'] = cotrendFlux
-    clip['detrend'] =
+    med = np.median(cotrendFlux)
+    assert(np.isfinite(med))
+    out['detrendedLightcurve'] = cotrendFlux/ med - 1
+    out['method'] = "Median removed only"
+    clip['detrend'] = out
 
     #Enforce contract
-    out['d
+    clip['detrend.detrendedLightcurve']
+    return clip
+
+
 @task.task
 def computeCentroidsTask(clip):
     data = clip['serve.socData']
@@ -154,7 +155,7 @@ def computeCentroidsTask(clip):
     return clip
 
 
-import dave.blsCode.bls_generic as bls
+import dave.blsCode.bls_ktwo as bls
 @task.task
 def runBlsTask(clip):
     time_days = clip['serve.time']
@@ -162,12 +163,65 @@ def runBlsTask(clip):
     minPeriod = clip['config.blsMinPeriod']
     maxPeriod = clip['config.blsMaxPeriod']
 
-    clip['bls'] = bls.doSearch(time, flux, minPeriod, maxPeriod)
+
+    out = clipboard.Clipboard()
+    period, epoch, duration, depth, bls_search_periods, convolved_bls = \
+        bls.doSearch(time_days, flux_norm, minPeriod, maxPeriod)
+
+    out['period'] = period
+    out['epoch'] = epoch
+    out['duration'] = duration
+    out['depth'] = depth
+    out['bls_search_periods'] = bls_search_periods
+    out['convolved_bls'] = convolved_bls
+    clip['bls'] = out
 
     #Enforce contract
     clip['bls.period']
     clip['bls.epoch']
     clip['bls.duration']
+    return clip
+
+
+@task.task
+def plotDiagnosticsTask(clip):
+
+    time = clip['serve.time']
+    rawLc = clip['extract.rawLightCurve']
+    cotrendLc = clip['cotrend.cotrendedLightcurve']
+    detrendLc = clip['detrend.detrendedLightcurve']
+
+    plotting.plotDiagnosticLightcurves(time, rawLc, cotrendLc, detrendLc)
+    return clip
+
+
+def saveOnError(clip):
+    """Note this is not a task, because it should run even if
+    an exception is raised"""
+    if 'exception' in clip.keys():
+        saveClip(clip)
+    return clip
+
+
+import shelve
+def saveClip(clip):
+    value = clip['value']
+    campaign = clip['config.campaign']
+
+    #The problem with this is how do I which tasks to run
+    #when I restore?
+    keysToSkip = clip.get('config.keysToIgnoreWhenSaving', [])
+
+    fn = "clip-%09i-%02i.shelf" %(value, campaign)
+    sh = shelve.open(fn)
+    for k in clip.keys():
+        if k in keysToSkip:
+            sh[k] = "Clip not saved"
+        else:
+            sh[k] = clip[k]
+    sh.close()
+
+
 
 def loadTpfAndLc(k2id, campaign):
     ar = mastio.K2Archive()
