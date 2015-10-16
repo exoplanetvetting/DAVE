@@ -7,7 +7,6 @@ Created on Tue Oct  6 15:54:57 2015
 $Id$
 $URL$
 """
-from __future__ import division, print_function, absolute_import
 
 __version__ = "$Id$"
 __URL__ = "$URL$"
@@ -22,56 +21,44 @@ import numpy as np
 
 import dave.fileio.kplrfits as kplrfits
 import dave.fileio.mastio as mastio
-#from ..fileio import mastio
-from . import task
-from . import clipboard
+import task
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
-import dave.pipeline.plotting as plotting
 
 
 def runList(k2idList):
 
     cfg = loadDefaultConfig()
 
+    #Tell the task module about the tasks.
+    for t in cfg['taskList']:
+        f = eval(t)
+        task.__dict__[f] = f
+
+    print task.__dict__.keys()
+
+
     parallel = cfg.get('debug', False)
 
-    f = lambda x: runOne(x, cfg)
+    f = lambda x: task.runOne(x, cfg)
 
-    #out = f(k2idList[0])
-    #out = map(f, k2idList)
-    count = multiprocessing.cpu_count() - 1
-    with contextlib.closing(pool.Pool(count)) as p:
-        out = task.parmap.map(runOne, k2idList, cfg, pool=p, parallel=parallel)
+    f(k2idList[0])
+#    out = map(f, k2idList)
+#    p = pool.Pool(count)
+#    count = multiprocessing.cpu_count() - 1
+#    with contextlib.closing(pool.Pool(count)) as p:
+#        out = task.parmap.map(task.runOne, k2idList, cfg, pool=p, parallel=parallel)
 
     return out
 
 
-def runOne(value, config):
-    taskList = config['taskList']
-
-    clip = clipboard.Clipboard()
-    clip['config'] = config
-    clip['value'] = value
-
-    for t in taskList:
-        f = eval(t)
-        clip = f(clip)
-
-    return clip
-
-
 def loadDefaultConfig():
-    cfg = clipboard.Clipboard()
+    cfg = dict()
     cfg['debug'] = True
-    cfg['campaign'] = 3
 
-    cfg['blsMinPeriod'] = 0.5
-    cfg['blsMaxPeriod'] = 30
 
     tasks = """serveTask extractLightcurveTask
-        computeCentroidsTask cotrendDataTask
-        detrendDataTask saveOnError""".split()
+        computeCentroidsTask cotrendDataTask""".split()
     cfg['taskList'] = tasks
     return cfg
 
@@ -83,7 +70,7 @@ def loadDefaultConfig():
 @task.task
 def serveTask(clip):
     k2id = clip['value']
-    campaign = clip['config.campaign']
+    campaign = clip['campaign']
 
     clip['serve'] = loadTpfAndLc(k2id, campaign)
 
@@ -96,63 +83,30 @@ def serveTask(clip):
 
 @task.task
 def extractLightcurveTask(clip):
-    data = clip['serve.socData']
+    data = clip['serve.data']
 
     #Placeholder. Use the SOC PA data for the lightcurve
     out = dict()
     out['rawLightCurve'] = data[:, 'SAP_FLUX']
-    out['source'] = "SOC PA Pipeline"
     clip['extract'] = out
+    clip['extract.source'] = "SOC PA Pipeline"
 
     #Enforce contract
-    clip['extract.rawLightCurve']
+    clip['extract.rawLightcurve']
     return clip
 
 
 @task.task
 def cotrendDataTask(clip):
-    data = clip['serve.socData']
+    data = clip['serve.data']
 
     clip['cotrend'] = {'cotrendedLightcurve': data[:, 'PDCSAP_FLUX']}
-    clip['cotrend']['source'] = "SOC PDC Pipeline"
+    clip['cotrend.source'] = "SOC PDC Pipeline"
 
     #Enforce contract
     clip['cotrend.cotrendedLightcurve']
     return clip
 
-
-@task.task
-def detrendDataTask(clip):
-    time = clip['serve.time']
-    cotrendFlux = clip['cotrend.cotrendedLightcurve']
-
-    #Stub function
-    #Copy the cotrended data without alteration
-    out = dict()
-    med = np.median(cotrendFlux)
-    assert(np.isfinite(med))
-    out['detrendedLightcurve'] = cotrendFlux/ med - 1
-    out['method'] = "Median removed only"
-    clip['detrend'] = out
-
-    #Enforce contract
-    clip['detrend.detrendedLightcurve']
-    return clip
-
-
-@task.task
-def computeCentroidsTask(clip):
-    data = clip['serve.socData']
-
-    cent_colrow = np.empty( (len(data), 2))
-    cent_colrow[:,0] = data[:, 'MOM_CENTR1']
-    cent_colrow[:,1] = data[:, 'MOM_CENTR2']
-    clip['centroids'] = {'cent_colrow': cent_colrow}
-    clip['centroids.source'] = "SOC PA Pipeline"
-
-    #Enforce contract
-    clip['centroids.cent_colrow']
-    return clip
 
 
 import dave.blsCode.bls_ktwo as bls
@@ -184,59 +138,56 @@ def runBlsTask(clip):
 
 
 @task.task
-def plotDiagnosticsTask(clip):
+def computeCentroidsTask(clip):
+    data = clip['serve.data']
 
-    time = clip['serve.time']
-    rawLc = clip['extract.rawLightCurve']
-    cotrendLc = clip['cotrend.cotrendedLightcurve']
-    detrendLc = clip['detrend.detrendedLightcurve']
+    cent_colrow = np.empty( (len(data), 2))
+    cent_colrow[:,0] = data[:, 'MOM_CENTR1']
+    cent_colrow[:,1] = data[:, 'MOM_CENTR2']
+    clip['centroids'] = {'cent_colrow': cent_colrow}
+    clip['centroids.source'] = "SOC PA Pipeline"
 
-    plotting.plotDiagnosticLightcurves(time, rawLc, cotrendLc, detrendLc)
+    #Enforce contract
+    clip['centroids.cent_colrow']
     return clip
 
 
-def saveOnError(clip):
-    """Note this is not a task, because it should run even if
-    an exception is raised"""
-    if 'exception' in clip.keys():
-        saveClip(clip)
+import dave.lpp.calcLPPoctave as lpp
+@task.task
+def computeLppMetric(clip):
+    time_days = clip['serve.time']
+    flux_norm = clip['cotrend.cotrendedLightcurve']
+    period_days = clip['bls.period']
+    duration_hrs = clip['bls.duration']
+    phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
+    mapFile = clip['config.lppMapFilePath']
+
+    #Place holder, use Susan's version when it shows up.
+    TLpp, Y, binnedFlux = lpp.fergalVersion(time_days, flux_norm, mapFile,\
+        period_days, duration_hrs, phase_bkjd)
+
+    out = dict()
+    out['TLpp'] = TLpp
+
+    clip['lpp'] = out
+
+    #Enforce contract
+    clip['lpp.TLpp']
     return clip
-
-
-import shelve
-def saveClip(clip):
-    value = clip['value']
-    campaign = clip['config.campaign']
-
-    #The problem with this is how do I which tasks to run
-    #when I restore?
-    keysToSkip = clip.get('config.keysToIgnoreWhenSaving', [])
-
-    fn = "clip-%09i-%02i.shelf" %(value, campaign)
-    sh = shelve.open(fn)
-    for k in clip.keys():
-        if k in keysToSkip:
-            sh[k] = "Clip not saved"
-        else:
-            sh[k] = clip[k]
-    sh.close()
-
-
 
 def loadTpfAndLc(k2id, campaign):
     ar = mastio.K2Archive()
 
     out = dict()
-    fits, hdr = ar.getLongTpf(k2id, campaign, header=True)
-    hdr0 = ar.getLongTpf(k2id, campaign, ext=0)
+    fits, hdr = ar.loadLongTpf(k2id, campaign, header=True)
+    hdr0 = ar.loadLongTpf(k2id, campaign, ext=0)
     cube = tpf.getTargetPixelArrayFromFits(fits, hdr)
 
-    out['time'] = fits['TIME']
     out['cube'] = cube
     out['tpfHeader'] = hdr
     out['tpfHeader0'] = hdr0
 
-    fits, hdr2 = ar.getLongCadence(k2id, campaign, header=True)
+    fits, hdr2 = ar.loadLongCadence(k2id, campaign, header=True)
     data = kplrfits.getNumpyArrayFromFitsRec(fits)
     lookup = """ TIME TIMECORR CADENCENO
                  SAP_FLUX SAP_FLUX_ERR SAP_BKG SAP_BKG_ERR
@@ -252,4 +203,4 @@ def loadTpfAndLc(k2id, campaign):
 
 
 
-#runList([206103150])
+runList([206103150])
