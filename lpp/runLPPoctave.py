@@ -13,7 +13,8 @@ import calcLPPoctave as lpp
 
 
 t0=timer.time()
-mapfile='/home/sthomp/DAVE/origLPP/maps/mapQ1Q17DR24-DVMed6084.mat'
+path = lpp.getLppDir()
+mapfile=path+'/octave/maps/mapQ1Q17DR24-DVMed6084.mat'
 
 octave.addpath('/home/sthomp/DAVE/origLPP/transitLike/')
 octave.addpath('/home/sthomp/DAVE/origLPP/createLightCurves/')
@@ -32,7 +33,8 @@ dur=15;
 plt.figure();
 plt.plot(time,flux,'.')
 
-Tlpp, Y, binnedFlux = octave.calcLPPMetricLCarray(time,flux,period,dur,phase,mapfile)
+#Tlpp, Y, binnedFlux = octave.calcLPPMetricLCarray(time,flux,period,dur,phase,mapfile)
+Tlpp, Y, binnedFlux = lpp.fergalVersion(time, flux, mapfile, period, dur, phase)
 
 plt.figure()
 plt.subplot(211)
@@ -45,3 +47,4 @@ print Tlpp
 t1=timer.time()
 t=t1-t0;
 print t
+plt.show()
