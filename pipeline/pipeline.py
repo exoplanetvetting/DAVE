@@ -55,7 +55,7 @@ def runList(k2idList):
 def loadDefaultConfig():
     cfg = dict()
     cfg['debug'] = True
-
+    cfg['nPointsForMedianSmooth'] = 2*48
 
     tasks = """serveTask extractLightcurveTask
         computeCentroidsTask cotrendDataTask""".split()
@@ -104,16 +104,25 @@ def cotrendDataTask(clip):
     clip['cotrend.source'] = "SOC PDC Pipeline"
 
     #Enforce contract
-    clip['cotrend.cotrendedLightcurve']
+    clip['cotrend.flux']
     return clip
 
+
+@task.task
+def detrendTask(clip):
+    flux = clip['cotrend.flux']
+    nPoints = clip['config.nPointsForMedianSmooth']
+
+    detrend = kplrfits.medianSubtract1d(flux, nPoints)
+    clip['detrend.flux'] = detrend
+    return clip
 
 
 import dave.blsCode.bls_ktwo as bls
 @task.task
 def runBlsTask(clip):
     time_days = clip['serve.time']
-    flux_norm = clip['cotrend.cotrendedLightcurve']
+    flux_norm = clip['detrend.flux']
     minPeriod = clip['config.blsMinPeriod']
     maxPeriod = clip['config.blsMaxPeriod']
 
@@ -174,6 +183,7 @@ def computeLppMetric(clip):
     #Enforce contract
     clip['lpp.TLpp']
     return clip
+
 
 def loadTpfAndLc(k2id, campaign):
     ar = mastio.K2Archive()
