@@ -18,266 +18,238 @@ import numpy as np
 
 import dave.fileio.mastio as mastio
 import dave.fileio.tpf as tpf
+import dave.centroid.plotTpf as plotTpf
+import dave.centroid.centroid as centroid
+import dave.diffimg.diffimg as diffimg
+import dave.diffimg.arclen as arclen
 import dave.centroid.prf as prf
-import plotTpf
-
-import scipy.optimize as sopt
 
 
-def getExtent(img, hdr):
-    shape= img.shape
-    c0 = float(hdr['1CRV4P'])
-    r0 = float(hdr['2CRV4P'])
+"""
+Question, am I better off fitting diff image or signif image?
+"""
 
 
-    extent = [c0, c0+shape[1], r0, r0+shape[0]]
-    return extent
 
+def example():
+    k2id =  206103150
+    campaign = 3
 
-def main():
-    kepid = 8554498
-    quarter = 14
-
-    ar = mastio.KeplerArchive()
-    fits, hdr = ar.getLongTpf(kepid, quarter, header=True)
-    hdr0 = ar.getLongTpf(kepid, quarter, ext=0)
+    ar = mastio.K2Archive()
+    fits, hdr = ar.getLongTpf(k2id, campaign, header=True)
+    hdr0 = ar.getLongTpf(k2id, campaign, ext=0)
     cube = tpf.getTargetPixelArrayFromFits(fits, hdr)
+    idx = np.isfinite(cube)
+    cube[~idx] = 0  #Remove Nans
 
-    module = hdr0['MODULE']
-    output = hdr0['OUTPUT']
-    img = cube[100]
-    idx = np.isfinite(img)
-    img[~idx] = 0
-    bbox = getExtent(img, hdr)
-    row, col = np.unravel_index(np.argmax(img), img.shape)
-    col += bbox[0] + .5
-    row += bbox[2] + .5
+    flags = fits['QUALITY']
+    ccdMod = hdr0['module']
+    ccdOut = hdr0['output']
 
-#    col,row = 670.5, 653.5
+    #Compute roll phase
+    llc = ar.getLongCadence(k2id, campaign)
+    time= llc['TIME']
+    cent1 = llc['MOM_CENTR1']
+    cent2 = llc['MOM_CENTR2']
+    centColRow = np.vstack((cent1, cent2)).transpose()
+    rot = arclen.computeArcLength(centColRow, flags>0)
+    rollPhase = rot[:,0]
+    rollPhase[flags>0] = -9999    #A bad value
 
-    print "Initial Guess for Q%i (%.3f %.3f)" %(quarter, col, row)
-#    x0 = [120e3]
-#    args = (module, output, col, row, bbox, img)
-#    bounds=[(0, None)]
-#    res = sopt.minimize(costFunc1, x0, args, method="L-BFGS-B", \
-#        bounds=bounds)
+    prfObj = prf.KeplerPrf("/home/fergal/data/keplerprf")
+    bbox = centroid.getBoundingBoxForImage(cube[0], hdr)
 
-    x0 = [col, row, 120e3]
-    scale = 1 #np.max(img)
-    args = (module, output, bbox, img/scale)
-    options = {'disp':False, 'eps':.02, 'maxiter':80}
-    bounds=[(bbox[0], bbox[1]), (bbox[2], bbox[3]), (1, None)]
-    res = sopt.minimize(costFunc2, x0, args, method="L-BFGS-B", \
-        bounds=bounds, options=options)
-    res.x[2] *= scale  #Rescale amplitude
-#    res.x[:2] += .02
+    period =  	4.1591409
+    epoch = fits['time'][491]
+    dur = 3.0
 
-#    c0 = np.floor(col)
-#    r0 = np.floor(row)
-#    score = np.zeros((50,50))
-#    for i in range(0, 50, 1):
-#        c = c0 + i/50.
-#        print i
-#        for j in range(0, 50, 1):
-#            r = r0 + j/50.
-#            x0 = [120e3]
-#            args = (module, output, c, r, bbox, img)
-#            bounds=[(0, None)]
-#            res = sopt.minimize(costFunc1, x0, args, \
-#                method="L-BFGS-B", bounds=bounds)
-#            score[j, i] = res.fun
-#
-#    mp.figure(2)
-#    mp.clf()
-#    mp.imshow(np.log10(score), cmap=mp.cm.rainbow, interpolation="nearest", origin="bottom")
-#    mp.colorbar()
-#    r,c = np.unravel_index(np.argmax(img), img.shape)
-#    print c0+c, r0+r
-#
-#    return score
+    out = measureDiffOffset(period, epoch, dur, time, prfObj, \
+        ccdMod, ccdOut, cube, bbox, rollPhase, flags)
+    return out
 
 
-    mp.figure(1)
-    mp.clf()
-    mp.subplot(141)
-    plotTpf.plotCadence(img, hdr)
-    mp.colorbar()
+def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
+    time, prfObj, ccdMod, ccdOut, cube, bbox, rollPhase, flags):
+    """Measure Centroid shift between intransit and difference image
+    for every in-transit cadence
 
-    mp.subplot(142)
-    kPrf = prf.KeplerPrf("/home/fergal/data/keplerprf")
-    c,r = res.x[0], res.x[1]
-    model = kPrf.getPrfForBbox(module, output, c, r, bbox)
-    model *= res.x[2]
-    plotTpf.plotCadence(model, hdr)
-    mp.colorbar()
+    Inputs:
+    -----------
+    period_days, epoch_bkjd, duration_hrs
+        (floats) Properties of transit
 
-    mp.subplot(143)
-    diff = img-model
-    plotTpf.plotCadence(diff, hdr)
-    mp.colorbar()
+    time_bkjd
+        Array of times per cadence for the given campaign
 
-    print "Performance %.3f" %(np.max(np.abs(diff))/np.max(img))
+    prfObj
+        An object of the class prf.KeplerPrf()
 
-    return res
+    ccdMod, ccdOut
+        (int) CCD module and output of image. Needed to
+        create the correct PRF model
 
-def costFunc2(x, module, output, bbox, img):
-    kPrf = prf.KeplerPrf("/home/fergal/data/keplerprf")
-    model = kPrf.getPrfForBbox(module, output, x[0], x[1], bbox)
-    model *= x[2]
+    cube
+        (3d np array) A data cube created from a TPF file.
+        See fileio.tpf.getTargetPixelArrayFromFits()
 
-    cost = img-model
-    cost = np.sum(cost**2)
-#    print "%.3e" %(cost)
-#    cost = np.log10(cost)
-    return cost
+    bbox
+        [c1, c2, r1, r2]. Define the range of columns (c1..c2)
+        and rows (r1..r2)  defined by the image.
+        An exception raised if the following equality not true
+        img.shape = (c2-c1), (r2-r1)
 
+    rollPhase
+        (1d np array) An array of roll phases for each row
+        of cube. len(rollPhase) == len(cube). Units of this
+        array don't matter, so long as cadences with similar
+        roll angles have similar values of rollPhase. Roll phases
+        for bad cadences should be set to a bad value
 
-def costFunc1(x, module, output, col, row, bbox, img):
-    kPrf = prf.KeplerPrf("/home/fergal/data/keplerprf")
-    model = kPrf.getPrfForBbox(module, output, col, row, bbox)
-    model *= x[0]
+    flags
+        (1d array) flag values indicating bad cadences.
+        Currently a non-zero value of flags indicates a bad
+        cadence.
 
-    cost = img-model
-    cost = np.sum(cost**2)
-    return cost
+    Returns:
+    -------------
+    A array with 5 columns, and as many rows as there are
+    in transit cadences. The columns are
 
+    0: Relative cadence number
+    1: In transit centroid column
+    2: In transit centroid row
+    3: Diff img centroid column
+    4: Diff img centroid row
 
+    If there is a statisically significant difference between the intransit
+    and difference image centroids then the transit is most likely not
+    on the target.
+    """
+    idx = getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time)
+    wh = np.where(idx)[0]
+    out = -1 * np.ones((len(wh), 5))
+    for i,w in enumerate(wh):
+        out[i,0] = w
+        try:
+            out[i, 1:] = measureInTransitAndDiffCentroidForOneImg(\
+                prfObj, ccdMod, ccdOut, cube, w, bbox, rollPhase, flags, \
+                hdr=None, plot=False)
+        except ValueError:
+            pass
+        print i, len(wh)
 
-def main2():
-    kepid = 8554498
-    quarter = 4
-    #I need to find these out blindly, but good enough for now
-#    col, row = 670.74, 653.94  #Q4
-#    col, row = 687.6, 639.74  #Q3
-#    col, row = 684.58, 643.38  #Q1
-#    col, row = 673.77 - .5 , 658.443 -.5
-
-
-    ar = mastio.KeplerArchive()
-    fits, hdr = ar.getLongTpf(kepid, quarter, header=True)
-    hdr0 = ar.getLongTpf(kepid, quarter, ext=0)
-    cube = tpf.getTargetPixelArrayFromFits(fits, hdr)
-
-    module = hdr0['MODULE']
-    output = hdr0['OUTPUT']
-    img = cube[100]
-    idx = np.isfinite(img)
-    img[~idx] = 0
-    bbox = getExtent(img, hdr)
-    row, col = np.unravel_index(np.argmax(img), img.shape)
-    col += bbox[0]
-    row += bbox[2]
-
-#    col, row = 687.6, 639.74
-#    col, row = 687.82, 639.44
-    print col, row
-    print bbox
-
-    #Score functions
-    func = lambda x: img.reshape((-1,1)).squeeze() -\
-        modelFunc(module, output, x[0], x[1], x[2], bbox)
-    func2 = lambda x: np.sum(func(x)**2)
-#    func2 = lambda x: np.max(np.abs(func(x)))
-
-    mp.figure(1)
-    mp.clf()
-    mp.subplot(141)
-    plotTpf.plotCadence(img, hdr)
-    mp.plot(col, row, 'ro')
-    mp.colorbar()
-
-    kPrf = prf.KeplerPrf("/home/fergal/data/keplerprf")
-    model = kPrf.getPrfForBbox(module, output, col, row, bbox)
-
-#    mp.subplot(142)
-#    plotTpf.plotCadence(model, hdr, cmap=mp.cm.jet)
-#    mp.colorbar()
-#
-#    mp.subplot(143)
-    scale = np.max(img)/np.max(model)
-#    diff = img - scale*model
-#    plotTpf.plotCadence(diff, hdr)
-#    print "M1", np.log10(np.sum(diff**2)), scale
-#    print "M2", np.log10(func2([col, row, scale])), 3*np.max(img)
-#    mp.colorbar()
-
-#    return
-##    Plot a sequence of models while you vary row/col
-#    for i in range(1,6):
-#        mp.subplot(1, 5, i)
-#        c = np.floor(col) + .5 +  .2*i
-#        r = np.floor(row)
-#        model = kPrf.getPrfAtColRow(module, output, c, r)
-#        plotTpf.plotCadence(model, hdr)
-#        mp.title("|C,r> = |%.2f %.2f>" %(c, r))
-#    return
+    return out
 
 
-#    Fitting
-    x0 = [col+.5, row+.5, scale]
-#    x0 = [670.78, 653.87, scale]
-    print x0, bbox
-    method = "L-BFGS-B"
-#    method = "SLSQP"
-    result = sopt.minimize(func2, x0, method=method, bounds=[(bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, None)]  )
-    c, r = result.x[:2]
-    c, r = 670.875, 653.98
+def getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time_bkjd):
+    """
+    Find the cadences affected by a transit.
 
-    model = kPrf.getPrfForBbox(module, output, c, r, bbox)
-    mp.subplot(142)
-    mp.cla()
-    plotTpf.plotCadence(model, hdr)
-    mp.colorbar()
+    Inputs::
+    --------
+    period_days, epoch_bkjd, duration_hrs
+        (floats) Properties of transit
 
-    mp.subplot(143)
-    sModel = model * result.x[2]  #Scale model to flux
-    plotTpf.plotCadence(sModel, hdr)
-    mp.colorbar()
-
-    mp.subplot(144)
-    diff = img - sModel
-    plotTpf.plotCadence(diff, hdr)
-    mp.colorbar()
-
-    return result
+    time_bkjd
+        Array of times per cadence for the given campaign
 
 
-#    #globaal search
-#    score = np.zeros((50,50))
-#    c0, r0 = np.floor(col), np.floor(row)
-#    for i in range(0, 50, 1):
-#        print i
-#        c = c0 + i/50.
-#        for j in range(0, 50, 1):
-#            r = r0 + j/50.
-#
-#            score[i, j] = np.log10(func2([c, r, scale]))
-#
-#    mp.figure(2)
-#    mp.clf()
-#    mp.subplot(121)
-#    mp.imshow(score, origin="bottom", cmap=mp.cm.rainbow, interpolation="nearest")
-#    mp.colorbar()
-#
-#    mp.subplot(122)
-#    loc = np.unravel_index(np.argmin(score), (50,50))
-#    c = np.floor(col) + loc[0]/50.
-#    r = np.floor(row) + loc[1]/50.
-#    model = kPrf.getPrfForBbox(module, output, c, r, bbox)
-#    scale = np.max(img)/np.max(model)
-#    diff = img - scale*model
-#    plotTpf.plotCadence(diff, hdr)
-#    mp.colorbar()
-#
-#    print c, r
-#    print score[loc]
-#    return score
+    Returns:
+    ------------
+    An array of booleans of length equal to length of time_bkjd.
+    Cadences in transit are set to true, all other cadences to false
+    """
+
+    time = time_bkjd #Mneumonic
+    n1 = int(np.floor((time[0] - epoch_bkjd)/period_days))
+    n2 = int(np.ceil((time[-1] - epoch_bkjd)/period_days))
+    dur_days = duration_hrs/24.
+
+    inTransit = np.zeros_like(time, dtype=bool)
+    for n in range(n1, n2+1):
+        t0 = epoch_bkjd + n*period_days - .5*dur_days
+        t1 = epoch_bkjd + n*period_days + .5*dur_days
+
+        idx = (time >= t0) & (time <= t1)
+#        import pdb; pdb.set_trace()
+        inTransit |= idx
+
+    return inTransit
 
 
-def modelFunc(module, output, col, row, scale, bbox):
-    kPrf = prf.KeplerPrf("/home/fergal/data/keplerprf")
-    model = kPrf.getPrfForBbox(module, output, col, row, bbox)
+def measureInTransitAndDiffCentroidForOneImg(prfObj, ccdMod, ccdOut, cube, rin, bbox, rollPhase, flags, hdr=None, plot=False):
+    """Measure image centroid of in-transit and difference images
 
-    assert(np.all( np.isfinite(model)))
-    vals = model.reshape((-1,1)).squeeze()
-    return vals*scale
+    Inputs:
+    -----------
+    prfObj
+        An object of the class prf.KeplerPrf()
+
+
+    ccdMod, ccdOut
+        (int) CCD module and output of image. Needed to
+        create the correct PRF model
+
+
+    cube
+        (3d np array) A TPF data cube as returned by
+        dave.fileio.getTargetPixelArrayFromFits()
+
+    rin
+        (int) Which image to process. rin should be in the range 0..len(cube)
+
+    bbox
+        [c1, c2, r1, r2]. Define the range of columns (c1..c2)
+        and rows (r1..r2)  defined by the image.
+        An exception raised if the following equality not true
+        img.shape = (c2-c1), (r2-r1)
+
+    rollPhase
+        (1d np array) An array of roll phases for each row
+        of cube. len(rollPhase) == len(cube). Units of this
+        array don't matter, so long as cadences with similar
+        roll angles have similar values of rollPhase
+
+    flags
+        (1d array) flag values indicating bad cadences.
+        Currently a non-zero value of flags indicates a bad
+        cadence.
+
+    Optional Inputs:
+    ---------------
+    hdr
+        Fits header object for TPF file. Useful if you want to plot
+
+    plot
+        (bool) Request plots.
+
+
+    Returns:
+    -------------
+    A 4 element numpy array
+    ic  In transit centroid column
+    ir  In transit centroid row
+    dc  Difference image centroid column
+    dr  Difference image centroid row
+    """
+    inTrans = cube[rin]
+    diff, oot= diffimg.constructK2DifferenceImage(cube, rin, rollPhase, flags)
+
+    ootRes = centroid.fitPrfCentroidForImage(oot, ccdMod, ccdOut, bbox, prfObj)
+    diffRes = centroid.fitPrfCentroidForImage(diff, ccdMod, ccdOut, bbox, prfObj)
+
+    if plot:
+        mp.subplot(121)
+        plotTpf.plotCadence(inTrans, hdr)
+        mp.colorbar()
+        mp.subplot(122)
+        plotTpf.plotCadence(diff, hdr)
+        mp.colorbar()
+
+        mp.plot(ootRes.x[0], ootRes.x[1], 'ro', ms=12, alpha=.4)
+        mp.plot(diffRes.x[0], diffRes.x[1], 'r^', ms=12, alpha=.4)
+
+    return np.array([ootRes.x[0], ootRes.x[1], diffRes.x[0], diffRes.x[1]])
+
+
+
