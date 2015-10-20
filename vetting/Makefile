@@ -4,7 +4,7 @@ bin-noerr :
 	g++ -Wno-unused-result -O3 -o bin-noerr bin-noerr.cpp
 
 modshift :
-	g++ -Wno-unused-result -O3 -o modshift modshift-dave.cpp
+	g++ -Wno-unused-result -O3 -o modshift modshift-dave-v2.cpp
 
 jktebop :
 	gfortran -O3 -o jktebop jktebop-dave.f
