@@ -8,7 +8,7 @@ function [ binnedFlux ] = foldBinLightCurve( dataStruct,ntrfr,npts)
     phase=dataStruct.phase;
     dur=dataStruct.duration;
     period=dataStruct.period;
-    flux=dataStruct.flux;
+    flux=dataStruct.flux - 1;
 
           %Create phased light curve
           phaselc=mod((time-(phase-0.5*period))/period,1);
@@ -30,8 +30,8 @@ function [ binnedFlux ] = foldBinLightCurve( dataStruct,ntrfr,npts)
            a=[.03:1/npts:0.47,0.53:1/npts:0.97];
            b=( (0.5-ntrfr*trfr):(4*ntrfr*trfr)/(npts):(0.5+ntrfr*trfr) );
         
-           [runta,runya]=running_median(phaselc,flux,1.25/(npts),a);  %1.25 was 1
-           [runtb,runyb]=running_median(phaselc,flux,(3*ntrfr*trfr)/(npts),b); %3 was 2
+           [runta,runya]=running_median(phaselc,flux,1.5/(npts),a);  %1.25 was 1
+           [runtb,runyb]=running_median(phaselc,flux,(5*ntrfr*trfr)/(npts),b); %3 was 2
 
            %Combine the two sets iof bins
            runymess=[runya;runyb];

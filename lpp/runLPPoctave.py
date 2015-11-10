@@ -56,7 +56,7 @@ octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/drtoolbox/techniques/')
     
 c2File='/home/sthomp/DAVE/vanTCEs/c2/c2tce.txt'
 mapfile='/home/sthomp/DAVE/dave/lpp/octave/maps/mapQ1Q17DR24-DVMed6084.mat'
-fileout='/home/sthomp/DAVE/vanTCEs/results/c2tce_lpp-v3.txt'
+fileout='/home/sthomp/DAVE/vanTCEs/results/c2tce_lpp-shortP.txt'
 
 data=np.loadtxt(c2File,dtype='float',skiprows=1,delimiter=',')
 np.shape(data)
@@ -79,21 +79,24 @@ for (i,v) in enumerate(np.arange(0,2510)):
     phase=data[i,phcol]
     duration=data[i,durcol]*24;
     
-    try:
-        Tlpp,binnedFlux = lpp.calcLPPone(time,flux,mapfile,period,duration,phase)
-#    Tlpp, Y, binnedFlux = octave.calcLPPMetricLCarray(time,flux,period,duration,phase,mapfile)
-    except:
-        Tlpp=0.0999;
-    
-    out="%s %f %f %f  %f\n" % (str(int(data[i,epiccol])), period, phase, duration, Tlpp)
-    print out 
-    fp.write(out)
+    if period < 10:
+        try:
+            Tlpp,binnedFlux = lpp.calcLPPone(time,flux,mapfile,period,duration,phase)
+    #    Tlpp, Y, binnedFlux = octave.calcLPPMetricLCarray(time,flux,period,duration,phase,mapfile)
+        except:
+            Tlpp=0.0999;
+        
+        out="%s %f %f %f  %f\n" % (str(int(data[i,epiccol])), period, phase, duration, Tlpp)
+        print out 
+        fp.write(out)
     #"%s %f %f %f  %f\n", str(int(data[i,epiccol])), period, phase, duration    plt.pause(.5), Tlpp)
     
-    if Tlpp < .005:
+#    if Tlpp < .005:
+        tit="Tlpp=%s  period=%s" % (Tlpp,period)
         plt.figure(1)
         plt.clf()
         plt.plot(binnedFlux,'ro-')
+        plt.title(tit)
         plt.pause(.1)
 
     
@@ -121,5 +124,6 @@ for (i,v) in enumerate(outdata[:,0]):
 want=cand==1
 plt.figure()
 plt.clf()
-plt.plot(outdata[:,3],np.log10(outdata[:,4]),'o')
-plt.plot(outdata[want,3], np.log10(outdata[want,4]),'r.',ms=12)
+plt.plot(np.log10(outdata[:,1]),np.log10(outdata[:,4]),'o')
+plt.plot(np.log10(outdata[want,1]), np.log10(outdata[want,4]),'r.',ms=12)
+plt.plot([-1,1],[-2.2,-2.2],'g--')

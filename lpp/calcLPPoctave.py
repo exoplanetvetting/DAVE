@@ -37,12 +37,12 @@ def calcLPPone(time,flux,mapFile,period,duration,phase):
 
     binnedFlux :  The sorted, folded, binned flux values input to LPP
     """
-
-    octave.addpath('octave/transitLike/')
-    octave.addpath('octave/createLightCurves/')
-    octave.addpath('octavve/drtoolbox/')
-    octave.addpath('octave/drtoolbox/techniques/')
-
+    octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/transitLike')
+    octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/createLightCurves/')
+    octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/drtoolbox/')
+    octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/drtoolbox/techniques/')
+    #octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/drtoolbox')
+    
     Tlpp, Y, binnedFlux = octave.calcLPPMetricLCarray(time,flux,period,duration,phase,mapFile)
 
 
