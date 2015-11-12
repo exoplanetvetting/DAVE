@@ -24,29 +24,6 @@ import clipboard
 import task
 
 
-def runList(k2idList):
-
-    cfg = loadDefaultConfig()
-
-    #Tell the task module about the tasks.
-    for t in cfg['taskList']:
-        f = eval(t)
-        task.__dict__[f] = f
-
-    print task.__dict__.keys()
-
-
-    parallel = cfg.get('debug', False)
-
-    f = lambda x: task.runOne(x, cfg)
-
-    f(k2idList[0])
-#    out = map(f, k2idList)
-#    p = pool.Pool(count)
-#    count = multiprocessing.cpu_count() - 1
-#    with contextlib.closing(pool.Pool(count)) as p:
-#        out = task.parmap.map(task.runOne, k2idList, cfg, pool=p, parallel=parallel)
-
 
 def runOne(k2id, config):
     taskList = config['taskList']
@@ -55,6 +32,11 @@ def runOne(k2id, config):
     clip['config'] = config
     clip['value'] = k2id
 
+    #Check that all the tasks are properly defined
+    for t in taskList:
+        f = eval(t)
+
+    #Now run them.
     for t in taskList:
         f = eval(t)
         clip = f(clip)
@@ -74,10 +56,10 @@ def loadDefaultConfig():
     #My front end
     tasks = """serveTask extractLightcurveTask
         computeCentroidsTask cotrendDataTask detrendDataTask
-        runBlsTask """.split()
+        placeholderBls trapezoidFitTask   """.split()
 
     #My transit finder and triage
-    """ estSnrTask computeLppMetricTask"""
+    """ placeholderBls trapezoidFitTask  computeLppMetricTask"""
     cfg['taskList'] = tasks
     return cfg
 
@@ -113,7 +95,7 @@ def extractLightcurveTask(clip):
 
     #Flag bad values
     flags[~np.isfinite(flux)] = True
-    flux[flux<1] = True
+    flags[flux<1] = True
 
     #Placeholder. Use the SOC PA data for the lightcurve
     out = dict()
@@ -161,7 +143,7 @@ def detrendDataTask(clip):
     #This is the simplest possible thing. Replace all bad/missing data with
     #zeros. This is a placehold. Bad data inside a transit is replaced with
     #a zero, which is not what you want.
-#    flux[flags] = 0
+    flux[flags] = 0
 
     #Do a simple detrend.
     detrend = kplrfits.medianSubtract1d(flux, nPoints)
@@ -201,8 +183,8 @@ def runBlsTask(clip):
     maxPeriod = clip['config.blsMaxPeriod']
 
     #Zero out the bad data. This crashes BLS
-    flux_norm[flags] = 0
-    assert(np.all( np.isfinite(flux_norm)))
+#    flux_norm[flags] = 0
+#    assert(np.all( np.isfinite(flux_norm)))
 
     out = clipboard.Clipboard()
 #    import pdb; pdb.set_trace()
@@ -223,6 +205,19 @@ def runBlsTask(clip):
     clip['bls.duration_hrs']
     return clip
 
+
+def placeholderBls(clip):
+    """Debugging code. Returns the ephemeris of the largest event in
+    K2Id 206103150
+    """
+    out = clipboard.Clipboard()
+    out['period'] = 4.15892
+    out['epoch'] = 2145.76
+    out['duration_hrs'] = 1.94443
+    out['depth'] = .01112825
+
+    clip['bls'] = out
+    return clip
 
 #import dave.lpp.calcLPPoctave as lpp
 #@task.task
@@ -252,18 +247,25 @@ import dave.trapezoidFit.estimateSnr as tf
 @task.task
 def trapezoidFitTask(clip):
     time_days = clip['serve.time']
-    flux_norm = clip['detrend.flux']
+    flux_norm = clip['detrend.flux_frac']
+    flags = clip['detrend.flags']
     period_days = clip['bls.period']
     duration_hrs = clip['bls.duration_hrs']
     phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
-    depth_frac = 1e+3 #Placeholder
+    depth_frac = clip['bls.depth']
+
+    print depth_frac
+    print period_days
 
     #We don't know these values.
     unc = np.ones_like(flux_norm)
-    flags = np.zeros_like(flux_norm)
 
-    out = tf.getSnrOfTransit(time_days, flux_norm, unc, flags, period_days, \
-        phase_bkjd, duration_hrs, depth_frac)
+    assert(np.all(np.isfinite(time_days[~flags])))
+    assert(np.all(np.isfinite(flux_norm[~flags])))
+
+    out = tf.getSnrOfTransit(time_days[~flags], flux_norm[~flags],\
+        unc[~flags], flags[~flags], \
+        period_days, phase_bkjd, duration_hrs, depth_frac)
 
     clip['trapFit'] = out
 
@@ -276,16 +278,16 @@ def trapezoidFitTask(clip):
     return clip
 
 
-@task.task
-def plotDiagnosticsTask(clip):
-
-    time = clip['serve.time']
-    rawLc = clip['extract.rawLightCurve']
-    cotrendLc = clip['cotrend.cotrendedLightcurve']
-    detrendLc = clip['detrend.detrendedLightcurve']
-
-    plotting.plotDiagnosticLightcurves(time, rawLc, cotrendLc, detrendLc)
-    return clip
+#@task.task
+#def plotDiagnosticsTask(clip):
+#
+#    time = clip['serve.time']
+#    rawLc = clip['extract.rawLightCurve']
+#    cotrendLc = clip['cotrend.cotrendedLightcurve']
+#    detrendLc = clip['detrend.detrendedLightcurve']
+#
+#    plotting.plotDiagnosticLightcurves(time, rawLc, cotrendLc, detrendLc)
+#    return clip
 
 
 def saveOnError(clip):
