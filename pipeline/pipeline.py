@@ -16,13 +16,15 @@ __URL__ = "$URL$"
 
 import numpy as np
 
+
 import dave.fileio.kplrfits as kplrfits
+import dave.lpp.calcLPPoctave as lpp
 import dave.fileio.mastio as mastio
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
 import clipboard
 import task
-
+import os
 
 
 def runOne(k2id, config):
@@ -53,10 +55,20 @@ def loadDefaultConfig():
     cfg['blsMinPeriod'] = 0.5
     cfg['blsMaxPeriod'] = 30
 
+    path = lpp.getLppDir()
+    cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
+
     #My front end
     tasks = """serveTask extractLightcurveTask
         computeCentroidsTask cotrendDataTask detrendDataTask
-        placeholderBls trapezoidFitTask   """.split()
+        placeholderBls lppMetricTask""".split()
+
+    #Status
+    #BLS has a segfault bug. Use placeHolderBLS instead
+    #Trap fit works.
+    #ModShift. Waiting on a model lightcurve of same length as data
+    #LPP working
+    #Centroids, not tested.
 
     #My transit finder and triage
     """ placeholderBls trapezoidFitTask  computeLppMetricTask"""
@@ -156,7 +168,6 @@ def detrendDataTask(clip):
     return clip
 
 
-
 @task.task
 def computeCentroidsTask(clip):
     data = clip['serve.socData']
@@ -219,30 +230,30 @@ def placeholderBls(clip):
     clip['bls'] = out
     return clip
 
-#import dave.lpp.calcLPPoctave as lpp
-#@task.task
-#def computeLppMetricTask(clip):
-#    time_days = clip['serve.time']
-#    flux_norm = clip['detrend.flux']
-#    period_days = clip['bls.period']
-#    duration_hrs = clip['bls.duration']
-#    phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
-#    mapFile = clip['config.lppMapFilePath']
-#
-#    #Place holder, use Susan's version when it shows up.
-#    TLpp, Y, binnedFlux = lpp.fergalVersion(time_days, flux_norm, mapFile,\
-#        period_days, duration_hrs, phase_bkjd)
-#
-#    out = dict()
-#    out['TLpp'] = TLpp
-#
-#    clip['lpp'] = out
-#
-#    #Enforce contract
-#    clip['lpp.TLpp']
-#    return clip
-#
-#
+
+@task.task
+def lppMetricTask(clip):
+    time_days = clip['serve.time']
+    flux_norm = clip['detrend.flux_frac']
+    period_days = clip['bls.period']
+    duration_hrs = clip['bls.duration_hrs']
+    phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
+    mapFile = clip['config.lppMapFilePath']
+
+    #Place holder, use Susan's version when it shows up.
+    TLpp, Y, binnedFlux = lpp.fergalVersion(time_days, flux_norm, mapFile,\
+        period_days, duration_hrs, phase_bkjd)
+
+    out = dict()
+    out['TLpp'] = TLpp
+
+    clip['lpp'] = out
+
+    #Enforce contract
+    clip['lpp.TLpp']
+    return clip
+
+
 import dave.trapezoidFit.estimateSnr as tf
 @task.task
 def trapezoidFitTask(clip):
@@ -259,17 +270,21 @@ def trapezoidFitTask(clip):
 
     #We don't know these values.
     unc = np.ones_like(flux_norm)
+    unc[flags] = 1e99
+    flux_norm[flags] = 0
+
 
     assert(np.all(np.isfinite(time_days[~flags])))
     assert(np.all(np.isfinite(flux_norm[~flags])))
-
     out = tf.getSnrOfTransit(time_days[~flags], flux_norm[~flags],\
         unc[~flags], flags[~flags], \
         period_days, phase_bkjd, duration_hrs, depth_frac)
-
     clip['trapFit'] = out
 
 
+    #Ask Chris to write a function to create a model for a given set of times
+    #That can be the same length as time_days
+    clip['trapFit.bestfitModel']
     clip['trapFit.period_days']
     clip['trapFit.epoch_bkjd']
     clip['trapFit.duration_hrs']
