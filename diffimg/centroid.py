@@ -25,7 +25,7 @@ import dave.fileio.tpf as tpf
 import dave.centroid.prf as prf
 import dave.diffimg.diffimg as diffimg
 import dave.diffimg.arclen as arclen
-import plotTpf
+import dave.misc.plotTpf
 
 import scipy.optimize as sopt
 np.ones

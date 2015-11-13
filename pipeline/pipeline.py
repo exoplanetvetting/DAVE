@@ -66,7 +66,8 @@ def loadDefaultConfig():
     #My front end
     tasks = """serveTask extractLightcurveTask
         computeCentroidsTask rollPhaseTask cotrendDataTask detrendDataTask
-        placeholderBls trapezoidFitTask """.split()
+        blsTask trapezoidFitTask lppMetricTask
+        measureDiffImgCentroidsTask""".split()
 
     #Status
     #BLS has a segfault bug. Use placeHolderBLS instead
@@ -204,7 +205,7 @@ def rollPhaseTask(clip):
 
 import dave.blsCode.bls_ktwo as bls
 @task.task
-def runBlsTask(clip):
+def blsTask(clip):
     time_days = clip['serve.time']
     flux_norm = clip['detrend.flux_frac']
     flags = clip['detrend.flags']
@@ -215,11 +216,11 @@ def runBlsTask(clip):
 #    flux_norm[flags] = 0
 #    assert(np.all( np.isfinite(flux_norm)))
 
-    out = clipboard.Clipboard()
-#    import pdb; pdb.set_trace()
+    idx = flags == 0
     period, epoch, duration, depth, bls_search_periods, convolved_bls = \
-        bls.doSearch(time_days, flux_norm, minPeriod, maxPeriod)
+        bls.doSearch(time_days[idx], flux_norm[idx], minPeriod, maxPeriod)
 
+    out = clipboard.Clipboard()
     out['period'] = period
     out['epoch'] = epoch
     out['duration_hrs'] = duration * 24
@@ -309,8 +310,8 @@ def trapezoidFitTask(clip):
     return clip
 
 
-import dave.centroid.centroid as cent
-import dave.centroid.prf as prf
+import dave.diffimg.centroid as cent
+import dave.diffimg.prf as prf
 @task.task
 def measureDiffImgCentroidsTask(clip):
 
