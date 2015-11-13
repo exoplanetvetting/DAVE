@@ -58,10 +58,10 @@ def runModShift(phase,flux,model,basename,period):
     """
 
     # Uncomment for testing
-    data = numpy.loadtxt('000757450-01.mod')
-    phase = data[:,0]
-    flux  = data[:,1]
-    model = data[:,2]
+    #data = numpy.loadtxt('000757450-01.mod')
+    #phase = data[:,0]
+    #flux  = data[:,1]
+    #model = data[:,2]
 
     # Write data to a file so it can be read by model-shift compiled C code
     numpy.savetxt('model-shift-in.txt', numpy.c_[phase,flux,model])
