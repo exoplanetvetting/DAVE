@@ -9,6 +9,7 @@ import numpy
 
 def runModShift(phase,flux,model,basename,period):
     """Run the Model-Shift test
+
     Inputs:
     -------------
     phase
@@ -21,9 +22,11 @@ def runModShift(phase,flux,model,basename,period):
         The basename for the output plot
     period
         The period of the system in days
-        
+
     Returns:
-    
+    --------------
+    A dictionary containing the following keys:
+
     mod_sig_pri
       The significance of the primary event assuming white noise
     mod_sig_sec
@@ -48,29 +51,27 @@ def runModShift(phase,flux,model,basename,period):
       The depth of the secondary event
     mod_secdeptherr
       The error in the depth of the secondary event
-   
-    -------------
-    **None**
-    Output: 
+
+    Output:
     ----------
     The model-shift plot is also created as a PDF file
     """
-    
+
     # Uncomment for testing
     data = numpy.loadtxt('000757450-01.mod')
     phase = data[:,0]
     flux  = data[:,1]
     model = data[:,2]
-    
+
     # Write data to a file so it can be read by model-shift compiled C code
     numpy.savetxt('model-shift-in.txt', numpy.c_[phase,flux,model])
-    
+
     # Run modshift, and return the output
     modshiftcmdout = check_output(["./modshift",'model-shift-in.txt',basename,str(period)])
-    
+
     # Delete the input text file
     os.remove('model-shift-in.txt')
-    
+
     # Read the modshift output back in to variables
     info = modshiftcmdout.split()
     mod_sig_pri = float(info[1])
@@ -85,8 +86,8 @@ def runModShift(phase,flux,model,basename,period):
     mod_ph_pos = float(info[10])
     mod_secdepth = float(info[11])
     mod_secdeptherr = float(info[12])
-    
-    
+
+
     return {'mod_sig_pri':mod_sig_pri, 'mod_sig_sec':mod_sig_sec, 'mod_sig_ter':mod_sig_ter, 'mod_sig_pos':mod_sig_pos, 'mod_sig_fa':mod_sig_fa, 'mod_Fred':mod_Fred, 'mod_ph_pri':mod_ph_pri, 'mod_ph_sec':mod_ph_sec, 'mod_ph_ter':mod_ph_ter, 'mod_ph_pos':mod_ph_pos, 'mod_secdepth':mod_secdepth, 'mod_secdeptherr':mod_secdeptherr}
 
 
