@@ -80,19 +80,11 @@ def constructK2DifferenceImage(cube, indexOfCadenceInTransit, rollPhase, flags, 
 
 
 #    if plot:
-#    idx = flags == 0
-#    x = np.arange(len(rollPhase))
-#        mp.figure(1)
-#        mp.clf()
-#        mp.plot(x[idx], rollPhase[idx], 'ko-')
-#        mp.axvline(i0, color='b')
-#        mp.xlim(i0-100, i0+100)
-#        mp.axhline(rollPhase[i0], color='grey')
 
     try:
         oot, before, after = getInterpolatedOotImage(cube, rollPhase, flags, i0)
     except ValueError, e:
-        msg = "WARN: No good Oot images created for %i: %s" \
+        msg = "WARN: While creating Diff Img for %i: %s" \
             %(i0, e)
         raise ValueError(msg)
 
@@ -114,7 +106,51 @@ def constructK2DifferenceImage(cube, indexOfCadenceInTransit, rollPhase, flags, 
     return diff, oot
 
 
+def plotRollPhaseDiagnosticPlot(x, rollPhase, flags, indexOfEvent):
+    if x is None:
+        x = np.arange(len(rollPhase))
 
+    if flags.dtype == bool:
+        raise ValueError("Boolean flag array not accepted")
+
+    i0 = indexOfEvent
+    idx = flags == 0
+    mp.plot(x[idx], rollPhase[idx], 'ko-')
+    mp.axvline(i0, color='b')
+    mp.axhline(rollPhase[i0], color='grey')
+
+    dtFlag =kplrfits.SapQuality['PossibleRollTweak']
+    thrusterFiringIndices = np.where( flags & dtFlag )[0]
+    tfi = thrusterFiringIndices
+    tfiBefore = tfi[tfi < i0]
+    tfiAfter = tfi[tfi > i0]
+
+
+    lwr = max(0, i0-100)
+    upr = min(len(x)-1, i0+100)
+    plotLwr = x[lwr]
+    plotUpr = x[upr]
+    mp.xlim(plotLwr, plotUpr)
+    mp.ylim(-1,1)
+
+
+    for w in tfi:
+        if x[w] < plotLwr or x[w] > plotUpr:
+            continue
+        mp.axvline(x[w], color='r')
+
+    lwr, upr = getThrusterFiringIntervalBefore(tfiBefore)
+    i1, sgn, d1, d2 = getBracketingCadence(rollPhase, lwr, upr, rollPhase[i0])
+    mp.plot(x[i1], rollPhase[i1], 'ro')
+    mp.plot(x[i1+sgn], rollPhase[i1+sgn], 'ro')
+
+    lwr, upr = getThrusterFiringIntervalAfter(tfiAfter)
+    i1, sgn, d1, d2 = getBracketingCadence(rollPhase, lwr, upr, rollPhase[i0])
+    mp.plot(x[i1], rollPhase[i1], 'ro')
+    mp.plot(x[i1+sgn], rollPhase[i1+sgn], 'ro')
+
+
+    print(plotLwr, plotUpr)
 
 
 def getInterpolatedOotImage(cube, rollPhase, flags, i0):
@@ -166,14 +202,22 @@ def getInterpolatedOotImage(cube, rollPhase, flags, i0):
 
     if lwrBefore is None:
         raise ValueError("No suitable interval found before requested cadence")
-    ootBefore = getDiffFromRange(cube, lwrBefore, uprBefore, rollPhase, \
-        rollPhase0)
 
+    try:
+        ootBefore = getDiffFromRange(cube, lwrBefore, uprBefore, rollPhase, \
+            rollPhase0)
+    except ValueError, e:
+        raise ValueError("Early diff img: %s" %(e))
 
     lwrAfter, uprAfter = getThrusterFiringIntervalAfter(tfiAfter)
     if lwrAfter is None:
         raise ValueError("No suitable interval found after requested cadence")
-    ootAfter = getDiffFromRange(cube, lwrAfter, uprAfter, rollPhase, rollPhase0)
+    try:
+        ootAfter = getDiffFromRange(cube, lwrAfter, uprAfter, rollPhase, \
+            rollPhase0)
+    except ValueError, e:
+        raise ValueError("Later diff img: %s" %(e))
+
 
     oot = .5 * (ootBefore + ootAfter)
     return oot, [lwrBefore, uprBefore], [lwrAfter, uprAfter]
@@ -218,8 +262,48 @@ def getDiffFromRange(cube, lwr, upr, rollPhase, rollPhase0):
     ------------
     Don't use cadences that are flagged in some bad way.
     """
-
     maxDiffBetweenAdjacentPoints = .15
+    i0, sgn, d1, d2 = getBracketingCadence(rollPhase, lwr, upr, rollPhase0)
+
+
+    #d1 and d2 must bracket rollPhase0. They should also
+    #have similar values
+    if d1*d2 < 0 and np.fabs(d2-d1) < maxDiffBetweenAdjacentPoints:
+        diff = interpolateImages(rollPhase[i0], rollPhase[i0+sgn], \
+            cube[i0], cube[i0+sgn], rollPhase0 )
+        return diff
+
+    raise ValueError("Can't produce difference image")
+
+def getBracketingCadence(rollPhase, lwr, upr, rollPhase0):
+    """Get bracketing cadence for a given rollphase.
+
+    Computes i0 and sgn such that:
+    * i0 is in the range [lwr, upr]
+    * sgn is either +1 or -1
+    * rollPhase[i0] and rollPhase[i0+sgn] bracket rollPhase0, i.e
+      one value is larger than rollPhase0 and the other is lower.
+
+    Inputs:
+    ------------
+    rollPhase
+        (1d numpy array)  Values for rollphase
+    lwr, upr
+        (integers), range of values in rollphase to search
+    rollPhase0
+        The roll phase to bracket
+
+    Returns:
+    -----------
+    i0
+        (int) First bracketing cadence
+    sgn
+        (int) Either +1 or -1. The second bracketing cadence is i0+sgn
+    d1, d2
+        (int) Rollphase difference between rp[i0], rp[i0+sng] and rollPhase0
+        Can be used to assess the quality of the bracket chosen.
+
+    """
     i0 = np.argmin( np.fabs(rollPhase[lwr:upr] - rollPhase0)) + lwr
 
     d1 = rollPhase0 - rollPhase[i0]
@@ -230,20 +314,7 @@ def getDiffFromRange(cube, lwr, upr, rollPhase, rollPhase0):
     #I want to use the next cadence.
     sgn = 2*int(d1*slope > 0) - 1
     d2 = rollPhase0 - rollPhase[i0 + sgn]
-
-#    x = np.arange(len(rollPhase))
-#    mp.plot(x[i0], rollPhase[i0], 'ro')
-#    mp.plot(x[i0+sgn], rollPhase[i0+sgn], 'ro')
-
-    #d1 and d2 must bracket rollPhase0. They should also
-    #have similar values
-    if d1*d2 < 0 and np.fabs(d2-d1) < maxDiffBetweenAdjacentPoints:
-        diff = interpolateImages(rollPhase[i0], rollPhase[i0+sgn], \
-            cube[i0], cube[i0+sgn], rollPhase0 )
-        return diff
-
-#    import pdb; pdb.set_trace()
-    raise ValueError("Can't produce difference image")
+    return i0, sgn, d1, d2
 
 
 def interpolateImages(x0, x1, img0, img1, x):
