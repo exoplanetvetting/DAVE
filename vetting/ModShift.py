@@ -12,7 +12,7 @@ def runModShift(phase,flux,model,basename,period):
     Inputs:
     -------------
     phase
-        The array of phases in days
+        The array of phases in days, ranging from -0.25*period to 0.75*period.
     flux
         The array of observed fluxes
     model
