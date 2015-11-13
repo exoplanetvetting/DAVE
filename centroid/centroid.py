@@ -28,7 +28,7 @@ import dave.diffimg.arclen as arclen
 import plotTpf
 
 import scipy.optimize as sopt
-
+np.ones
 
 def exampleDiffImgCentroiding():
     k2id =  206103150
@@ -64,6 +64,10 @@ def exampleDiffImgCentroiding():
 
     out = measureDiffOffset(period, epoch, dur, time, prfObj, \
         ccdMod, ccdOut, cube, bbox, rollPhase, flags)
+
+    idx = out[:,1] > 0
+    mp.clf()
+    mp.plot(out[:,3]-out[:,1], out[:,4]- out[:,2], 'ro')
     return out
 
 
