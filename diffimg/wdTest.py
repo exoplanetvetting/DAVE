@@ -13,7 +13,7 @@ import numpy as np
 
 import mastio2
 import play as roll
-import diffimg
+import diffimg2 as diffimg
 import tpf
 
 
@@ -24,7 +24,8 @@ import tpf
 def main():
     ar = mastio2.K2Archive()
 
-    kepid = 206011438
+    kepid = 206011438 #WD
+    kepid = 206103150 #WASP star
 
     fits = ar.getLongCadence(kepid, 3)
     time = fits['TIME']
@@ -42,32 +43,16 @@ def main():
     rollPhase = rot[:,0]
     rollPhase[flags>0] = -9999    #A bad value
 
-    fits, hdr = ar.getTargetPixelFile(kepid, 3, header=True)
+    fits, hdr = ar.getLongTpf(kepid, 3, header=True)
     cube = tpf.getTargetPixelArrayFromFits(fits, hdr)
     gain = hdr['gain']
     cube *= gain
 
-    i0 = np.random.randint(0, len(cin))
-#    i0 = 2722
-    indexInTransit = [i0]
+#    i0 = np.random.randint(0, len(cin))
+    i0 = 2622
 
     mp.figure(1)
-    try:
-        diff, oot = diffimg.constructK2DifferenceImage(cube, indexInTransit, rollPhase, flags)
-#        diffimg.plotDiffDiagnostic(diff, np.sqrt(np.fabs(oot)), np.sqrt(np.fabs(cube[i0])))
-        diffimg.plotDiffDiagnostic(diff, oot, np.sqrt(np.fabs(oot)))
-        mp.title('Poisson Noise')
-
-    except ValueError, e:
-        print e
-
-#    mp.figure(2)
-#    mp.clf()
-#    rp0 = rollPhase[i0]
-#    mp.axvline(time[i], color='r')
-#    mp.axhline(rp0, color='grey')
-#    mp.axvline(time[indexBefore], color='g')
-#    mp.axvline(time[indexAfter], color='g')
-#    mp.plot(time[~badIdx], rollPhase[~badIdx], 'k.')
-#    mp.plot(time[~badIdx], rot[~badIdx, 1], 'r.')
-#    plotThrusterFirings(flags,time)
+    itr = cube[i0]
+    oot = diffimg.getInterpolatedOotImage(cube, rollPhase, flags, i0)
+    diff = itr-oot
+    diffimg.plotDiffDiagnostic(diff, oot, itr)
