@@ -398,23 +398,27 @@ def medianSubtract(data, nPoints, fCol=FluxColDef['PDCSAP_FLUX']):
     data, with data[:,fCol] detrended
     """
 
-    size = data.shape[0]
+    data[:,fCol] = medianSubtract1d(data[:, fCol], nPoints)
+    return data
 
-    filtered = np.zeros( (size, 1))
+
+def medianSubtract1d(flux, nPoints):
+    """Quick and dirty median smooth function.
+    Not designed to be at all effecient"""
+
+    size = len(flux)
+    filtered = np.zeros_like(flux)
     for i in range(size):
-        #This two step ensures that lwr and upr lie in the range [0,size)
         lwr = max(i-nPoints, 0)
         upr = min(lwr + 2*nPoints, size)
         lwr = upr- 2*nPoints
 
-        sub = data[lwr:upr, :]
+        sub = flux[lwr:upr]
 
-        offset = np.median(sub[:,fCol])
-        filtered[i] = data[i,fCol] - offset
+        offset = np.median(sub)
+        filtered[i] = flux[i] - offset
 
-
-    data[:,fCol] = filtered[:,0]
-    return data
+    return filtered
 
 
 def fitAndRemovePolynomial(data, order, \
@@ -539,21 +543,28 @@ def markTransitCadences(time, period_days, epoch_bkjd, duration_days,\
     affected by a transit
 
     Input:
-    time:           (numpy 1d array) array of cadence times
-    period_days:    Transit period
-    epoch_bkjd:     Transit epoch
-    duration_days:  Duration of transit (start to finish). If you
-                    select a duration from first to last contact,
-                    all cadences affected by transit are selected.
-                    If you only select 2 to 3 contact, only the
-                    interior region of the transit is selected
-    numberOfDurations   How much of the lightcurve either side of
-                        the transit to mark. Default means to mark
-                        1/2 the transit duration either side of
-                        transit center.
+    -------------
+    time:
+        (numpy 1d array) array of cadence times
+    period_days:
+        Transit period
+    epoch_bkjd:
+        Transit epoch
+    duration_days:
+        Duration of transit (start to finish). If you
+        select a duration from first to last contact,
+        all cadences affected by transit are selected.
+        If you only select 2 to 3 contact, only the
+        interior region of the transit is selected
+    numberOfDurations
+        How much of the lightcurve either side of
+        the transit to mark. Default means to mark
+        1/2 the transit duration either side of
+        transit center.
 
 
     Returns:
+    -------------
     Array of length len(time) of booleans. Element set to true
     are affected by transits
     """

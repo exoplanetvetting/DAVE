@@ -25,10 +25,10 @@ import dave.fileio.tpf as tpf
 import dave.centroid.prf as prf
 import dave.diffimg.diffimg as diffimg
 import dave.diffimg.arclen as arclen
-import plotTpf
+import dave.misc.plotTpf
 
 import scipy.optimize as sopt
-
+np.ones
 
 def exampleDiffImgCentroiding():
     k2id =  206103150
@@ -64,6 +64,10 @@ def exampleDiffImgCentroiding():
 
     out = measureDiffOffset(period, epoch, dur, time, prfObj, \
         ccdMod, ccdOut, cube, bbox, rollPhase, flags)
+
+    idx = out[:,1] > 0
+    mp.clf()
+    mp.plot(out[:,3]-out[:,1], out[:,4]- out[:,2], 'ro')
     return out
 
 
@@ -160,9 +164,10 @@ def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
             out[i, 1:] = measureInTransitAndDiffCentroidForOneImg(\
                 prfObj, ccdMod, ccdOut, cube, w, bbox, rollPhase, flags, \
                 hdr=None, plot=False)
-        except ValueError:
+        except ValueError, e:
+            print "Img %i: %s" %(w, e)
             pass
-        print i, len(wh)
+#        print i, len(wh)
 
     return out
 
@@ -362,6 +367,23 @@ def fitPrfCentroidForImage(img, ccdMod, ccdOut, bbox, prfObj):
 
 
 def getBoundingBoxForImage(img, hdr):
+    """Get the bounding box for the an image from a TPF file
+    i.e the corners of the rectangle that circumscribes the image
+
+    Inputs:
+    ---------
+    img
+        (2d np array) Image to construct bounding box for
+    hdr
+        (FITS header object). The header of the first extension of the TPF
+        file. If you are dealing with an image not from a fits file, use
+        img.shape to get the bounding box instead.
+
+    Returns:
+    ----------
+    A 4 element list for column0, column1, row0, row1
+
+    """
     shape= img.shape
     c0 = float(hdr['1CRV4P'])
     r0 = float(hdr['2CRV4P'])
