@@ -12,3 +12,5 @@ jktebop :
 jktld :
 	gfortran -O3 -o jktld jktld-v3.f
 
+clean:
+	rm bin-noerr modshift jktebop jktld

@@ -1,0 +1,15 @@
+
+
+Requirements:
+python 2.7+
+numpy
+scipy
+matplotlib
+oct2py  #LPP
+
+clipsandtasks
+
+
+g++
+gfortran (or other fortran compiler)
+python-bls
