@@ -22,7 +22,7 @@ import numpy as np
 
 import dave.fileio.mastio as mastio
 import dave.fileio.tpf as tpf
-import dave.centroid.prf as prf
+import dave.diffimg.prf as prf
 import dave.diffimg.diffimg as diffimg
 import dave.diffimg.arclen as arclen
 import dave.misc.plotTpf
