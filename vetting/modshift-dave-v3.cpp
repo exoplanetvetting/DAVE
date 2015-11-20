@@ -41,7 +41,7 @@ const double THREESIGCONF = 0.997300203936740; // Three-sigma confidence interva
 
 // Declare Functions
 void BIN_NOERR(string, double, string);
-double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),SUM(double[],int),SUMSQ(double[],int),SELECT(double[],int,int),INVERFC(double),MAD(double[],int),MEAN(double[],double[],int);
+double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),SUM(double[],int),SUMSQ(double[],int),SELECT(double[],int,int),INVERFC(double),MAD(double[],int),MEAN(double[],int);
 
 // Declare Global - Only using global because of memory allocation problems. If I declare local i get seg faults.
 double data[4][2*N];  // 0 = Time; 1 = Original Data; 2 = Original Model; 3 = Original Residuals
@@ -871,19 +871,16 @@ double SELECT(double x[],int n, int m)    // Returns the mth smallest value in a
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double MEAN(double x[], double xerr[], int n) {  // Return error-weighted mean of first n terms
+double MEAN(double x[], int n) {  // Return mean of first n terms
 
 int z;
-double invvarsum,xmean;
+double xmean;
 
-invvarsum=xmean=0.0;
+xmean=0.0;
 for(z=0;z<n;z++)
-  {
-  invvarsum += 1.0/(xerr[z]*xerr[z]);
-  xmean += x[z]/(xerr[z]*xerr[z]);
-  }
+  xmean += x[z];
 
-return(xmean/invvarsum);
+return(xmean/n);
 }
   
 
@@ -899,7 +896,7 @@ void BIN_NOERR(string bininfile, double binsize, string binoutfile)
   int n,sw1;  // n is number of points going into current bin - sw1 is a switch
   int Nraw,Nbin; // Number of original and binned data points
   double curbin;
-  double curdat2[N],curdat3[N];  // Temp arrays for calculations
+  double curdat2[N];  // Temp arrays for calculations
   double inpdata[2][N];  // Input data
   double bindat[3][N];   // Output binned data
   ifstream datain;
@@ -933,14 +930,15 @@ void BIN_NOERR(string bininfile, double binsize, string binoutfile)
       if(inpdata[0][i]>=curbin && inpdata[0][i]<curbin+binsize)
         {
         curdat2[n] = inpdata[1][i];
-        curdat3[n] = 1.0;
+//         curdat3[n] = 1.0;
         n++;
         sw1=1;
         }
+
     if(sw1==1)
       {
       bindat[0][Nbin] = curbin+0.5*binsize;
-      bindat[1][Nbin] = MEAN(curdat2,curdat3,n);
+      bindat[1][Nbin] = MEAN(curdat2,n);
       bindat[2][Nbin] = STDEV(curdat2,n)/sqrt(n);
       Nbin++;
       }
@@ -951,6 +949,5 @@ void BIN_NOERR(string bininfile, double binsize, string binoutfile)
     dataout << setprecision(10) << bindat[0][i] << " " << bindat[1][i] << " " << bindat[2][i] << endl;
   dataout.close();
   
-
   }
 
