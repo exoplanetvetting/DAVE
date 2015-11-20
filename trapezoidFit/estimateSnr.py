@@ -35,7 +35,7 @@ def getSnrOfTransit(time_days, flux_frac, unc, flags, period_days, phase_bkjd, \
     ioblk = tf.trapezoid_fit(time_days[idx], 1+flux_frac[idx], unc[idx], \
                   period_days, phase_bkjd, duration_hrs, \
                   1e6*depth_frac, fitTrialN=13, fitRegion=10.0, \
-                  errorScale=1.0, debugLevel=3, \
+                  errorScale=1.0, debugLevel=2, \
                   sampleN=15)
 
     #Taken from trapfit.py around lines 434
@@ -46,6 +46,7 @@ def getSnrOfTransit(time_days, flux_frac, unc, flags, period_days, phase_bkjd, \
     out['duration_hrs'] = 24* ioblk.bestphysvals[2]
     out['ingress_hrs'] = out['duration_hrs'] * ioblk.bestphysvals[3]
     out['depth_frac'] = ioblk.bestphysvals[1]
+    out['bestfitModel'] = ioblk.modellc - 1  #Mean zero
 
     out['snr'] = estimateSnr(time_days, flux_frac, flags, out['period_days'], \
         out['epoch_bkjd'], out['duration_hrs'], out['depth_frac'])

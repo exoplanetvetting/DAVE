@@ -11,7 +11,7 @@ $URL$
 import matplotlib.pyplot as mp
 import numpy as np
 
-import diffimg
+import diffimg2 as diffimg
 import mastio2
 import kplrfits
 import plotTpf
@@ -39,15 +39,19 @@ looks like. See wdTest.py
 def computeArcLength(cent_colrow, flag):
     """Compute arclength along the main eigenvector for each centroid point
 
+    Inspired by similar approach by Vanderburg  & Johnson (2014)
+
     This is done slightly differently to V&J. I don't bother computing
     arclength along the fit, I just say how far along the eigenvector
     each centroid point lies. This is noisier than their approach, but
     simpler to implement.
 
     Inputs:
-    cent    (2d numpy array) Array of centroid positions. Zeroth col is column
-            position, and 1st col is row position. Bad values should be stripped
-            out of this array before calling compute arclenght.
+    -------------
+    cent
+        (2d numpy array) Array of centroid positions. Zeroth col is column
+        position, and 1st col is row position. Bad values should be stripped
+        out of this array before calling compute arclenght.
 
     Returns:
     A numpy array of shape cent. The zeroth column is the value of arclength
@@ -89,6 +93,34 @@ def plotThrusterFirings(flags, xval=None):
 
 
 
+def plotDiffer(cube, hdr, index):
+
+    diff = cube[index]- cube[index+1]
+    mp.clf()
+
+    mp.subplot(221)
+    plotTpf.plotCadence(cube[index], hdr)
+    mp.colorbar()
+
+    mp.subplot(222)
+    plotTpf.plotCadence(cube[index+1], hdr)
+    mp.colorbar()
+
+    mp.subplot(223)
+    plotTpf.plotCadence(diff, hdr)
+    mp.colorbar()
+
+    mp.subplot(224)
+    noise = np.sqrt(cube[index]+cube[index+1])
+    z = diff/noise
+    plotTpf.plotCadence(z, hdr)
+
+    idx = np.isfinite(z)
+    zmax = max( -np.min(z[idx]), np.max(z[idx]))
+    mp.clim([-zmax, zmax])
+    mp.colorbar()
+
+
 
 def main():
     ar = mastio2.K2Archive()
@@ -107,6 +139,32 @@ def main():
     cent2 = fits['MOM_CENTR2']
     badIdx = flags > 0
 
+    i0 = np.random.randint(0, len(cin))
+
+    fits, hdr = ar.getLongTpf(kepid, 3, header=True)
+    cube = tpf.getTargetPixelArrayFromFits(fits, hdr)
+    gain = hdr['gain']
+#    cube *= gain
+
+    #Compute roll phase
+    centColRow = np.vstack((cent1, cent2)).transpose()
+    rot = computeArcLength(centColRow, flags>0)
+    rollPhase = rot[:,0]
+    rollPhase[flags>0] = -9999    #A bad value
+
+
+    diffimg.constructK2DifferenceImage(cube,  578, rollPhase, flags)
+    return
+    for i in range(180, len(rollPhase)):
+        mp.clf()
+        try:
+            diffimg.constructK2DifferenceImage(cube,  [i], rollPhase, flags)
+        except ValueError:
+            continue
+
+        mp.savefig('fig-%05i.png' %(i))
+
+def oldStuff():
     #Compute roll phase
     centColRow = np.vstack((cent1, cent2)).transpose()
     rot = computeArcLength(centColRow, flags>0)

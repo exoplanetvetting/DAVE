@@ -16,13 +16,15 @@ __URL__ = "$URL$"
 
 import numpy as np
 
+
 import dave.fileio.kplrfits as kplrfits
+import dave.lpp.calcLPPoctave as lpp
 import dave.fileio.mastio as mastio
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
 import clipboard
 import task
-
+import os
 
 
 def runOne(k2id, config):
@@ -53,13 +55,29 @@ def loadDefaultConfig():
     cfg['blsMinPeriod'] = 0.5
     cfg['blsMaxPeriod'] = 30
 
+    #The LPP mapping file is used by LPP to define the regions of param
+    #space where the transits cluster.
+    path = lpp.getLppDir()
+    cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
+
+    #Location of the model PRF fits files.
+    cfg['prfPath'] = os.path.join(os.environ['HOME'], "data/keplerprf")
+
     #My front end
     tasks = """serveTask extractLightcurveTask
-        computeCentroidsTask cotrendDataTask detrendDataTask
-        placeholderBls trapezoidFitTask   """.split()
+        computeCentroidsTask rollPhaseTask cotrendDataTask detrendDataTask
+        blsTask trapezoidFitTask lppMetricTask
+        measureDiffImgCentroidsTask""".split()
+
+    #Status
+    #BLS has a segfault bug. Use placeHolderBLS instead
+    #Trap fit works.
+    #ModShift. Waiting on a model lightcurve of same length as data
+    #LPP working
+    #Centroids, not tested.
 
     #My transit finder and triage
-    """ placeholderBls trapezoidFitTask  computeLppMetricTask"""
+    """ placeholderBls trapezoidFitTask  lppMetricTask"""
     cfg['taskList'] = tasks
     return cfg
 
@@ -156,7 +174,6 @@ def detrendDataTask(clip):
     return clip
 
 
-
 @task.task
 def computeCentroidsTask(clip):
     data = clip['serve.socData']
@@ -172,10 +189,23 @@ def computeCentroidsTask(clip):
     return clip
 
 
+import dave.diffimg.arclen as arclen
+@task.task
+def rollPhaseTask(clip):
+
+    centColRow = clip['centroids.cent_colrow']
+    flags = clip['extract.flags']
+    rot = arclen.computeArcLength(centColRow, flags>0)
+    rollPhase = rot[:,0]
+    rollPhase[flags>0] = -9999    #A bad value
+
+    clip['rollPhase'] = {'rollPhase':rollPhase}
+    return clip
+
 
 import dave.blsCode.bls_ktwo as bls
 @task.task
-def runBlsTask(clip):
+def blsTask(clip):
     time_days = clip['serve.time']
     flux_norm = clip['detrend.flux_frac']
     flags = clip['detrend.flags']
@@ -186,11 +216,11 @@ def runBlsTask(clip):
 #    flux_norm[flags] = 0
 #    assert(np.all( np.isfinite(flux_norm)))
 
-    out = clipboard.Clipboard()
-#    import pdb; pdb.set_trace()
+    idx = flags == 0
     period, epoch, duration, depth, bls_search_periods, convolved_bls = \
-        bls.doSearch(time_days, flux_norm, minPeriod, maxPeriod)
+        bls.doSearch(time_days[idx], flux_norm[idx], minPeriod, maxPeriod)
 
+    out = clipboard.Clipboard()
     out['period'] = period
     out['epoch'] = epoch
     out['duration_hrs'] = duration * 24
@@ -206,6 +236,7 @@ def runBlsTask(clip):
     return clip
 
 
+@task.task
 def placeholderBls(clip):
     """Debugging code. Returns the ephemeris of the largest event in
     K2Id 206103150
@@ -219,30 +250,30 @@ def placeholderBls(clip):
     clip['bls'] = out
     return clip
 
-#import dave.lpp.calcLPPoctave as lpp
-#@task.task
-#def computeLppMetricTask(clip):
-#    time_days = clip['serve.time']
-#    flux_norm = clip['detrend.flux']
-#    period_days = clip['bls.period']
-#    duration_hrs = clip['bls.duration']
-#    phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
-#    mapFile = clip['config.lppMapFilePath']
-#
-#    #Place holder, use Susan's version when it shows up.
-#    TLpp, Y, binnedFlux = lpp.fergalVersion(time_days, flux_norm, mapFile,\
-#        period_days, duration_hrs, phase_bkjd)
-#
-#    out = dict()
-#    out['TLpp'] = TLpp
-#
-#    clip['lpp'] = out
-#
-#    #Enforce contract
-#    clip['lpp.TLpp']
-#    return clip
-#
-#
+
+@task.task
+def lppMetricTask(clip):
+    time_days = clip['serve.time']
+    flux_norm = clip['detrend.flux_frac']
+    period_days = clip['bls.period']
+    duration_hrs = clip['bls.duration_hrs']
+    phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
+    mapFile = clip['config.lppMapFilePath']
+
+    #Place holder, use Susan's version when it shows up.
+    TLpp, Y, binnedFlux = lpp.fergalVersion(time_days, flux_norm, mapFile,\
+        period_days, duration_hrs, phase_bkjd)
+
+    out = dict()
+    out['TLpp'] = TLpp
+
+    clip['lpp'] = out
+
+    #Enforce contract
+    clip['lpp.TLpp']
+    return clip
+
+
 import dave.trapezoidFit.estimateSnr as tf
 @task.task
 def trapezoidFitTask(clip):
@@ -254,28 +285,68 @@ def trapezoidFitTask(clip):
     phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
     depth_frac = clip['bls.depth']
 
-    print depth_frac
-    print period_days
-
     #We don't know these values.
     unc = np.ones_like(flux_norm)
+    unc[flags] = 1e99
+    flux_norm[flags] = 0
+
 
     assert(np.all(np.isfinite(time_days[~flags])))
     assert(np.all(np.isfinite(flux_norm[~flags])))
-
     out = tf.getSnrOfTransit(time_days[~flags], flux_norm[~flags],\
         unc[~flags], flags[~flags], \
         period_days, phase_bkjd, duration_hrs, depth_frac)
-
     clip['trapFit'] = out
 
 
+    #Ask Chris to write a function to create a model for a given set of times
+    #That can be the same length as time_days
+    clip['trapFit.bestfitModel']
     clip['trapFit.period_days']
     clip['trapFit.epoch_bkjd']
     clip['trapFit.duration_hrs']
     clip['trapFit.depth_frac']
     clip['trapFit.snr']
     return clip
+
+
+import dave.diffimg.centroid as cent
+import dave.diffimg.prf as prf
+@task.task
+def measureDiffImgCentroidsTask(clip):
+
+    #Measuring centroids requires a lot of input params
+    period_days = clip['trapFit.period_days']
+    epoch_bkjd = clip['trapFit.epoch_bkjd']  #Check this what BLS returns
+    duration_hrs = clip['trapFit.duration_hrs']
+
+    cube = clip['serve.cube']
+    cube[ ~np.isfinite(cube) ] = 0
+    tpfHeader0 = clip['serve.tpfHeader0']
+    tpfHeader = clip['serve.tpfHeader']
+    ccdMod = tpfHeader0['MODULE']
+    ccdOut = tpfHeader0['OUTPUT']
+    bbox = cent.getBoundingBoxForImage(cube[0], tpfHeader)
+    rollPhase = clip['rollPhase.rollPhase']
+    prfPath = clip['config.prfPath']
+    prfObj = prf.KeplerPrf(prfPath)
+
+    time_days = clip['serve.time']
+    flags = clip['serve.flags']
+
+#    import pdb; pdb.set_trace()
+    out = cent.measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
+        time_days, prfObj, ccdMod, ccdOut, cube, bbox, rollPhase, flags)
+
+    #Set column names
+    out = nca.Nca(out)
+    out.setLookup(1, "rin intr_col intr_row diff_col diff_row".split())
+
+    clip['diffImg'] = {'centroid_timeseries':out}
+
+    clip['diffImg.centroid_timeseries']
+    return clip
+
 
 
 #@task.task
