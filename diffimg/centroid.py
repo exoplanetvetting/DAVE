@@ -155,6 +155,8 @@ def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
     and difference image centroids then the transit is most likely not
     on the target.
     """
+
+    log = []
     idx = getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time)
     wh = np.where(idx)[0]
     out = -1 * np.ones((len(wh), 5))
@@ -165,11 +167,10 @@ def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
                 prfObj, ccdMod, ccdOut, cube, w, bbox, rollPhase, flags, \
                 hdr=None, plot=False)
         except ValueError, e:
-            print "Img %i: %s" %(w, e)
+            log.append("Img %i: %s" %(w, e))
             pass
-#        print i, len(wh)
 
-    return out
+    return out, log
 
 
 def getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time_bkjd):
