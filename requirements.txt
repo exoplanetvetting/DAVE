@@ -1,6 +1,9 @@
 
 
 Requirements:
+
+
+
 python 2.7+
 numpy
 scipy
@@ -13,3 +16,6 @@ clipsandtasks
 g++
 gfortran (or other fortran compiler)
 python-bls
+
+
+Kepler PRF fits files.
