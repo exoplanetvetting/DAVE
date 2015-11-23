@@ -275,10 +275,12 @@ def getDiffFromRange(cube, lwr, upr, rollPhase, rollPhase0):
 
     raise ValueError("Can't produce difference image")
 
+
 def getBracketingCadence(rollPhase, lwr, upr, rollPhase0):
     """Get bracketing cadence for a given rollphase.
 
     Computes i0 and sgn such that:
+
     * i0 is in the range [lwr, upr]
     * sgn is either +1 or -1
     * rollPhase[i0] and rollPhase[i0+sgn] bracket rollPhase0, i.e
@@ -329,10 +331,18 @@ def getThrusterFiringIntervalBefore(tfIndices, minDuration = 10):
     See getThrusterFiringIntervalAfter() for more details. This
     function does the same job, but returns the last two indices
     in the array  meeting the criteria.
+
     """
 
+    nTfi = len(tfIndices)
+    if nTfi == 0:
+        return None, None
+
+    if nTfi == 1:
+        return 0, tfIndices[0]
+
     i = len(tfIndices)-1
-    while i > 0:
+    while i > 1:
         if tfIndices[i-1] + minDuration < tfIndices[i]:
             return tfIndices[i-1], tfIndices[i]
         i -= 1
@@ -342,26 +352,43 @@ def getThrusterFiringIntervalBefore(tfIndices, minDuration = 10):
 def getThrusterFiringIntervalAfter(tfIndices, minDuration=10):
     """Get range of points between first two thruster firings in input
 
+    Thruster firings tend to cluster, so we don't just want the first
+    pair of firings in the array. Better is the first pair of firings that
+    are separated by a minimum number of cadecnces, minDuration
+
     Input:
     --------
     tfIndices (1d np array)
         A list of numbers, each number represents the index where a
         thruster firing occurs. This is not a boolean array
 
+    Optional Input:
+    ---------------
+    minDuration
+        A pair of cadences must be separated by at least this many cadences
+        to be returned.
 
     Returns:
     ----------
-    Values for first two numbers separated by more than minDuration
+    Values for first two numbers separated by more than minDuration.
+
+
 
     Example:
     ---------
-    self( [1,3,15,9])
-    returns [3,15]
+    ``getThrusterFiringIntervalAfter( [1,3,15,29], 10)``
+    returns ``[3,15]``
     """
-    i = 0
     numTf=  len(tfIndices)
+
+    if numTf == 0:
+        return None, None
+
+    if numTf == 1:
+        return tfIndices[0], -1
+
+    i = 0
     while i < numTf:
-#        print tfIndices[i], tfIndices[i+1]
         if tfIndices[i] + minDuration < tfIndices[i+1]:
             return tfIndices[i], tfIndices[i+1]
         i += 1
