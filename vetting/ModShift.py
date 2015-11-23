@@ -67,7 +67,9 @@ def runModShift(phase,flux,model,basename,period):
     numpy.savetxt('model-shift-in.txt', numpy.c_[phase,flux,model])
 
     # Run modshift, and return the output
-    modshiftcmdout = check_output(["./modshift",'model-shift-in.txt',basename,str(period)])
+    path = getModShiftDir()
+    modshiftcmdout = check_output(["%s/modshift" %(path), \
+        'model-shift-in.txt',basename,str(period)])
 
     # Delete the input text file
     os.remove('model-shift-in.txt')
@@ -91,3 +93,11 @@ def runModShift(phase,flux,model,basename,period):
     return {'mod_sig_pri':mod_sig_pri, 'mod_sig_sec':mod_sig_sec, 'mod_sig_ter':mod_sig_ter, 'mod_sig_pos':mod_sig_pos, 'mod_sig_fa':mod_sig_fa, 'mod_Fred':mod_Fred, 'mod_ph_pri':mod_ph_pri, 'mod_ph_sec':mod_ph_sec, 'mod_ph_ter':mod_ph_ter, 'mod_ph_pos':mod_ph_pos, 'mod_secdepth':mod_secdepth, 'mod_secdeptherr':mod_secdeptherr}
 
 
+
+
+def getModShiftDir():
+    """Get the path where LPP stores its .m files"""
+    pathSep = "/"
+    path = os.path.realpath(__file__)
+    path = pathSep.join(path.split(pathSep)[:-1])
+    return path
