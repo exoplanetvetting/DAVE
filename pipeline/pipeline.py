@@ -61,13 +61,13 @@ def loadDefaultConfig():
     cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
 
     #Location of the model PRF fits files.
-    cfg['prfPath'] = os.path.join(os.environ['HOME'], "data/keplerprf")
+    cfg['prfPath'] = os.path.join(os.environ['HOME'], ".mastio/keplerprf")
 
     #My front end
     tasks = """serveTask extractLightcurveTask
         computeCentroidsTask rollPhaseTask cotrendDataTask detrendDataTask
         blsTask trapezoidFitTask lppMetricTask
-        measureDiffImgCentroidsTask""".split()
+        measureDiffImgCentroidsTask saveOnError""".split()
 
     #Status
     #BLS has a segfault bug. Use placeHolderBLS instead
@@ -335,14 +335,14 @@ def measureDiffImgCentroidsTask(clip):
     flags = clip['serve.flags']
 
 #    import pdb; pdb.set_trace()
-    out = cent.measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
+    out,log = cent.measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
         time_days, prfObj, ccdMod, ccdOut, cube, bbox, rollPhase, flags)
 
     #Set column names
     out = nca.Nca(out)
     out.setLookup(1, "rin intr_col intr_row diff_col diff_row".split())
 
-    clip['diffImg'] = {'centroid_timeseries':out}
+    clip['diffImg'] = {'centroid_timeseries':out, 'log':log}
 
     clip['diffImg.centroid_timeseries']
     return clip
