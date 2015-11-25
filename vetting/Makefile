@@ -1,7 +1,7 @@
 all : modshift jktebop jktld
 
 modshift :
-	g++ -Wno-unused-result -O3 -o modshift modshift-v4.cpp
+	g++ -Wno-unused-result -O3 -o modshift modshift.cpp
 
 jktebop :
 	gfortran -O3 -o jktebop jktebop-dave.f

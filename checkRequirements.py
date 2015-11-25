@@ -12,6 +12,7 @@ import numpy as np
 import subprocess
 import pip
 
+
 def checkInstalled(cmd):
 
     print("Checking for %s" %(cmd))
@@ -60,7 +61,7 @@ def main():
     isOk &= checkImport("matplotlib")
 
     #This is specialised code.
-    isOk &= checkImport("python-bls", True)
+    isOk &= checkImport("bls", True)
 
     print("*****************\n")
     if isOk:
@@ -68,3 +69,7 @@ def main():
     else:
         print("Sorry, not all requirements met. Please check the output to see")
         print("which software you must install before installing Dave.")
+
+
+if __name__ == "__main__":
+    main()
