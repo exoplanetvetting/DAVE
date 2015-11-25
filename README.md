@@ -26,6 +26,8 @@ To check if you have all the dependencies, run:
 python checkRequirements.py
 ```
 
+You will almost certainly need to install @dfm's [python-bls](https://github.com/dfm/python-bls) package.
+
 
 ## Example use
 
