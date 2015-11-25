@@ -25,3 +25,16 @@ To check if you have all the dependencies, run:
 ```
 python checkRequirements.py
 ```
+
+
+## Example use
+
+```
+from dave.pipeline import pipeline
+cfg = pipeline.loadDefaultConfig()
+pipeline.runOne(206103150, cfg)
+```
+
+(this will crash at present)
+
+```
