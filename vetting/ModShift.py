@@ -7,26 +7,28 @@ import time
 import numpy
 
 
-def runModShift(phase,flux,model,basename,period):
+def runModShift(time,flux,model,basename,period,epoch):
     """Run the Model-Shift test
-
+    
     Inputs:
     -------------
-    phase
-        The array of phases in days, ranging from -0.25*period to 0.75*period.
+    time
+        The array of time values in any time unit, typically days.
     flux
-        The array of observed fluxes
+        The array of observed fluxes correspodnding to each time.
     model
-        The array of model fluxes
+        The array of model fluxes corresponding to each time.
     basename
         The basename for the output plot
     period
-        The period of the system in days
-
+        The period of the system in the same units as the time array, typically days.
+    epoch
+        The epoch of the system in the same units as the time array, typically days.
+        
     Returns:
-    --------------
+    -------------
     A dictionary containing the following keys:
-
+    
     mod_sig_pri
       The significance of the primary event assuming white noise
     mod_sig_sec
@@ -52,28 +54,26 @@ def runModShift(phase,flux,model,basename,period):
     mod_secdeptherr
       The error in the depth of the secondary event
 
-    Output:
+    Output: 
     ----------
     The model-shift plot is also created as a PDF file
     """
-
-    # Uncomment for testing
-    #data = numpy.loadtxt('000757450-01.mod')
-    #phase = data[:,0]
+    
+    # Uncomment next 4 lines for testing
+    #data = numpy.loadtxt('000757450-01-fulltime-model.dat')
+    #time = data[:,0]
     #flux  = data[:,1]
     #model = data[:,2]
-
+    
     # Write data to a file so it can be read by model-shift compiled C code
-    numpy.savetxt('model-shift-in.txt', numpy.c_[phase,flux,model])
-
+    numpy.savetxt('model-shift-in.txt', numpy.c_[time,flux,model])
+    
     # Run modshift, and return the output
-    path = getModShiftDir()
-    modshiftcmdout = check_output(["%s/modshift" %(path), \
-        'model-shift-in.txt',basename,str(period)])
-
+    modshiftcmdout = check_output(["./modshift",'model-shift-in.txt',basename,str(period),str(epoch)])
+    
     # Delete the input text file
     os.remove('model-shift-in.txt')
-
+    
     # Read the modshift output back in to variables
     info = modshiftcmdout.split()
     mod_sig_pri = float(info[1])
@@ -88,16 +88,8 @@ def runModShift(phase,flux,model,basename,period):
     mod_ph_pos = float(info[10])
     mod_secdepth = float(info[11])
     mod_secdeptherr = float(info[12])
-
-
+    
+    
     return {'mod_sig_pri':mod_sig_pri, 'mod_sig_sec':mod_sig_sec, 'mod_sig_ter':mod_sig_ter, 'mod_sig_pos':mod_sig_pos, 'mod_sig_fa':mod_sig_fa, 'mod_Fred':mod_Fred, 'mod_ph_pri':mod_ph_pri, 'mod_ph_sec':mod_ph_sec, 'mod_ph_ter':mod_ph_ter, 'mod_ph_pos':mod_ph_pos, 'mod_secdepth':mod_secdepth, 'mod_secdeptherr':mod_secdeptherr}
 
 
-
-
-def getModShiftDir():
-    """Get the path where LPP stores its .m files"""
-    pathSep = "/"
-    path = os.path.realpath(__file__)
-    path = pathSep.join(path.split(pathSep)[:-1])
-    return path

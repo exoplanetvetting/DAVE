@@ -1,11 +1,6 @@
 /* Jeff Coughlin
-   modshift.cpp
+   modshift-v4.cpp
 
-TO-DO: MAKE SURE I AM USING STDEV for thefinal rmsmin calc AND NOT RMS FOR NOISE CALCS. Just check it out if there's a big diff. Checked - nope no big diff. Data is already mean subtracted.
-TO-DO: 
-
-   awk '{print("echo -n "substr($1,1,12)"\ >> modshift.txt\n../modshift "$1" >> modshift.txt\nmv ModShift.ps "substr($1,1,12)"-modshift.ps")}' alldatfiles > runmodshiftall
-     
 */
 
 #include <iostream>
@@ -41,11 +36,17 @@ const double THREESIGCONF = 0.997300203936740; // Three-sigma confidence interva
 
 // Declare Functions
 void BIN_NOERR(string, double, string);
-double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),SUM(double[],int),SUMSQ(double[],int),SELECT(double[],int,int),INVERFC(double),MAD(double[],int),MEAN(double[],int);
+double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),INVERFC(double),MAD(double[],int),MEAN(double[],int);
+
+struct datastruct {double time; double phase; double flux; double model; double resid;};  // Time, Phase, Flux, Model, Residual
 
 // Declare Global - Only using global because of memory allocation problems. If I declare local i get seg faults.
-double data[4][2*N];  // 0 = Time; 1 = Original Data; 2 = Original Model; 3 = Original Residuals
-double rms[N],sumres2[N],zparm[N],tmpdob1[N],tmpdob2[N],chi2[N],tmpsum[N]; //,runmean[N],depthfac[N];
+datastruct data[2*N];  // The main data array
+double rms[N],tmpdob1[N],tmpdob2[N],tmpdob3[N],chi2[N];
+int tmpint[N];  // Array of ints for temporary use
+double flat[2*N]; // residual assuming flat baseline
+datastruct inpdata[N];  // Input data for binning
+datastruct bindat[N];   // Output binned data
 
 
 // Function for sorting via qsort
@@ -56,7 +57,9 @@ int cmp(const void *x, const void *y)
   if (xx > yy) return  1;
   return 0;
   }  
-  
+
+bool phase_sort (datastruct lhs, datastruct rhs) {return lhs.phase < rhs.phase;}
+bool time_sort (datastruct lhs, datastruct rhs) {return lhs.time < rhs.time;}
 
 int main (int argc, char* argv[]) {
 
@@ -69,20 +72,20 @@ int ndat,sw1,sw2,ntmp;
 double tstart,tend;
 int midti,startti,endti;  // Index for middle of transit point, start of transit, and end of transit
 double sigpri,sigsec,sigter,sigpos;
-double period;
+double period,epoch;
 string syscmd;
 stringstream convert;
 int widthfac;
 double width,halfwidth,tenthwidth;
 double tdepth,nintrans,depfacsec,depfacter,depfacpos,depsig,sigfa,fred;
 double med,std,sigreject,mad;
-int tmpint1[N];
 string tmpstr1;
 double baseflux;
-double flat[2*N]; // residual assuming flat baseline
 double tmpsum1,tmpsum2;
 
 // clock_t startTime = clock();
+
+
 
 
 if(argc>1)
@@ -108,51 +111,89 @@ else
   cout << "Period? ";
   cin >> period;
   }
+  
+if(argc>4)
+  epoch = atof(argv[4]);
+else
+  {
+  cout << "Epoch? ";
+  cin >> epoch;
+  }
 
 
+// Open file and check to make sure file exists
 infile.open(infilename.c_str());
 if(!infile.good())
   {
   cout << "Input file does not exist or cannot read! Exiting..." << endl;
   exit(0);
   }
-sw1=0;
-sw2=0;
+  
+// Read in file
 i=0;
+infile >> data[i].time;
 while(!infile.eof())
   {
-  for(j=0;j<=2;j++)
-    infile >> data[j][i];
-  
+  infile >> data[i].flux;
+  infile >> data[i].model;
+  i++;
+  infile >> data[i].time;
+  }
+infile.close();
+ndat = i;
+
+
+// Sort input data on time
+sort(data,data+ndat,time_sort);
+
+
+// Phase data given period and epoch period
+while(epoch>data[0].time)  // Make sure epoch occurs before earliest data point
+  epoch-=period;
+for(i=0;i<ndat;i++)
+  {
+  data[i].phase = period*((data[i].time-epoch)/period - int((data[i].time-epoch)/period));
+  if(data[i].phase > 0.75*period)  // Make so ranges from -0.25*period to 0.75*period
+    data[i].phase-=period;
+  }
+
+// Sort data on phase
+sort(data,data+ndat,phase_sort);
+
+
+// Record width in phase space
+sw1=0;
+sw2=0;
+for(i=0;i<ndat;i++)
+  {
   if(i==0)
-    baseflux = data[2][i];
+    baseflux = data[i].model; // Out of transit baseline flux of the model
   
-  if(sw1==0 && data[2][i]<baseflux)
+  if(sw1==0 && data[i].model<baseflux)
     {
-    tstart=data[0][i];
+    tstart=data[i].phase;
     sw1=1;
     }
-  if(sw1==1 && data[2][i]==baseflux)
+  if(sw1==1 && data[i].model==baseflux)
     {
-    tend=data[0][i-1];
+    tend=data[i-1].phase;
     sw1=2;
     }
-  if(sw2==0 && data[0][i] > 0)
+  if(sw2==0 && data[i].phase > 0)
     {
     midti = i;
     sw2=1;
     }
   i++;
   }
-infile.close();
-ndat = i-1;
+
 
 
 
 // Check to make sure model isn't all zeros, or only positive. Should be transit-like.
 j=0;
 for(i=0;i<ndat;i++)
-  if(data[2][i]<0.0)
+  if(data[i].model<0.0)
     j=1;
 if(j==0)
   {
@@ -163,7 +204,7 @@ if(j==0)
 
 
 // Record model depth of primary transit
-tdepth = data[2][midti];
+tdepth = data[midti].model;
 
 
 if(tstart<0)  // Make width symmetrical. Also prevents glitches on cases if no in-transit data at positive phase.
@@ -188,39 +229,44 @@ tenthwidth = 0.1*width;
 for(l=0;l<1;l++)  // Number of outlier passes - ONLY NEED ONE WHEN USING MAD - JUST LEAVING LOOP IN CASE I EVER WANT TO CHANGE MY MIND
   {
   for(i=0;i<ndat;i++)
-    data[3][i] = data[1][i] - data[2][i];  // Calculate residuals
+    data[i].resid = data[i].flux - data[i].model;  // Calculate residuals
 
-//   std = STDEV(data[3],ndat);
-  mad = MAD(data[3],ndat);  // MAD is Median Absolute Devitation - better than STD - only need one pass.
+//   std = STDEV(data.resid,ndat);
+  for(i=0;i<ndat;i++)
+    tmpdob3[i] = data[i].resid;
+  mad = MAD(tmpdob3,ndat);  // MAD is Median Absolute Devitation - better than STD - only need one pass.
   std = 1.4826*mad;  // https://www.mathworks.com/help/stats/mad.html  AND https://en.wikipedia.org/wiki/Median_absolute_deviation
     
   sigreject = sqrt(2)*INVERFC(1.0/ndat);  // Calculate sigma threshold based on number of data points
     
   for(i=0;i<ndat;i++)  // Keep track of which data points to remove. 0 is good, if flagged as 1, remove later
-    tmpint1[i]=0;
+    tmpint[i]=0;
 
   for(i=0;i<ndat;i++)
     {
     k=0;
     sw1=0;
     for(j=0;j<ndat;j++)
-      if(fabs(data[0][i]-data[0][j]) < tenthwidth)  // look at points within a transit duration
+      if(fabs(data[i].phase-data[j].phase) < tenthwidth)  // look at points within a transit duration
         {
-        tmpdob1[k]=data[3][j];
+        tmpdob1[k]=data[j].resid;
         k++;
         }
     med = MEDIAN(tmpdob1,k);
     
-    if(fabs(data[3][i] - med) > sigreject*std)  // Keep data points within sigreject standard deviations of median
-      tmpint1[i] = 1;
+    if(fabs(data[i].resid - med) > sigreject*std)  // Keep data points within sigreject standard deviations of median
+      tmpint[i] = 1;
     }
 
   m=0;
   for(i=0;i<ndat;i++)
-    if(tmpint1[i]==0)  // Keep good data points
+    if(tmpint[i]==0)  // Keep good data points
       {
-      for(j=0;j<4;j++)
-        data[j][m] = data[j][i];
+      data[m].time = data[i].time;
+      data[m].phase = data[i].phase;
+      data[m].flux = data[i].flux;
+      data[m].model = data[i].model;
+      data[m].resid = data[i].resid;
       m++;
       }
     else
@@ -233,8 +279,14 @@ for(l=0;l<1;l++)  // Number of outlier passes - ONLY NEED ONE WHEN USING MAD - J
   
 // Double up input data for shifting
 for(i=0;i<ndat;i++)
-  for(j=0;j<4;j++)
-    data[j][i+ndat] = data[j][i];
+  {
+  data[i+ndat].time = data[i].time;
+  data[i+ndat].phase = data[i].phase;
+  data[i+ndat].flux = data[i].flux;
+  data[i+ndat].model = data[i].model;
+  data[i+ndat].resid = data[i].resid; 
+  }  
+
 
 
 // cout << data[0][63150] << " " << data[1][63150] << " " << data[2][63150] << endl;
@@ -246,7 +298,7 @@ for(i=0;i<ndat;i++)
 // Save old in case I need to revert
 // To speed things up, assume outside of transit is flat
 // for(j=0;j<2*ndat;j++)
-//   flat[j] = data[1][j] - baseflux;
+//   flat[j] = data[j].flux - baseflux;
 // 
 // 
 // 
@@ -254,10 +306,10 @@ for(i=0;i<ndat;i++)
 //   {
 //   for(j=0;j<ndat;j++)
 //     {
-//     if(fabs(data[0][j]) > 0.5*width)  // If data point is outside transit, can use the pre-computed value that assumes the baseline is flat.
-//       data[3][j] = flat[j+i];
+//     if(fabs(data[j].phase) > 0.5*width)  // If data point is outside transit, can use the pre-computed value that assumes the baseline is flat.
+//       data[j].resid = flat[j+i];
 //     else
-//       data[3][j] = data[1][j+i] - data[2][j];  // Shitfing data, holding model steady. Moving data points backwards, or model forwards, same thing
+//       data[j].resid = data[1][j+i] - data[j].model;  // Shitfing data, holding model steady. Moving data points backwards, or model forwards, same thing
 //     }
 // 
 //   rms[i] = RMS(data[3],ndat);  // RMS of the new residuals
@@ -276,12 +328,12 @@ halfwidth = 0.5*width;  // Pre-computing so don't have to do inside loop
 sw1=0;
 for(j=0;j<ndat;j++)
   { 
-  if(sw1==0 && data[0][j] > -halfwidth)
+  if(sw1==0 && data[j].phase > -halfwidth)
     {
     startti = j-1;  // Cadence of the last point before the transit occurs
     sw1=1;
     }
-  if(sw1==1 && fabs(data[0][j])>halfwidth)
+  if(sw1==1 && fabs(data[j].phase)>halfwidth)
     {
     endti = j;  // Cadence of the point just after the transit ends.
     sw1=2;
@@ -291,23 +343,13 @@ for(j=0;j<ndat;j++)
 
 // To speed things up, assume outside of transit is flat
 for(j=0;j<2*ndat;j++)
-  flat[j] = pow(data[1][j] - baseflux,2);
+  flat[j] = pow(data[j].flux - baseflux,2);
 
-// Old code next 8 lines - was trying to speed things up, but never quite figured it out
-// for(i=0;i<ndat;i++)
-//   {
-//   tmpsum[i] = 0;
-// //   for(j=0;j<startti;j++)
-// //     tmpsum[i] += flat[j+i];
-// //   for(j=endti;j<ndat;j++)
-// //     tmpsum[i] += flat[j+i];
-//   }
 
 // Okay do the actual perumtation. 
 for(i=0;i<ndat;i++)  // Perform ndat pertubations
   {
   tmpsum2 = 0;
-//   tmpsum2=tmpsum[i];  // Start summation at 0 - OLD attempt at speedup
   
   // Before transit, can look up values for compuatation speed increase
   for(j=0;j<startti;j++)
@@ -315,7 +357,7 @@ for(i=0;i<ndat;i++)  // Perform ndat pertubations
   
   // Compute new values inside transit
   for(j=startti;j<endti;j++)
-    tmpsum2 += pow(data[1][j+i] - data[2][j],2);  // Shitfing data, holding model steady. Moving data points backwards, or model forwards, same thing
+    tmpsum2 += pow(data[j+i].flux - data[j].model,2);  // Shitfing data, holding model steady. Moving data points backwards, or model forwards, same thing
     
   // After transit, can look up values for computation speed increase
   for(j=endti;j<ndat;j++)
@@ -339,8 +381,8 @@ for(i=0;i<ndat;i++)  // Calculate chi squared and find lowest chi squared value
   chi2[i] = ndat*pow(rms[i],2)/pow(rmsmin,2);  // Using rms to calculate chi squared
   if(chi2[i] < chi2low)
     chi2low = chi2[i];
-  outfile << fixed << setprecision(10) << data[0][i]/period << " " << setprecision(8) << setw(11) << data[1][i] << " " << data[2][i] << endl; // Write out original data while we're at it
-  if(data[0][i+midti] > tstart && data[0][i+midti] < tend)  // If within the actual transit window, compute number of in-transit data points while we're at it
+  outfile << fixed << setprecision(10) << data[i].phase/period << " " << setprecision(8) << setw(11) << data[i].flux << " " << data[i].model << endl; // Write out original data while we're at it
+  if(data[i+midti].phase > tstart && data[i+midti].phase < tend)  // If within the actual transit window, compute number of in-transit data points while we're at it
     nintrans++;
   }
 outfile.close();
@@ -353,12 +395,12 @@ prilowtime = 0;
 widthfac=4;
 for(i=0;i<ndat;i++)
   {
-  if((data[0][i+midti] < widthfac*tstart || data[0][i+midti] > widthfac*tend) && (data[0][i+midti] < widthfac*tstart+period || data[0][i+midti] > widthfac*tend+period) && (data[0][i+midti] < widthfac*tstart-period || data[0][i+midti] > widthfac*tend-period))  // If outside primary transit
+  if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
     {
     if(chi2[i]<chi2outlow)
       {
       chi2outlow=chi2[i];
-      seclowtime = data[0][i+midti];
+      seclowtime = data[i+midti].phase;
       }
     }
   else
@@ -366,7 +408,7 @@ for(i=0;i<ndat;i++)
     if(chi2[i]<chi2inlow)
       {
       chi2inlow=chi2[i];
-      prilowtime = data[0][i+midti];
+      prilowtime = data[i+midti].phase;
       }
     }
   }
@@ -377,11 +419,11 @@ terlowtime = -2*period;
 widthfac=4;
 for(i=0;i<ndat;i++)
   {
-  if((data[0][i+midti] < prilowtime+widthfac*tstart || data[0][i+midti] > prilowtime+widthfac*tend) && (data[0][i+midti] < prilowtime+widthfac*tstart+period || data[0][i+midti] > prilowtime+widthfac*tend+period) && (data[0][i+midti] < prilowtime+widthfac*tstart-period || data[0][i+midti] > prilowtime+widthfac*tend-period) && (data[0][i+midti] < seclowtime+widthfac*tstart || data[0][i+midti] > seclowtime+widthfac*tend) && (data[0][i+midti] < seclowtime+widthfac*tstart+period || data[0][i+midti] > seclowtime+widthfac*tend)+period && (data[0][i+midti] < seclowtime+widthfac*tstart-period || data[0][i+midti] > seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
+  if((data[i+midti].phase < prilowtime+widthfac*tstart || data[i+midti].phase > prilowtime+widthfac*tend) && (data[i+midti].phase < prilowtime+widthfac*tstart+period || data[i+midti].phase > prilowtime+widthfac*tend+period) && (data[i+midti].phase < prilowtime+widthfac*tstart-period || data[i+midti].phase > prilowtime+widthfac*tend-period) && (data[i+midti].phase < seclowtime+widthfac*tstart || data[i+midti].phase > seclowtime+widthfac*tend) && (data[i+midti].phase < seclowtime+widthfac*tstart+period || data[i+midti].phase > seclowtime+widthfac*tend)+period && (data[i+midti].phase < seclowtime+widthfac*tstart-period || data[i+midti].phase > seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
     if(chi2[i]<chi2terlow)
       {
       chi2terlow=chi2[i];
-      terlowtime=data[0][i+midti];
+      terlowtime=data[i+midti].phase;
       }
   }
 
@@ -391,11 +433,11 @@ sechightime = -2*period;
 widthfac=6;
 for(i=0;i<ndat;i++)
   {
-  if((data[0][i+midti] < prilowtime+widthfac*tstart || data[0][i+midti] > prilowtime+widthfac*tend) && (data[0][i+midti] < prilowtime+widthfac*tstart+period || data[0][i+midti] > prilowtime+widthfac*tend+period) && (data[0][i+midti] < prilowtime+widthfac*tstart-period || data[0][i+midti] > prilowtime+widthfac*tend-period) && (data[0][i+midti] < seclowtime+widthfac*tstart || data[0][i+midti] > seclowtime+widthfac*tend) && (data[0][i+midti] < seclowtime+widthfac*tstart+period || data[0][i+midti] > seclowtime+widthfac*tend)+period && (data[0][i+midti] < seclowtime+widthfac*tstart-period || data[0][i+midti] > seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
+  if((data[i+midti].phase < prilowtime+widthfac*tstart || data[i+midti].phase > prilowtime+widthfac*tend) && (data[i+midti].phase < prilowtime+widthfac*tstart+period || data[i+midti].phase > prilowtime+widthfac*tend+period) && (data[i+midti].phase < prilowtime+widthfac*tstart-period || data[i+midti].phase > prilowtime+widthfac*tend-period) && (data[i+midti].phase < seclowtime+widthfac*tstart || data[i+midti].phase > seclowtime+widthfac*tend) && (data[i+midti].phase < seclowtime+widthfac*tstart+period || data[i+midti].phase > seclowtime+widthfac*tend)+period && (data[i+midti].phase < seclowtime+widthfac*tstart-period || data[i+midti].phase > seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
     if(chi2[i]>chi2outhigh)
       {
       chi2outhigh=chi2[i];
-      sechightime = data[0][i+midti];
+      sechightime = data[i+midti].phase;
       }
   }
 
@@ -403,7 +445,7 @@ for(i=0;i<ndat;i++)
 ntmp=0;
 widthfac=2;
 for(i=0;i<ndat;i++)
-  if((data[0][i+midti] < prilowtime+widthfac*tstart || data[0][i+midti] > prilowtime+widthfac*tend) && (data[0][i+midti] < prilowtime+widthfac*tstart+period || data[0][i+midti] > prilowtime+widthfac*tend+period) && (data[0][i+midti] < prilowtime+widthfac*tstart-period || data[0][i+midti] > prilowtime+widthfac*tend-period) && (data[0][i+midti] < seclowtime+widthfac*tstart || data[0][i+midti] > seclowtime+widthfac*tend) && (data[0][i+midti] < seclowtime+widthfac*tstart+period || data[0][i+midti] > seclowtime+widthfac*tend)+period && (data[0][i+midti] < seclowtime+widthfac*tstart-period || data[0][i+midti] > seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
+  if((data[i+midti].phase < prilowtime+widthfac*tstart || data[i+midti].phase > prilowtime+widthfac*tend) && (data[i+midti].phase < prilowtime+widthfac*tstart+period || data[i+midti].phase > prilowtime+widthfac*tend+period) && (data[i+midti].phase < prilowtime+widthfac*tstart-period || data[i+midti].phase > prilowtime+widthfac*tend-period) && (data[i+midti].phase < seclowtime+widthfac*tstart || data[i+midti].phase > seclowtime+widthfac*tend) && (data[i+midti].phase < seclowtime+widthfac*tstart+period || data[i+midti].phase > seclowtime+widthfac*tend)+period && (data[i+midti].phase < seclowtime+widthfac*tstart-period || data[i+midti].phase > seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
     {
     tmpdob1[ntmp]=chi2[i];
     ntmp++;
@@ -415,7 +457,7 @@ else // First contigency - if there were no points outside twice the width of th
   ntmp=0;
   widthfac=2;
   for(i=0;i<ndat;i++)
-    if((data[0][i+midti] < widthfac*tstart || data[0][i+midti] > widthfac*tend) && (data[0][i+midti] < widthfac*tstart+period || data[0][i+midti] > widthfac*tend+period) && (data[0][i+midti] < widthfac*tstart-period || data[0][i+midti] > widthfac*tend-period))  // If outside primary transit
+    if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
       {
       tmpdob1[ntmp]=chi2[i];
       ntmp++;
@@ -427,7 +469,7 @@ else // First contigency - if there were no points outside twice the width of th
     ntmp=0;
     widthfac=1;
     for(i=0;i<ndat;i++)
-      if((data[0][i+midti] < widthfac*tstart || data[0][i+midti] > widthfac*tend) && (data[0][i+midti] < widthfac*tstart+period || data[0][i+midti] > widthfac*tend+period) && (data[0][i+midti] < widthfac*tstart-period || data[0][i+midti] > widthfac*tend-period))  // If outside primary transit
+      if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
         {
         tmpdob1[ntmp]=chi2[i];
         ntmp++;
@@ -457,9 +499,9 @@ else // First contigency - if there were no points outside twice the width of th
 ntmp=0;
 widthfac=2;
 for(i=0;i<ndat;i++)
-  if((data[0][i+midti] < prilowtime+widthfac*tstart || data[0][i+midti] > prilowtime+widthfac*tend) && (data[0][i+midti] < prilowtime+widthfac*tstart+period || data[0][i+midti] > prilowtime+widthfac*tend+period) && (data[0][i+midti] < prilowtime+widthfac*tstart-period || data[0][i+midti] > prilowtime+widthfac*tend-period) && (data[0][i+midti] < seclowtime+widthfac*tstart || data[0][i+midti] > seclowtime+widthfac*tend) && (data[0][i+midti] < seclowtime+widthfac*tstart+period || data[0][i+midti] > seclowtime+widthfac*tend)+period && (data[0][i+midti] < seclowtime+widthfac*tstart-period || data[0][i+midti] > seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
+  if((data[i+midti].phase < prilowtime+widthfac*tstart || data[i+midti].phase > prilowtime+widthfac*tend) && (data[i+midti].phase < prilowtime+widthfac*tstart+period || data[i+midti].phase > prilowtime+widthfac*tend+period) && (data[i+midti].phase < prilowtime+widthfac*tstart-period || data[i+midti].phase > prilowtime+widthfac*tend-period) && (data[i+midti].phase < seclowtime+widthfac*tstart || data[i+midti].phase > seclowtime+widthfac*tend) && (data[i+midti].phase < seclowtime+widthfac*tstart+period || data[i+midti].phase > seclowtime+widthfac*tend)+period && (data[i+midti].phase < seclowtime+widthfac*tstart-period || data[i+midti].phase > seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
     {
-    tmpdob1[ntmp]=data[1][i+midti]-data[2][i+midti];  // Original data
+    tmpdob1[ntmp]=data[i+midti].flux-data[i+midti].model;  // Original data
     tmpdob2[ntmp]=tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med);  // Converted depth value of the convolved data
     ntmp++;
     }
@@ -523,7 +565,7 @@ cout << fixed << setprecision(10) << basename << " " << sigpri << " " << sigsec 
 tmpstr1 = "outfile2-" + basename + ".dat";
 outfile.open(tmpstr1.c_str());
 for(i=0;i<ndat;i++)
-  outfile << fixed << setprecision(10) << data[0][midti+i]/period << " " << rms[i] << " " << chi2[i] << " " << tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med) << endl;
+  outfile << fixed << setprecision(10) << data[midti+i].phase/period << " " << rms[i] << " " << chi2[i] << " " << tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med) << endl;
 outfile.close();
 
 // Sort for plotting
@@ -533,6 +575,7 @@ system(tmpstr1.c_str());
 // Make a file for binning
 syscmd = "awk '{print($1,$2)}' outfile1-" + basename + ".dat > " + basename +"-bininput.dat";
 system(syscmd.c_str());
+
 
 // Bin data for the binned data
 BIN_NOERR(basename+"-bininput.dat",((tend-tstart)/period)/8,basename+"-binned2.dat");
@@ -826,48 +869,6 @@ for(z=0;z<a;z++)
 return sqrt(sum/a);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-double SUM(double x[],int a) {  // Return sum of first a terms
-
-int z;
-double xsum;
-
-xsum=0;
-for(z=0;z<a;z++)
-  xsum += x[z];
-
-return(xsum);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-double SUMSQ(double x[],int a) {  // Return sum of first a terms squared
-
-int z;
-double xsum;
-
-xsum=0;
-for(z=0;z<a;z++)
-  xsum += x[z]*x[z];
-
-return(xsum);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-double SELECT(double x[],int n, int m)    // Returns the mth smallest value in array x, given n terms in array x
-  {
-  int z;
-  double w[N];
-  
-  for(z=0;z<n;z++)
-    w[z]=x[z];
-  
-  qsort(w,n,sizeof(double),cmp);
-    
-  return w[m];
-  }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -896,57 +897,54 @@ void BIN_NOERR(string bininfile, double binsize, string binoutfile)
   int n,sw1;  // n is number of points going into current bin - sw1 is a switch
   int Nraw,Nbin; // Number of original and binned data points
   double curbin;
-  double curdat2[N];  // Temp arrays for calculations
-  double inpdata[2][N];  // Input data
-  double bindat[3][N];   // Output binned data
   ifstream datain;
   ofstream dataout;
   
   
-//   if(binoutfile==bininfile)
-//     {
-//     cout << "Binned output file cannot be the same as input file. Exiting." << endl;
-//     exit(0);
-//     }
+  if(binoutfile==bininfile)
+    {
+    cout << "Binned output file cannot be the same as input file. Exiting." << endl;
+    exit(0);
+    }
 
   i=0;
   datain.open(bininfile.c_str());
-  datain >> inpdata[0][i];
+  datain >> inpdata[i].phase;
   while(!datain.eof())
     {
-    datain >> inpdata[1][i];
+    datain >> inpdata[i].flux;
     i++;
-    datain >> inpdata[0][i];
+    datain >> inpdata[i].phase;
     }
   datain.close();
   Nraw = i;
 
   Nbin=0;
-  for(curbin=inpdata[0][0]; curbin<inpdata[0][Nraw-1]+binsize; curbin+=binsize)
+  for(curbin=inpdata[0].phase; curbin<inpdata[Nraw-1].phase+binsize; curbin+=binsize)
     {
     n=0;
     sw1=0;
     for(i=0;i<Nraw;i++)
-      if(inpdata[0][i]>=curbin && inpdata[0][i]<curbin+binsize)
+      if(inpdata[i].phase>=curbin && inpdata[i].phase<curbin+binsize)
         {
-        curdat2[n] = inpdata[1][i];
-//         curdat3[n] = 1.0;
+        tmpdob3[n] = inpdata[i].flux;
         n++;
         sw1=1;
         }
 
     if(sw1==1)
       {
-      bindat[0][Nbin] = curbin+0.5*binsize;
-      bindat[1][Nbin] = MEAN(curdat2,n);
-      bindat[2][Nbin] = STDEV(curdat2,n)/sqrt(n);
+      bindat[Nbin].phase = curbin+0.5*binsize;
+      bindat[Nbin].flux = MEAN(tmpdob3,n);
+      bindat[Nbin].resid = STDEV(tmpdob3,n)/sqrt(n);
       Nbin++;
       }
     }
   
+
   dataout.open(binoutfile.c_str());
   for(i=0;i<Nbin;i++)
-    dataout << setprecision(10) << bindat[0][i] << " " << bindat[1][i] << " " << bindat[2][i] << endl;
+    dataout << setprecision(10) << bindat[i].phase << " " << bindat[i].flux << " " << bindat[2].resid << endl;
   dataout.close();
   
   }
