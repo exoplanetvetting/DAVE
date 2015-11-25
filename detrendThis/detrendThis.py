@@ -15,10 +15,13 @@ import astropy.io.ascii as ascii
 def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None, inpflag=None, ap=4.0):
 
     if ferr is None:
-        lcerr = np.ones_like(time)
+        ferr = np.ones_like(time)
+
+    if inpflag is None:
+        inpflag = np.ones_like(time)
 
     if qflags is None:
-        lcerr = np.zeros_like(time)
+        qflags = np.zeros_like(time)
 
     
     #we are going to remove all the bad values
@@ -42,7 +45,7 @@ def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None, inpflag=None, ap
                  len(time), n_chunks, cadstep, zpt, ap)
 
     outflux, correction, thr_cad = extract_lc.run_C0_detrend(
-        time, flatlc, xbar, ybar, cadstep=cadstep, skip=None)
+        time, flatlc, xpos, ypos, cadstep=cadstep, skip=None)
     
     not_thr = ~thr_cad
     corflux = (flux[zpt:][not_thr]/
@@ -62,9 +65,9 @@ def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None, inpflag=None, ap
     outcorflatflux = np.zeros(len(badmask)) * np.nan
     outcorrection = np.zeros(len(badmask)) * np.nan
 
-    outcorflux[badmask] = corflux
-    outcorflatflux[badmask] = corflatflux
-    outcorrection[badmask] = correction
+    outcorflux[badmask * not_thr] = corflux
+    outcorflatflux[badmask * not_thr] = corflatflux
+    outcorrection[badmask * not_thr] = correction
 
     return outcorflux, outcorflatflux, outcorrection
 
