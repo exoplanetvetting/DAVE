@@ -382,6 +382,27 @@ def getMaskForBadData():
     return m
 
 
+def getMaskForBadK2Data():
+    """If data[i, 'SAP_QUALITY] & m, data is marked with a flag
+       indicating it's probably, or definiately bad.
+
+    These are flags are appropriate for K2 data
+    """
+    m = np.uint32(0)
+    m += np.uint32(SapQuality['AttitudeTweak'])
+    m += np.uint32(SapQuality['NotFinePoint'])
+    m += np.uint32(SapQuality['MomDump'])
+    m += np.uint32(SapQuality['BigArgabright'])
+    m += np.uint32(SapQuality['Exclude'])
+    m += np.uint32(SapQuality['Outlier'])
+    m += np.uint32(SapQuality['SmallArgabright'])
+    m += np.uint32(SapQuality['NoData'])
+    m += np.uint32(SapQuality['DefiniteRollTweak'])
+    m += np.uint32(SapQuality['PossibleRollTweak'])
+
+    return m
+
+
 def medianSubtract(data, nPoints, fCol=FluxColDef['PDCSAP_FLUX']):
     """Remove trends from data
 

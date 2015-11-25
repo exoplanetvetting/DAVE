@@ -59,6 +59,7 @@ def loadDefaultConfig():
     #space where the transits cluster.
     path = lpp.getLppDir()
     cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
+    cfg['modshiftBasename'] = "./modshift"
 
     #Location of the model PRF fits files.
     cfg['prfPath'] = os.path.join(os.environ['HOME'], ".mastio/keplerprf")
@@ -67,18 +68,12 @@ def loadDefaultConfig():
     tasks = """serveTask extractLightcurveTask
         computeCentroidsTask rollPhaseTask cotrendDataTask detrendDataTask
         blsTask trapezoidFitTask lppMetricTask
-        measureDiffImgCentroidsTask saveOnError""".split()
-
-    #Status
-    #BLS has a segfault bug. Use placeHolderBLS instead
-    #Trap fit works.
-    #ModShift. Waiting on a model lightcurve of same length as data
-    #LPP working
-    #Centroids, not tested.
-
-    #My transit finder and triage
-    """ placeholderBls trapezoidFitTask  lppMetricTask"""
+        measureDiffImgCentroidsTask saveClip""".split()
     cfg['taskList'] = tasks
+
+
+    cfg['clipSavePath'] = "./clips"
+    cfg['keysToIgnoreWhenSaving'] = ["serve"]
     return cfg
 
 
@@ -105,11 +100,12 @@ def serveTask(clip):
 def extractLightcurveTask(clip):
     data = clip['serve.socData']
 
-    flags = clip.get('serve.flags', data[:, 'SAP_QUALITY'])
+    flagValues = clip.get('serve.flags', data[:, 'SAP_QUALITY'])
     flux = data[:, 'SAP_FLUX']
 
     #Convert flags to a boolean.
-    flags = flags > 0
+    mask = kplrfits.getMaskForBadK2Data()
+    flags = flagValues & mask
 
     #Flag bad values
     flags[~np.isfinite(flux)] = True
@@ -310,6 +306,29 @@ def trapezoidFitTask(clip):
     return clip
 
 
+import dave.vetting.ModShift as ModShift
+@task.task
+def modshiftTask(clip):
+
+    time = clip['serve.time']
+    flux = clip['detrend.flux_frac']
+    fl = clip['detrend.flags']
+
+    #Place holder until I can get a proper model
+    model = flux[~fl]
+
+    basename = clip['config.modshiftBasename']
+    period = clip['trapFit.period_days']
+    epoch= clip['trapFit.epoch_bkjd']
+
+    out = ModShift.runModShift(time[~fl], flux[~fl], model, basename, \
+        period, epoch)
+
+    clip['modshift'] = out
+
+    #I don't know which values are important, so I can't enfornce contract yet
+    return clip
+
 import dave.diffimg.centroid as cent
 import dave.diffimg.prf as prf
 @task.task
@@ -373,20 +392,21 @@ import shelve
 def saveClip(clip):
     value = clip['value']
     campaign = clip['config.campaign']
+    path = clip.get('config.clipSavePath', ".")
 
     #The problem with this is how do I which tasks to run
     #when I restore?
     keysToSkip = clip.get('config.keysToIgnoreWhenSaving', [])
 
     fn = "clip-%09i-%02i.shelf" %(value, campaign)
-    sh = shelve.open(fn)
+    sh = shelve.open(os.path.join(path, fn))
     for k in clip.keys():
         if k in keysToSkip:
             sh[k] = "Clip not saved"
         else:
             sh[k] = clip[k]
     sh.close()
-
+    return clip
 
 def loadTpfAndLc(k2id, campaign):
     ar = mastio.K2Archive()
