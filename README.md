@@ -37,6 +37,8 @@ cfg = pipeline.loadDefaultConfig()
 pipeline.runOne(206103150, cfg)
 ```
 
-(this will crash at present)
+To get this to work, you will have to create a directory called `.mastio/k2` in your home directory.
 
-```
+You will also need to download and extract
+[kplr2011265_prf.tar](https://archive.stsci.edu/pub/kepler/fpc/kplr2011265_prf.tar)
+into `.mastio/keplerprf`.
