@@ -90,6 +90,11 @@ data = dave.fileio.kplrfits.getNumpyArrayFromFitsRec(fits)
     idx |= ~np.isfinite(flux)  #Or otherwise NaN
     idx |= outliers.indexOfOutliers(flux)    #Remove outliers
 
+    #No good cadences for some reason.
+    if np.all(idx):
+        raise ValueError("No good cadences found for noise estimate. Check transit duration")
+
+    assert( np.all(np.isfinite(flux[~idx])))
     rms = estimateScatterWithMarshallMethod(flux[~idx])
     return depth_frac/rms
 
