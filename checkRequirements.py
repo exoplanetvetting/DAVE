@@ -14,8 +14,7 @@ import pip
 
 
 def checkInstalled(cmd):
-
-    print("Checking for %s" %(cmd))
+    print("Checking for %s".format(cmd))
     try:
         res = subprocess.check_output(cmd.split())
     except OSError:
@@ -27,8 +26,7 @@ def checkInstalled(cmd):
 
 
 def checkImport(package, installIfNeeded=False):
-
-    print("Checking for python package %s" %(package))
+    print("Checking for python package {}".format(package))
     try:
         __import__(package)
         print("... OK")
@@ -47,6 +45,7 @@ def checkImport(package, installIfNeeded=False):
         else:
             return False
     return True
+
 
 def main():
 
