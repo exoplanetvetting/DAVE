@@ -25,3 +25,20 @@ To check if you have all the dependencies, run:
 ```
 python checkRequirements.py
 ```
+
+You will almost certainly need to install @dfm's [python-bls](https://github.com/dfm/python-bls) package.
+
+
+## Example use
+
+```
+from dave.pipeline import pipeline
+cfg = pipeline.loadDefaultConfig()
+pipeline.runOne(206103150, cfg)
+```
+
+To get this to work, you will have to create a directory called `.mastio/k2` in your home directory.
+
+You will also need to download and extract
+[kplr2011265_prf.tar](https://archive.stsci.edu/pub/kepler/fpc/kplr2011265_prf.tar)
+into `.mastio/keplerprf`.
