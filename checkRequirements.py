@@ -61,7 +61,7 @@ def main():
     isOk &= checkImport("oct2py")
 
     #This is specialised code.
-    isOk &= checkImport("bls", True)
+    isOk &= checkImport("bls", False)
 
     print("*****************\n")
     if isOk:

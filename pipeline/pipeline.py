@@ -105,7 +105,7 @@ def extractLightcurveTask(clip):
 
     #Convert flags to a boolean.
     mask = kplrfits.getMaskForBadK2Data()
-    flags = flagValues & mask
+    flags = (flagValues & mask).astype(bool)
 
     #Flag bad values
     flags[~np.isfinite(flux)] = True
