@@ -13,7 +13,7 @@ def runModShift(time,flux,model,basename,period,epoch):
     Inputs:
     -------------
     time
-        The array of time values in any time unit, typically days.
+        The array of time values days.
     flux
         The array of observed fluxes correspodnding to each time.
     model
@@ -21,9 +21,9 @@ def runModShift(time,flux,model,basename,period,epoch):
     basename
         The basename for the output plot
     period
-        The period of the system in the same units as the time array, typically days.
+        The period of the system in days.
     epoch
-        The epoch of the system in the same units as the time array, typically days.
+        The epoch of the system in days.
         
     Returns:
     -------------
@@ -37,6 +37,10 @@ def runModShift(time,flux,model,basename,period,epoch):
       The significance of the tertiary event assuming white noise
     mod_sig_pos
       The significance of the positive event assuming white noise
+    mod_sig_odd
+      The significance of the primary event utilizing only odd-numbered transits
+    mod_sig_evn
+      The significance of the primary event utilizing only even-numbered transits
     mod_sig_fa
       The False Alarm threshold assuming 20,000 objects evaluated
     mod_Fred
@@ -60,10 +64,10 @@ def runModShift(time,flux,model,basename,period,epoch):
     """
     
     # Uncomment next 4 lines for testing
-    #data = numpy.loadtxt('000757450-01-fulltime-model.dat')
-    #time = data[:,0]
-    #flux  = data[:,1]
-    #model = data[:,2]
+    data = numpy.loadtxt('000757450-01-fulltime-model.dat')
+    time = data[:,0]
+    flux  = data[:,1]
+    model = data[:,2]
     
     # Write data to a file so it can be read by model-shift compiled C code
     numpy.savetxt('model-shift-in.txt', numpy.c_[time,flux,model])
@@ -80,16 +84,18 @@ def runModShift(time,flux,model,basename,period,epoch):
     mod_sig_sec = float(info[2])
     mod_sig_ter = float(info[3])
     mod_sig_pos = float(info[4])
-    mod_sig_fa = float(info[5])
-    mod_Fred = float(info[6])
-    mod_ph_pri = float(info[7])
-    mod_ph_sec = float(info[8])
-    mod_ph_ter = float(info[9])
-    mod_ph_pos = float(info[10])
-    mod_secdepth = float(info[11])
-    mod_secdeptherr = float(info[12])
+    mod_sig_odd = float(info[5])
+    mod_sig_evn = float(info[6])
+    mod_sig_fa  = float(info[7])
+    mod_Fred    = float(info[8])
+    mod_ph_pri  = float(info[9])
+    mod_ph_sec  = float(info[10])
+    mod_ph_ter  = float(info[11])
+    mod_ph_pos  = float(info[12])
+    mod_secdepth = float(info[13])
+    mod_secdeptherr = float(info[14])
     
     
-    return {'mod_sig_pri':mod_sig_pri, 'mod_sig_sec':mod_sig_sec, 'mod_sig_ter':mod_sig_ter, 'mod_sig_pos':mod_sig_pos, 'mod_sig_fa':mod_sig_fa, 'mod_Fred':mod_Fred, 'mod_ph_pri':mod_ph_pri, 'mod_ph_sec':mod_ph_sec, 'mod_ph_ter':mod_ph_ter, 'mod_ph_pos':mod_ph_pos, 'mod_secdepth':mod_secdepth, 'mod_secdeptherr':mod_secdeptherr}
+    return {'mod_sig_pri':mod_sig_pri, 'mod_sig_sec':mod_sig_sec, 'mod_sig_ter':mod_sig_ter, 'mod_sig_pos':mod_sig_pos, 'mod_sig_odd':mod_sig_odd, 'mod_sig_evn':mod_sig_evn, 'mod_sig_fa':mod_sig_fa, 'mod_Fred':mod_Fred, 'mod_ph_pri':mod_ph_pri, 'mod_ph_sec':mod_ph_sec, 'mod_ph_ter':mod_ph_ter, 'mod_ph_pos':mod_ph_pos, 'mod_secdepth':mod_secdepth, 'mod_secdeptherr':mod_secdeptherr}
 
 
