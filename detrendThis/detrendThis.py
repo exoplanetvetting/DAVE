@@ -12,6 +12,15 @@ import glob
 from numpy import transpose
 import astropy.io.ascii as ascii
 
+
+def twostepreplace(arr1, arr2, idx1, idx2, zpt):
+
+    midx = np.arange(len(arr1))[idx1][zpt:][idx2]
+    arr1[midx] = arr2
+
+    return arr1
+
+
 def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None, inpflag=None, ap=4.0):
 
     if ferr is None:
@@ -23,8 +32,7 @@ def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None, inpflag=None, ap
     if qflags is None:
         qflags = np.zeros_like(time)
 
-    
-    #we are going to remove all the bad values
+    # we are going to remove all the bad values
     # we should never pass out the time
     badmask = np.isfinite(flux) * (inpflag > 0.)
 
@@ -56,18 +64,19 @@ def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None, inpflag=None, ap
         np.median(flatlc[zpt:][not_thr])/
         correction[not_thr])
 
-# The 1.4826 and *4 factors make this similar to a 4-sigma cut.    
+# The 1.4826 and *4 factors make this similar to a 4-sigma cut.
     mad_cut = 1.4826*MAD(corflatflux-1.)*4
     keep = np.abs(corflatflux-1.) < mad_cut
 
 
-    outcorflux = np.zeros(len(badmask)) * np.nan
-    outcorflatflux = np.zeros(len(badmask)) * np.nan
-    outcorrection = np.zeros(len(badmask)) * np.nan
+    outcorflux = np.ones(len(badmask)) * np.nan
+    outcorflatflux = np.ones(len(badmask)) * np.nan
+    outcorrection = np.ones(len(badmask)) * np.nan
 
-    outcorflux[badmask * not_thr] = corflux
-    outcorflatflux[badmask * not_thr] = corflatflux
-    outcorrection[badmask * not_thr] = correction
+
+    outcorflux = twostepreplace(outcorflux, corflux, badmask, not_thr, zpt)
+    outcorflatflux = twostepreplace(outcorflatflux, corflatflux, badmask, not_thr, zpt)
+    outcorrection = twostepreplace(outcorrection, correction, badmask, not_thr, zpt)
 
     return outcorflux, outcorflatflux, outcorrection
 
