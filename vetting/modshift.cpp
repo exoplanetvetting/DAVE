@@ -735,7 +735,7 @@ void PLOT()
 
   // First plot
   outfile << "set origin 0.0,0.67" << endl;
-  outfile << "set xlabel 'Phase'" << endl;
+  outfile << "set xlabel 'Phase' offset 0,0.4" << endl;
   outfile << "set xrange [-0.25 to 1.25]" << endl;
   outfile << "set x2range [-0.25 to 1.25]" << endl;
   outfile << "set xtics 0.25" << endl;
@@ -754,7 +754,7 @@ void PLOT()
   outfile << "plot 'outfile1-" << basename << ".dat' u 1:($2*1.0E6) pt 7 ps 0.1 lc 1 notitle, '' u ($1+1.0):($2*1.0E6) pt 7 ps 0.1 lc 1 notitle, '' u ($1+2.0):($2*1.0E6) pt 7 ps 0.1 lc 1 notitle, '" << basename << "-binned2.dat' u 1:($2*1.0E6) pt 7 ps 0.1 lc 3 notitle, '' u ($1+1.0):($2*1.0E6) pt 7 ps 0.1 lc 3 notitle, 'outfile1-" << basename << ".dat' u 1:($3*1.0E6) with lines lt 1 lc 7 lw 5 notitle, '' u ($1+1.0):($3*1.0E6) with lines lt 1 lc 7 lw 5 notitle" << endl;
 
   // Second Plot
-  outfile << "set origin 0.0,0.43" << endl;
+  outfile << "set origin 0.0,0.435" << endl;
   outfile << "set autoscale y" << endl;
   outfile << "set xlabel 'Phase'" << endl;
   outfile << "set xtics format '%3.1f'" << endl;
