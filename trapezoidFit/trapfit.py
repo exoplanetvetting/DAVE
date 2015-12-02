@@ -209,6 +209,74 @@ def trapezoid(t, depth, bigT, littleT):
                       (t-bigT/2.0 + littleT/2.0)), output)
     return output
 
+def trapezoid_model_onemodel(ts, period, epoch, depth, bigT, littleT, subsamplen):
+    """Make a trapezoid model at the given input parameters.  This routine
+        generates the ioblk class which is used in the transit model.
+        You can save time if you want to generate many models by
+        calling this function once to generate the ioblk and then call
+        trapezoid_model_raw() to generate the models at other inputs
+            bypassing some of the setup routines in this function.
+       INPUT:
+           ts - Mid cadence time stamps
+           period - Period of signal ***assumed fixed during model generation**
+           epoch - Estimated epoch of signal.  Must be on same system
+                           as ts
+           depth [ppm] - Model depth
+           bigT [hr] -full transit duration in hours
+           littleT [hr] - ingress time in hours
+           subsample - Subsample each cadence by this factor
+        OUTPUT:
+            ioblk - structure class containing model ligh curve
+                    located at ioblk.modellc
+    """
+    # Instantiate trp_ioblk class and fill in values
+    ioblk = trp_ioblk()
+    ioblk.parm.debugLevel = 0
+    ioblk.parm.samplen = subsamplen
+    ioblk.normots = ts
+    ioblk.origests.period = period
+    ioblk.origests.epoch = epoch
+    ioblk.origests.depth = depth
+    ioblk.origests.duration = bigT
+    # Calculate this from timeSeries
+    ioblk.parm.cadlen = np.median(np.diff(ts))
+    ioblk = trp_setup(ioblk)
+    # update the tratio 
+    ioblk.physvals[3] = littleT / bigT
+    ioblk, err = boundedvals(ioblk)
+
+    ioblk.physvalsavs = ioblk.physvals
+    ioblk.boundedvalsavs = ioblk.boundedvals
+    ioblk, err = trapezoid_model(ioblk)
+    return ioblk
+    
+def trapezoid_model_raw(ioblk, epoch, depth, bigT, littleT):
+    """If you have a preexisting ioblk from fit or trapezoid_model_onemodel()
+        You can just call this function to get another model
+        at a different epoch depth duration and ingress time
+        ****period is not variable at this point call
+        trapezoid_model_onemodel() instead
+       INPUT:
+           ioblk - pre-existing ioblk from fitting or trapezoid_model_onemodel()
+           epoch - Estimated epoch of signal.  Must be on same system
+                           as ts
+           depth [ppm] - Model depth
+           bigT [hr] -full transit duration in hours
+           littleT [hr] - ingress time in hour
+        OUTPUT:
+            ioblk - structure class containing model ligh curve
+                    located at ioblk.modellc
+    """
+    ioblk.physvals[0] = epoch - ioblk.origests.epoch
+    ioblk.physvals[1] = depth / 1.0e6
+    ioblk.physvals[2] = bigT / 24.0
+    ioblk.physvals[3] = littleT / bigT
+    ioblk, err = boundedvals(ioblk)
+
+    ioblk, err = trapezoid_model(ioblk)
+    return ioblk
+   
+    
 def trapezoid_model(ioblk):
     """Generate a subsampled model at the current parameters
        INPUT:
@@ -558,10 +626,21 @@ if __name__ == "__main__":
     #plt.plot(timeSeries, dataSeries, '.')
     #plt.show()
 
-
+    # Test fitting
     ioblk = trapezoid_fit(timeSeries, dataSeries, errorSeries, \
                   signalPeriod, signalEpoch+0.001, signalDurationHours*0.9, \
                   signalDepth*1.1, \
-                  fitTrialN=13, fitRegion=4.0, errorScale=1.0, debugLevel=3,
+                  fitTrialN=2, fitRegion=4.0, errorScale=1.0, debugLevel=3,
                   sampleN=15, showFitInterval=30)
     print ioblk
+    # test generating model
+    newioblk = trapezoid_model_onemodel(timeSeries, signalPeriod, \
+                    signalEpoch, signalDepth, signalDurationHours, \
+                    signalDurationHours*0.1, ioblk.parm.samplen)
+    plt.close('all')
+    plt.plot(phasedSeries, newioblk.modellc,'.b')
+    newioblk = trapezoid_model_raw(newioblk, signalEpoch+0.05, signalDepth*1.5, \
+                    signalDurationHours*2.0, signalDurationHours*2.0*0.2)
+    plt.plot(phasedSeries, newioblk.modellc, '.r')
+    plt.show()
+    
