@@ -250,7 +250,7 @@ def placeholderBls(clip):
 @task.task
 def lppMetricTask(clip):
     time_days = clip['serve.time']
-    flux_norm = clip['detrend.flux_frac']
+    flux_norm = clip['detrend.flux_frac']+1
     period_days = clip['bls.period']
     duration_hrs = clip['bls.duration_hrs']
     phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
@@ -262,11 +262,13 @@ def lppMetricTask(clip):
 
     out = dict()
     out['TLpp'] = TLpp
+    out['binnedFlux'] = binnedFlux
 
     clip['lpp'] = out
 
     #Enforce contract
     clip['lpp.TLpp']
+    
     return clip
 
 
