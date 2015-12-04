@@ -54,26 +54,32 @@ class Clipboard(object):
 #    def __dir__(self):
 #        return self.getFullKeyList()
 
+    def dummy(self, x):
+        print isinstance(x, Clipboard)
+
 
     def getFullKeyList(self, arg=None, prefix=None):
         if arg is None:
             arg = self.store
+
         if prefix is None:
-            prefix = ""
+            rootPrefix = ""
         else:
-            prefix = "%s." %(prefix)
+            rootPrefix = "%s." %(prefix)
 
         keyList = []
 
-#        import pdb; pdb.set_trace()
-        for k in arg:
+        for k in arg.keys():
             value = arg[k]
-            if isinstance(value, dict) or isinstance(value, Clipboard):
-                prefix = "%s%s" %(prefix, k)
-                keyList.extend(self.getFullKeyList(value, prefix))
-            else:
-                keyList.append("%s%s" %(prefix, k))
-#            print k, keyList
+            try:
+                value.keys()
+            except AttributeError:
+                keyList.append("%s%s" %(rootPrefix, k))
+                continue
+
+            prefix = "%s%s" %(rootPrefix, k)
+            keyList.extend(self.getFullKeyList(value, prefix))
+
         return keyList
 
 
@@ -91,7 +97,7 @@ class Clipboard(object):
         Inputs:
         ---------
         keyString
-            (string) A dictionary key, or a set of keys joined by
+            (string) A dictionary k22ey, or a set of keys joined by
             full stops.
 
         Optional Inputs:
@@ -247,16 +253,3 @@ class Clipboard(object):
 
 
 
-def test():
-    c = Clipboard()
-    c['x'] = dict()
-    c['x.y'] = dict()
-    c['x.y.z'] = "A str"
-
-    print c.asString(maxLevel=2)
-
-    del c['x.y.z']
-
-    c['exception'] = True
-    c.unsetException()
-    return c
