@@ -294,18 +294,24 @@ def trapezoidFitTask(clip):
         period_days, phase_bkjd, duration_hrs, depth_frac)
     clip['trapFit'] = out
 
+    #compute modelat all input time values
+    subSampleN= 15
+    ioBlock = trapFit.trapezoid_model_onemodel(time_days, period_days, \
+        out['epoch_bkjd'], 1e6*out['depth_frac'], out['duration_hrs'], \
+        out['ingress_hrs'], subSampleN)
+    clip['trapFit.bestFitModel'] = ioBlock.modellc - 1  #Want mean of zero
 
-    #Ask Chris to write a function to create a model for a given set of times
-    #That can be the same length as time_days
-    clip['trapFit.bestfitModel']
     clip['trapFit.period_days']
     clip['trapFit.epoch_bkjd']
     clip['trapFit.duration_hrs']
+    clip['trapFit.ingress_hrs']
     clip['trapFit.depth_frac']
+    clip['trapFit.bestFitModel']
     clip['trapFit.snr']
     return clip
 
 
+import dave.trapezoidFit.trapfit as trapFit
 import dave.vetting.ModShift as ModShift
 @task.task
 def modshiftTask(clip):
@@ -314,15 +320,22 @@ def modshiftTask(clip):
     flux = clip['detrend.flux_frac']
     fl = clip['detrend.flags']
 
-    #Place holder until I can get a proper model
-    model = flux[~fl]
-
     basename = clip['config.modshiftBasename']
-    period = clip['trapFit.period_days']
-    epoch= clip['trapFit.epoch_bkjd']
+    period_days = clip['trapFit.period_days']
+    epoch_bkjd = clip['trapFit.epoch_bkjd']
+    dur_hrs =  clip['trapFit.duration_hrs']
+    ingress_hrs = clip['trapFit.ingress_hrs']
+    depth_ppm = 1e6*clip['trapFit.depth_frac']
+
+    subSampleN= 15
+    ioBlock = trapFit.trapezoid_model_onemodel(time[~fl], period_days, \
+        epoch_bkjd, depth_ppm, dur_hrs, \
+        ingress_hrs, subSampleN)
+    model = ioBlock.modellc   #Want mean of zero
+
 
     out = ModShift.runModShift(time[~fl], flux[~fl], model, basename, \
-        period, epoch)
+        period_days, epoch_bkjd)
 
     clip['modshift'] = out
 
