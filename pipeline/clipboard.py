@@ -50,6 +50,37 @@ class Clipboard(object):
 
         del tmp[keys[-1]]
 
+
+#    def __dir__(self):
+#        return self.getFullKeyList()
+
+
+    def getFullKeyList(self, arg=None, prefix=None):
+        if arg is None:
+            arg = self.store
+        if prefix is None:
+            prefix = ""
+        else:
+            prefix = "%s." %(prefix)
+
+        keyList = []
+
+#        import pdb; pdb.set_trace()
+        for k in arg:
+            value = arg[k]
+            if isinstance(value, dict) or isinstance(value, Clipboard):
+                prefix = "%s%s" %(prefix, k)
+                keyList.extend(self.getFullKeyList(value, prefix))
+            else:
+                keyList.append("%s%s" %(prefix, k))
+#            print k, keyList
+        return keyList
+
+
+    def __getattr__(self, keyString):
+        return self.get(keyString)
+
+
     def unsetException(self):
         if 'exception' in self.store:
             del self.store['exception']
