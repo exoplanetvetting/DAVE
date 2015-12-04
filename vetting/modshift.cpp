@@ -107,7 +107,7 @@ infile.open(infilename.c_str());
 if(!infile.good())
   {
   cout << "Input file does not exist or cannot read! Exiting..." << endl;
-  exit(0);
+  exit(1);
   }
   
 // Read in file
@@ -279,7 +279,7 @@ void DO_SHIFT()
   if(j==0)
     {
     cout << "Model is all flat! Exiting..." << endl;
-    exit(0);
+    exit(1);
     }
 
 
@@ -537,7 +537,7 @@ void DO_SHIFT()
         else
           {
           cout << "You should never see this message. I think you have no data at all in your light curve." << endl;
-          exit(0);
+          exit(1);
           }
         }
       }
@@ -1081,7 +1081,7 @@ void BIN_NOERR(string bininfile, double binsize, string binoutfile)
   if(binoutfile==bininfile)
     {
     cout << "Binned output file cannot be the same as input file. Exiting." << endl;
-    exit(0);
+    exit(1);
     }
 
   i=0;
