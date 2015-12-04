@@ -1,6 +1,6 @@
 all : modshift jktebop jktld
 
-modshift :
+modshift : modshift.cpp
 	g++ -Wno-unused-result -O3 -o modshift modshift.cpp
 
 jktebop :
