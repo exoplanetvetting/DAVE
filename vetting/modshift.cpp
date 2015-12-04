@@ -274,11 +274,11 @@ void DO_SHIFT()
   // Check to make sure model isn't all zeros, or only positive. Should be transit-like.
   j=0;
   for(i=0;i<ndat;i++)
-    if(data[i].model<0.0)
+    if(data[i].model!=baseflux)
       j=1;
   if(j==0)
     {
-    cout << "Model is all zeros! Exiting..." << endl;
+    cout << "Model is all flat! Exiting..." << endl;
     exit(0);
     }
 
