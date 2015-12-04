@@ -75,19 +75,16 @@ def runModShift(time,flux,model,basename,period,epoch):
     # Write data to a file so it can be read by model-shift compiled C code
     tmpFilename = 'model-shift-in.txt'
     numpy.savetxt(tmpFilename, numpy.c_[time,flux,model])
-    if not os.path.exists(tmpFilename):
-        raise IOError("Failed to create %s" %(tmpFilename))
-    print "Tmp file created"
 
     # Run modshift, and return the output
     path = getModShiftDir()
     cmd = ["%s/modshift" %(path), 'model-shift-in.txt', basename, \
         str(period), str(epoch)]
-#    print "INFO: Running %s" %(" ".join(cmd))
 
     try:
         modshiftcmdout = check_output(cmd)
     except CalledProcessError, e:
+        #The called process error message isn't very helpful
         msg = "FAIL: modshift returned error: %s" %(e.output)
         raise IOError(msg)
 
