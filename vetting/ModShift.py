@@ -77,7 +77,7 @@ def runModShift(time,flux,model,basename,period,epoch):
     # Run modshift, and return the output
     path = getModShiftDir()
     modshiftcmdout = check_output(["%s/modshift" %(path), \
-        'model-shift-in.txt',basename,str(period)])
+        'model-shift-in.txt',basename,str(period),str(epoch)])
 
     # Delete the input text file
     os.remove('model-shift-in.txt')
