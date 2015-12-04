@@ -2,9 +2,10 @@ import subprocess
 import os
 import sys
 import math
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 import time
 import numpy
+import os
 
 
 def runModShift(time,flux,model,basename,period,epoch):
@@ -72,15 +73,26 @@ def runModShift(time,flux,model,basename,period,epoch):
 #    model = data[:,2]
 
     # Write data to a file so it can be read by model-shift compiled C code
-    numpy.savetxt('model-shift-in.txt', numpy.c_[time,flux,model])
+    tmpFilename = 'model-shift-in.txt'
+    numpy.savetxt(tmpFilename, numpy.c_[time,flux,model])
+    if not os.path.exists(tmpFilename):
+        raise IOError("Failed to create %s" %(tmpFilename))
+    print "Tmp file created"
 
     # Run modshift, and return the output
     path = getModShiftDir()
-    modshiftcmdout = check_output(["%s/modshift" %(path), \
-        'model-shift-in.txt',basename,str(period),str(epoch)])
+    cmd = ["%s/modshift" %(path), 'model-shift-in.txt', basename, \
+        str(period), str(epoch)]
+#    print "INFO: Running %s" %(" ".join(cmd))
+
+    try:
+        modshiftcmdout = check_output(cmd)
+    except CalledProcessError, e:
+        msg = "FAIL: modshift returned error: %s" %(e.output)
+        raise IOError(msg)
 
     # Delete the input text file
-    os.remove('model-shift-in.txt')
+    os.remove(tmpFilename)
 
     # Read the modshift output back in to variables
     info = modshiftcmdout.split()
