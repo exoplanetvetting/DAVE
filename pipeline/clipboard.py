@@ -41,7 +41,18 @@ class Clipboard(object):
     def __repr__(self):
         return self.asString()
 
+    def __delitem__(self, keyString):
+        keys = keyString.split(".")
 
+        tmp = self.store
+        for k in keys[:-1]:
+            tmp = tmp[k]
+
+        del tmp[keys[-1]]
+
+    def unsetException(self):
+        if 'exception' in self.store:
+            del self.store['exception']
 
     def get(self, keyString, defaultValue=None, npCopy=True):
         """Access a value.
@@ -212,4 +223,9 @@ def test():
     c['x.y.z'] = "A str"
 
     print c.asString(maxLevel=2)
+
+    del c['x.y.z']
+
+    c['exception'] = True
+    c.unsetException()
     return c
