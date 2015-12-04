@@ -250,14 +250,14 @@ def placeholderBls(clip):
 @task.task
 def lppMetricTask(clip):
     time_days = clip['serve.time']
-    flux_norm = clip['detrend.flux_frac']+1
+    flux_unitmean = clip['detrend.flux_frac']+1
     period_days = clip['bls.period']
     duration_hrs = clip['bls.duration_hrs']
     phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
     mapFile = clip['config.lppMapFilePath']
 
     #Place holder, use Susan's version when it shows up.
-    TLpp, Y, binnedFlux = lpp.fergalVersion(time_days, flux_norm, mapFile,\
+    TLpp, Y, binnedFlux = lpp.fergalVersion(time_days, flux_unitmean, mapFile,\
         period_days, duration_hrs, phase_bkjd)
 
     out = dict()
