@@ -1,8 +1,21 @@
 
 import numpy as np
+import shelve
+import os
 
 __version__ = "$Id: clipboard.py 2130 2015-09-11 16:56:55Z fmullall $"
 __URL__ = "$URL: svn+ssh://flux/home/fmullall/svn/kepler/k2phot/clipboard.py $"
+
+
+
+def loadClipboard(filename):
+    """Load a previously saved clipboard"""
+    sh = shelve.open(filename)
+    if not os.path.exists(filename+".dat"):
+        raise IOError("File not found: %s" %(filename))
+
+    clip = sh['clip']
+    return clip
 
 
 class Clipboard(object):
@@ -11,35 +24,75 @@ class Clipboard(object):
     A value can be any valid python object. A clipboard
     is very similar to a normal python dictionary except
 
-    * Sub dictionaries are easier to address.
-      x = Clipboard()
-      x['y'] = dict('a':1)
-      print x['y.a']  #Returns x['y']['a]
+    * Sub dictionaries are easier to address::
+
+       x = Clipboard()
+       x['y'] = dict('a':1)
+       print x['y']['a']
+       >>> 1
+       print x['y.a']
+       >>> 1
+       x.y.a
+       >>> 1
 
     * When accessing numpy arrays, a copy is returned by
       default, which is usually what I want.
 
     * Printing the contents of the clip is much prettier than
       for a dictionary.
+
+
+    Note:
+    ---------
+    Any dictionaries passed as named arguments are cast as
+    Clipboards.
     """
+
 
     def __init__(self, *args, **kwargs):
         """
         Input:
         --------
-        A dictionary, or any allowed initialisation arguments for
-        a dictionary
+        Any legal items for a clipboard.
+
+        Example Initialisation:
+        ---------
+        ::
+
+            clip = Clipboard()
+            clip = Clipboard(a=1, b=2, c={'a':1, 'b':2} d=dict())
+
+            d={'x':1, 'y':2}
+            c = Clipboard(a=d)  #Retreive c['a.d']
+            c = Clipboard(d)    #Retreive c['x']
+
         """
-        self.store = dict(*args, **kwargs)
+        self.store = dict()
+
+        if len(args) > 1:
+            raise ValueError("Only one dict can be passed as an unnamed arg")
+
+        if len(args) == 1:
+            self.store = args[0]
+
+        for k in kwargs.keys():
+            if isinstance(kwargs[k], dict):
+                self.store[k] = Clipboard(kwargs[k])
+            else:
+                self.store[k] = kwargs[k]
+
 
     def __getitem__(self, keyString):
         return self.get(keyString)
 
+
     def __setitem__(self, keyString, value):
         self.set(keyString, value)
 
+
     def __repr__(self):
         return self.asString()
+
 
     def __delitem__(self, keyString):
         keys = keyString.split(".")
@@ -51,11 +104,30 @@ class Clipboard(object):
         del tmp[keys[-1]]
 
 
-#    def __dir__(self):
-#        return self.getFullKeyList()
+    def __dir__(self):
+        return self.getFullKeyList()
 
-    def dummy(self, x):
-        print isinstance(x, Clipboard)
+
+    def __getattr__(self, keyString):
+        """Try to return an element in the store, otherwise fall
+        back on the actual object attributes
+        """
+        try:
+            return self.get(keyString)
+        except KeyError:
+            return object.__getattr__(keyString)
+
+    def __setstate__(self, data):
+        """Needed to make Pickling work. See
+        https://bugs.python.org/issue5370
+        """
+        self.__dict__.update(data)
+
+
+    def save(self, filename):
+        sh = shelve.open(filename)
+        sh['clip'] = self
+        sh.close()
 
 
     def getFullKeyList(self, arg=None, prefix=None):
@@ -81,10 +153,6 @@ class Clipboard(object):
             keyList.extend(self.getFullKeyList(value, prefix))
 
         return keyList
-
-
-    def __getattr__(self, keyString):
-        return self.get(keyString)
 
 
     def unsetException(self):

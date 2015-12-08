@@ -13,7 +13,7 @@ __URL__ = "$URL$"
 
 
 
-from clipboard import Clipboard
+from clipboard import Clipboard, loadClipboard
 import unittest
 import numpy as np
 
@@ -38,6 +38,25 @@ class TestClipboard(unittest.TestCase):
         self.assertEqual(self.clip['c2.a'], 1)
         self.assertEqual(self.clip['c3.x'], 1)
 
+
+    def testGetAttributes(self):
+        """Doesn't work yet"""
+        c = self.clip
+
+        self.assertEqual(c.c2.a, 1)
+        self.assertEqual(c.c3.y, 2)
+
+
+    def testSetAttributes(self):
+        """Doesn't work yet"""
+        c = self.clip
+        c.array = np.zeros((10))
+        c.group = dict()
+#        c.group.x = 1
+
+        self.assertEqual(len(c.array), 10)
+#        self.assertEqual(c.group.x, 1)
+
     def test_Unset(self):
         self.clip['exception'] = True
 
@@ -59,6 +78,35 @@ class TestClipboard(unittest.TestCase):
         tmp[0] = 10
 
         self.assertEqual( int(np.sum(c['array'])), 0)
+
+
+    def test_get(self):
+        x = self.clip.get('c2.NotAKey', 5)
+        self.assertEquals(x, 5)
+
+    def test_save(self):
+        self.clip.save('tmp.shelf')
+        c2 = loadClipboard("tmp.shelf")
+
+        self.assertEqual(c2['c2.a'], 1)
+        self.assertEqual(c2['c3.x'], 1)
+
+    def testInit(self):
+        c = Clipboard(a=1, b=2, c={'x':1, 'y':2})
+        self.assertEqual(c['a'], 1)
+        self.assertEqual(c['b'], 2)
+        self.assertEqual(c['c.x'], 1)
+        self.assertEqual(c['c.y'], 2)
+
+        d={'x':1, 'y':2}
+        c = Clipboard(a=d)
+        self.assertEqual(c['a.x'], 1)
+        self.assertEqual(c['a.y'], 2)
+
+        c = Clipboard(d)
+        self.assertEqual(c['x'], 1)
+        self.assertEqual(c['y'], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
