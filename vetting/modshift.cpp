@@ -66,7 +66,7 @@ bool time_sort (datastruct lhs, datastruct rhs) {return lhs.time < rhs.time;}
 int main (int argc, char* argv[]) {
 
 
-clock_t startTime = clock();
+// clock_t startTime = clock();
 
 
 if(argc>1)
@@ -209,7 +209,7 @@ cout << fixed << setprecision(10) << basename << " " << results.sigpri << " " <<
 
 PLOT();
 
-cout << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
+// cout << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
 // */
 
 return 0;
@@ -250,7 +250,7 @@ void DO_SHIFT()
     if(i==0)
       baseflux = data[i].model; // Out of transit baseline flux of the model
     
-    if(sw1==0 && data[i].model<baseflux)
+    if(sw1==0 && data[i].model!=baseflux)
       {
       tstart=data[i].phase;
       sw1=1;
@@ -271,7 +271,7 @@ void DO_SHIFT()
 
 
 
-  // Check to make sure model isn't all zeros, or only positive. Should be transit-like.
+  // Check to make sure model isn't all flat
   j=0;
   for(i=0;i<ndat;i++)
     if(data[i].model!=baseflux)
@@ -285,7 +285,7 @@ void DO_SHIFT()
 
 
   // Record model depth of primary transit
-  results.tdepth = data[midti].model;
+  results.tdepth = -fabs(data[midti].model);
 
 
   if(tstart<0)  // Make width symmetrical. Also prevents glitches on cases if no in-transit data at positive phase.
@@ -356,7 +356,6 @@ void DO_SHIFT()
     ndat=m;  // Update number of data points to those not thrown out
     }
 
-  // cout << ndat << endl;
     
   // Double up input data for shifting
   for(i=0;i<ndat;i++)
@@ -780,7 +779,7 @@ void PLOT()
   outfile << "set size square 0.375,0.275" << endl;
   outfile << "set origin 0.0,0.2" << endl;
   outfile << "set label 'Primary' at graph 0.5,0.925 center front" << endl;
-  outfile << "set xrange [" << setprecision(10) << 3*tstart/period << " to " << 3*tend/period << "]" << endl;
+  outfile << "set xrange [" << setprecision(10) << results.prilowtime/period+3*tstart/period << " to " << results.prilowtime/period+3*tend/period << "]" << endl;
   outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
   outfile << "set xtics format '%5.3f' mirror" << endl;
   outfile << "set xlabel ' '" << endl;
@@ -801,7 +800,7 @@ void PLOT()
   outfile << "set origin 0.315,0.2" << endl;
 
   outfile << "set label 'Odd' at graph 0.5,0.925 center front" << endl;
-  outfile << "set xrange [" << setprecision(10) << 3*tstart/period << " to " << 3*tend/period << "]" << endl;
+  outfile << "set xrange [" << setprecision(10) << results.prilowtime/period+3*tstart/period << " to " << results.prilowtime/period+3*tend/period << "]" << endl;
   outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
   outfile << "set xtics format '%5.3f' mirror" << endl;
   outfile << "set xlabel ' '" << endl;
@@ -821,7 +820,7 @@ void PLOT()
   outfile << "set size square 0.375,0.275" << endl;
   outfile << "set origin 0.63,0.2" << endl;
   outfile << "set label 'Even' at graph 0.5,0.925 center front" << endl;
-  outfile << "set xrange [" << setprecision(10) << 3*tstart/period << " to " << 3*tend/period << "]" << endl;
+  outfile << "set xrange [" << setprecision(10) << results.prilowtime/period+3*tstart/period << " to " << results.prilowtime/period+3*tend/period << "]" << endl;
   outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
   outfile << "set xtics format '%5.3f' mirror" << endl;
   outfile << "set xlabel ' '" << endl;
