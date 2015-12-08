@@ -45,7 +45,7 @@ struct resultstruct {double sigpri; double sigsec; double sigter; double sigpos;
 resultstruct results;
 
 int ndat,ndatorig;
-double period,epoch,periodorig,epochorig;
+double period,epoch,periodorig,epochorig,baseflux;
 string basename,infilename;
 
 int i,j,k,l,m,n;
@@ -227,7 +227,6 @@ void DO_SHIFT()
   double width,halfwidth,tenthwidth;
   double nintrans;
   double med,std,sigreject,mad;
-  double baseflux;
   double tmpsum1,tmpsum2;
     
   // Phase Data given period and epoch
@@ -269,6 +268,8 @@ void DO_SHIFT()
     }
 
 
+// 
+
 
 
   // Check to make sure model isn't all flat
@@ -285,7 +286,7 @@ void DO_SHIFT()
 
 
   // Record model depth of primary transit
-  results.tdepth = -fabs(data[midti].model);
+  results.tdepth = -fabs(data[midti].model - baseflux);
 
 
   if(tstart<0)  // Make width symmetrical. Also prevents glitches on cases if no in-transit data at positive phase.
@@ -435,6 +436,7 @@ void DO_SHIFT()
   outfile.close();
 
 
+
   // Search for sec. eclipse and compute in-primary params
   chi2outlow = chi2inlow = 9E9;
   results.seclowtime = -2*period;
@@ -542,6 +544,8 @@ void DO_SHIFT()
       }
     }
 
+
+    
   // Calculate rmsmin and Fred, ratio of gaussian noise to systematic noise, excluding primary and secondary
   ntmp=0;
   widthfac=2;
@@ -554,6 +558,7 @@ void DO_SHIFT()
       }
   rmsmin = RMS(tmpdob1,ntmp);  // RMS assuming gaussian noise and excluding pri and sec events
   results.fred = sqrt(nintrans)*STDEV(tmpdob2,ntmp)/rmsmin;  // Have to account for the number of points in-transit we're averaging over.
+
 
 
   // Calculate Sigma_FA - the false alarm rate. I've set it so we shoudl only see one false alarm in 10,000 KOIs, assuming gaussian noise.
@@ -574,6 +579,8 @@ void DO_SHIFT()
   results.depfacter = (chi2terlow-chi2med)/(chi2inlow-chi2med);
   results.depfacpos = (chi2outhigh-chi2med)/(chi2inlow-chi2med);
 
+
+  
   // Significance of primary, secondary, tertiary, and positive events
   results.depsig = rmsmin/sqrt(nintrans);  // Noise level within transit duration assuming gaussian noise
   results.sigpri = (-results.tdepth*(chi2inlow-chi2med)/(chi2inlow-chi2med))/results.depsig;
@@ -703,12 +710,12 @@ void PLOT()
   
   outfile << "set label \"" <<  FORMAT(results.sigpos)                       << "\" at screen (a+3*b),(e-0.025) center font ',16'";
   if(results.sigpos>results.sigfa1)        outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
-
-  outfile << "set label \"" <<  FORMAT(results.fred)                         << "\" at screen (a+4*b),(e-0.025) center font ',16' textcolor lt 7" << endl;
     
-  outfile << "set label \"" <<  FORMAT(results.sigfa1)                       << "\" at screen (a+5*b),(e-0.025) center font ',16' textcolor lt 7" << endl;
+  outfile << "set label \"" <<  FORMAT(results.sigfa1)                       << "\" at screen (a+4*b),(e-0.025) center font ',16' textcolor lt 7" << endl;
   
-  outfile << "set label \"" <<  FORMAT(results.sigfa1)                       << "\" at screen (a+6*b),(e-0.025) center font ',16' textcolor lt 7" << endl;
+  outfile << "set label \"" <<  FORMAT(results.sigfa2)                       << "\" at screen (a+5*b),(e-0.025) center font ',16' textcolor lt 7" << endl;
+  
+  outfile << "set label \"" <<  FORMAT(results.fred)                         << "\" at screen (a+6*b),(e-0.025) center font ',16' textcolor lt 7" << endl;
 
   outfile << "set label \"" <<  FORMAT(results.sigpri/results.fred)          << "\" at screen (c+0*d),(e-0.025) center font ',16'";
   if(results.sigpri/results.fred<results.sigfa1)   outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
@@ -853,7 +860,7 @@ void PLOT()
   outfile << "set ytics auto" << endl;
   outfile << "unset ylabel" << endl;
   outfile << "set ylabel 'Flux (ppm)'" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u ($1+" << setprecision(10) << results.seclowtime/period << "):(" << results.depfacsec << "*$3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.seclowtime/period << "):(" << results.depfacsec << "*$3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.seclowtime/period << "):(" << results.depfacsec << "*$3*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u ($1+" << setprecision(10) << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
 
@@ -873,7 +880,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u ($1+" << setprecision(10) << results.terlowtime/period << "):(" << results.depfacter << "*$3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.terlowtime/period << "):(" << results.depfacter << "*$3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.terlowtime/period << "):(" << results.depfacter << "*$3*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u ($1+" << setprecision(10) << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
 
@@ -893,7 +900,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u ($1+" << setprecision(10) << results.sechightime/period << "):(" << results.depfacpos << "*$3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.sechightime/period << "):(" << results.depfacpos << "*$3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.sechightime/period << "):(" << results.depfacpos << "*$3*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u ($1+" << setprecision(10) << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
   
@@ -905,14 +912,14 @@ void PLOT()
 
 
   // Clean up files
-  syscmd = "cp outfile1-" + basename + ".dat " + basename + ".cln";  // Make clean file for use later
-  system(syscmd.c_str());
-  syscmd = "rm outfile?-" + basename + ".dat";
-  system(syscmd.c_str());
-  syscmd = "rm " + basename + "-bin*dat";
-  system(syscmd.c_str());
-  syscmd = "rm " + basename + "-ModShift.gnu";
-  system(syscmd.c_str());
+//   syscmd = "cp outfile1-" + basename + ".dat " + basename + ".cln";  // Make clean file for use later
+//   system(syscmd.c_str());
+//   syscmd = "rm outfile?-" + basename + ".dat";
+//   system(syscmd.c_str());
+  //syscmd = "rm " + basename + "-bin*dat";
+  //system(syscmd.c_str());
+//   syscmd = "rm " + basename + "-ModShift.gnu";
+//   system(syscmd.c_str());
   }
   
 //////////////////////////////////////////////////////////////////////////////
