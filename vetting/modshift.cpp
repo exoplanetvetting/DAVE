@@ -203,7 +203,7 @@ DO_SHIFT();  // Run shift
 
 
 // Terminal output
-cout << fixed << setprecision(10) << basename << " " << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigodd << " " << results.sigevn << " " << results.sigfa1 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
+cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigodd << " " << results.sigevn << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
 //cout << fixed << setprecision(6) << basename <<  " " << results.depfacsec*results.tdepth << " " << results.depsig << endl;
 
 
