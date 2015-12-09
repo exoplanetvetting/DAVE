@@ -16,13 +16,12 @@ __URL__ = "$URL$"
 
 import numpy as np
 
-
+import dave.pipeline.clipboard as clipboard
 import dave.fileio.kplrfits as kplrfits
 import dave.lpp.calcLPPoctave as lpp
 import dave.fileio.mastio as mastio
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
-import clipboard
 import task
 import os
 
@@ -55,11 +54,17 @@ def loadDefaultConfig():
     cfg['blsMinPeriod'] = 0.5
     cfg['blsMaxPeriod'] = 30
 
+    #Vetting parameters
+    cfg['minSnrForDetection'] = 10.
+    cfg['maxLppForTransit'] = 0.03
+    cfg['minCentroidSignifForFp'] = 3.0
+
+
     #The LPP mapping file is used by LPP to define the regions of param
     #space where the transits cluster.
     path = lpp.getLppDir()
     cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
-    cfg['modshiftBasename'] = "./modshift"
+    cfg['modshiftBasename'] = "modshift"
 
     #Location of the model PRF fits files.
     cfg['prfPath'] = os.path.join(os.environ['HOME'], ".mastio/keplerprf")
@@ -67,8 +72,7 @@ def loadDefaultConfig():
     #My front end
     tasks = """serveTask extractLightcurveTask
         computeCentroidsTask rollPhaseTask cotrendDataTask detrendDataTask
-        blsTask trapezoidFitTask lppMetricTask
-        measureDiffImgCentroidsTask saveClip""".split()
+        blsTask trapezoidFitTask""".split()
     cfg['taskList'] = tasks
 
 
@@ -268,7 +272,7 @@ def lppMetricTask(clip):
 
     #Enforce contract
     clip['lpp.TLpp']
-    
+
     return clip
 
 
@@ -333,7 +337,8 @@ def modshiftTask(clip):
     ioBlock = trapFit.trapezoid_model_onemodel(time[~fl], period_days, \
         epoch_bkjd, depth_ppm, dur_hrs, \
         ingress_hrs, subSampleN)
-    model = ioBlock.modellc   #Want mean of zero
+    model = ioBlock.modellc -1   #Want mean of zero
+#    model *= -1  #Invert for testing
 
 
     out = ModShift.runModShift(time[~fl], flux[~fl], model, basename, \
@@ -379,6 +384,68 @@ def measureDiffImgCentroidsTask(clip):
     clip['diffImg'] = {'centroid_timeseries':out, 'log':log}
 
     clip['diffImg.centroid_timeseries']
+    return clip
+
+
+import dave.vetting.RoboVet as RoboVet
+@task.task
+def vetTask(clip):
+    snr = clip['trapFit.snr']
+    snrThreshold = clip['config.minSnrForDetection']
+    lppThreshold = clip['config.maxLppForTransit']
+    offsetThreshold_sigma = clip['config.minCentroidSignifForFp']
+
+    out = clipboard.Clipboard(isCandidate=True, reasonForFail="None")
+    if snr < snrThreshold:
+        out['isCandidate'] = False
+        out['reasonForFail'] = "SNR (%.1f) below threshold %.1f" \
+            %(snr, snrThreshold)
+#        clip['vet'] = out
+#        return clip
+
+    clip = lppMetricTask(clip)
+    Tlpp = clip['lpp.TLpp']
+    if Tlpp > lppThreshold:
+        out['isCandidate'] = False
+        out['reasonForFail'] = "TLpp (%.1f) above threshold %.1f" \
+            %(Tlpp, lppThreshold)
+#        clip['vet'] = out
+#        return clip
+
+    clip = modshiftTask(clip)
+    modshift = clip['modshift']
+    fluxVetDict = RoboVet.roboVet(modshift)
+    out['fluxVet'] = fluxVetDict
+
+    assert(fluxVetDict['disp'] in ["candidate", "false positive"])
+
+    if fluxVetDict['disp'] == "false positive":
+        out['isCandidate'] = False
+        out['reasonForFail'] = fluxVetDict['comments']
+#        clip['vet'] = out
+#        return clip
+
+    clip = measureDiffImgCentroidsTask(clip)
+    centroids = clip['diffImg.centroid_timeseries']
+
+    result = cent.measureOffsetInTimeseries(centroids)
+    out['centroidVet'] = result
+    signif = result['signif']
+    offset = result['offset']
+
+    if signif > offsetThreshold_sigma:
+        out['isCandidate'] = False
+        out['reasonForFail'] = "Centroid offset of %.2f (%.1f sigma) detected" \
+            %( offset, signif)
+#        clip['vet'] = out
+#        return clip
+
+
+    clip['vet'] = out
+
+    #Enforce contract
+    clip['vet.isCandidate']
+    clip['vet.reasonForFail']
     return clip
 
 
