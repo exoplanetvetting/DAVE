@@ -8,6 +8,7 @@ import contextlib
 import clipboard
 import traceback
 import parmap
+import signal
 import time
 import pdb
 import sys
@@ -89,6 +90,14 @@ def task(func):
             clip["__meta__"] = dict()
 
         debug = clip.get('config.debug', False)
+        timeout_sec = clip.get('config.timeout_sec', defaultValue=0)
+
+        #If specified, let the function timeout if it takes too long.
+        #If the function takes too long, this will timeout
+        if timeout_sec > 0:
+            signal.signal(signal.SIGALRM, handleTimeout)
+            signal.alarm(timeout_sec)
+
         t0 = time.time()
         try:
             clip = func(*args, **kwargs)
@@ -103,6 +112,11 @@ def task(func):
                 clip['exception'] = e
                 clip['backtrace'] = traceback.format_exc()
 
+        #Cancel any timeouts, if necessary
+        signal.alarm(0)
+
+
+        #Check that function returns a clipboard.
         if not isinstance(clip, clipboard.Clipboard):
             if not isinstance(clip, dict):
                 throwable = ValueError("FAIL: %s did not return a clipboard" %(func.func_name))
@@ -122,6 +136,25 @@ def task(func):
     return wrapperForTask
 
 
+
+class TimeoutError(Exception):
+    pass
+
+def handleTimeout(signum, frame):
+    raise TimeoutError()
+
+
+
+
+    # set the timeout handler
+    try:
+        result = func(*args, **kwargs)
+    except TimeoutError as exc:
+        result = default
+    finally:
+        signal.alarm(0)
+
+    return result
 
 def runAll(func, iterable, config):
     """Run func over every element on iterable in parallel.
