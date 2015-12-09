@@ -1,11 +1,6 @@
-import subprocess
 import os
-import sys
-import math
 from subprocess import check_output, CalledProcessError
-import time
 import numpy
-import os
 
 
 def runModShift(time,flux,model,basename,period,epoch):
