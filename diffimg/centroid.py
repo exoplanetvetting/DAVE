@@ -98,6 +98,86 @@ def exampleFitting():
     return res
 
 
+def measureOffsetInTimeseries(offsets):
+    """
+    Vet the centroid time series produced by measureDiffOffset()
+
+    Measure the average position of the star in and out of transit
+    and estimate the significance of the shift, if any.
+
+    Inputs:
+    --------
+    offsets
+        (Nca) The return value from measureDiffOffset
+
+
+    Returns:
+    -----------
+    A tuple with 4 values
+
+    signif
+        Significance of offset in sigma, for the assumed model
+    offset
+        The mean offset over all measured cadences in units of
+        input (probably pixels)
+    unc
+        Uncertainty in the offset value. unc = std/sqrt(N),
+        signif = offset/unc
+    num
+        Number of cadences used in computation
+
+
+    Notes:
+    ---------
+    I currently assume distribution of offsets is gaussian in x and y,
+    but a more sophisticated model might be in order.
+    """
+
+    idx = offsets[:, 'intr_col'] > 0
+    tmp = offsets[idx]
+    tmp.lookup = offsets.lookup
+
+    numCadence = len(tmp)
+
+    #Compute per cadence offset
+    diffC = np.zeros( (numCadence) )
+    diffR = np.zeros( (numCadence) )
+    for i in range(len(tmp)):
+        ootCol = tmp[i, 'diff_col']
+        ootRow = tmp[i, 'diff_row']
+
+        #itr => in transit
+        itrCol = tmp[i, 'intr_col']
+        itrRow = tmp[i, 'intr_row']
+
+        diffC[i] = ootCol - itrCol
+        diffR[i] = ootRow - itrRow
+
+    #Compute means and std
+    meanDiffCol = np.mean(diffC)
+    rmsDiffCol = np.std(diffC - meanDiffCol)
+    meanDiffRow = np.mean(diffR)
+    rmsDiffRow = np.std(diffR - meanDiffRow)
+
+    #Compute, offset, unc and std
+    offset = np.hypot(meanDiffCol, meanDiffRow)
+    unc = np.hypot(rmsDiffCol, rmsDiffRow) / np.sqrt(numCadence)
+    signif = offset/unc
+
+
+    out = dict()
+    out['signif'] = signif
+    out['offset'] = offset
+    out['unc'] = unc
+    out['numCadence'] = numCadence
+
+    out['meanCol'] = meanDiffCol
+    out['meanRow'] = meanDiffRow
+    out['colUnc'] = rmsDiffCol/np.sqrt(numCadence)
+    out['rowUnc'] = rmsDiffRow/np.sqrt(numCadence)
+    return out
+
+
 def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
     time, prfObj, ccdMod, ccdOut, cube, bbox, rollPhase, flags):
     """Measure Centroid shift between intransit and difference image
