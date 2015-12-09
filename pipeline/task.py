@@ -98,6 +98,8 @@ def task(func):
             signal.signal(signal.SIGALRM, handleTimeout)
             signal.alarm(timeout_sec)
 
+
+        dtype = type(clip)
         t0 = time.time()
         try:
             clip = func(*args, **kwargs)
@@ -117,7 +119,7 @@ def task(func):
 
 
         #Check that function returns a clipboard.
-        if not isinstance(clip, clipboard.Clipboard):
+        if not isinstance(clip, dtype):
             if not isinstance(clip, dict):
                 throwable = ValueError("FAIL: %s did not return a clipboard" %(func.func_name))
 
