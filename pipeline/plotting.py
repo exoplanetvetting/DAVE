@@ -47,3 +47,29 @@ def plotFolded(clip):
     n = min(len(x), len(model))
     plt.plot(x[:n], model[:n], 'r.')
 
+
+
+def plotCentroids(clip):
+    cadence = clip['diffImg.centroid_timeseries']
+    mCol = clip['vet.centroidVet.meanCol']
+    mRow = clip['vet.centroidVet.meanRow']
+    colUnc = clip['vet.centroidVet.colUnc']
+    rowUnc = clip['vet.centroidVet.rowUnc']
+
+    idx = cadence[:,1] > 0
+    colOffset = cadence[idx, 'diff_col'] - cadence[idx, 'intr_col']
+    rowOffset = cadence[idx, 'diff_row'] - cadence[idx, 'intr_row']
+
+    plt.plot(colOffset, rowOffset, 'ko')
+    plt.axhline(lw=.5, color='grey')
+    plt.axvline(lw=.5, color='grey')
+
+    plt.errorbar(mCol, mRow, yerr=colUnc, xerr=rowUnc, color='r', lw=2, ms=5)
+    plt.xlabel("Column offset (pixels)")
+    plt.ylabel("Row offset (pixels)")
+
+    epic = clip['value']
+    period = clip['trapFit.period_days']
+    epoch = clip['trapFit.epoch_bkjd']
+    titleStr = "EPIC %i  P: %.3f days T0 = %.3f BKJD" %(epic, period, epoch)
+    plt.title(titleStr)
