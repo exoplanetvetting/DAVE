@@ -107,6 +107,16 @@ class TestClipboard(unittest.TestCase):
         self.assertEqual(c['x'], 1)
         self.assertEqual(c['y'], 2)
 
+    def testAddedDictionaryBecomesClipboard(self):
+        c = self.clip
+        d = {'x':1, 'y':2}
+
+        c['d'] = d
+        self.assertTrue(isinstance(c.d, Clipboard))
+#        self.assert(True)
+        self.assertEqual(c.d.x, 1)
+        self.assertEqual(c.d.y, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

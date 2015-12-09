@@ -233,7 +233,11 @@ class Clipboard(object):
             try:
                 tmp = tmp[k]
             except KeyError:
-                raise KeyError("Required key %s not found while looking for %s" %(k, keyString))
+                raise KeyError("Required key %s not found while looking for %s"\
+                    %(k, keyString))
+
+        if isinstance(value, dict):
+            value = Clipboard(value)
         tmp[keys[-1]] = value
 
 
