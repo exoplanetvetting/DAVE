@@ -46,7 +46,13 @@ def getSnrOfTransit(time_days, flux_frac, unc, flags, period_days, phase_bkjd, \
     out['duration_hrs'] = 24* ioblk.bestphysvals[2]
     out['ingress_hrs'] = out['duration_hrs'] * ioblk.bestphysvals[3]
     out['depth_frac'] = ioblk.bestphysvals[1]
-    out['bestfitModel'] = ioblk.modellc - 1  #Mean zero
+
+    #compute modelat all input time values
+    subSampleN= 15
+    ioBlock = tf.trapezoid_model_onemodel(time_days, period_days, \
+        out['epoch_bkjd'], 1e6*out['depth_frac'], out['duration_hrs'], \
+        out['ingress_hrs'], subSampleN)
+    out['bestFitModel'] = ioBlock.modellc - 1  #Want mean of zero
 
     out['snr'] = estimateSnr(time_days, flux_frac, flags, out['period_days'], \
         out['epoch_bkjd'], out['duration_hrs'], out['depth_frac'])
@@ -84,6 +90,11 @@ data = dave.fileio.kplrfits.getNumpyArrayFromFitsRec(fits)
     dur_days = duration_hrs / 24.
     idx = kplrfits.markTransitCadences(time, period_days, epoch_bkjd, \
         dur_days, nDurForClip)
+
+    if np.all(idx):
+        msg = "All cadences seem to be in or near transit: "
+        msg += "Period %.1f Duration %.2f hrs" %(period_days, duration_hrs)
+        raise ValueError(msg)
 
     idx |= flags > 0  #Remove data flagged as bad
     idx |= ~np.isfinite(time)  #Or otherwise NaN
