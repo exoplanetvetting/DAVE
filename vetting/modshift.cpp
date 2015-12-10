@@ -744,7 +744,7 @@ void PLOT()
   if(results.sigsec-results.sigpos>results.sigfa2) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
 
   outfile << "set label \"" <<  FORMAT(fabs(results.sigodd-results.sigevn)) << "\" at screen (c+6*d),(e-0.025) center font ',16'";
-  if(fabs(results.sigodd-results.sigevn)>results.sigfa2) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
+  if(fabs(results.sigodd-results.sigevn)>results.sigfa1) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
 
 
   // First plot
