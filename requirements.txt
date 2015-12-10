@@ -12,6 +12,7 @@ oct2py  #LPP
 
 clipsandtasks
 
+gnuplot
 
 g++
 gfortran (or other fortran compiler)
