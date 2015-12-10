@@ -50,6 +50,7 @@ def loadDefaultConfig():
     cfg = dict()
     cfg['debug'] = True
     cfg['campaign'] = 3
+    cfg['timeout_sec'] = 120
     cfg['nPointsForMedianSmooth'] = 2*48
     cfg['blsMinPeriod'] = 0.5
     cfg['blsMaxPeriod'] = 30
@@ -72,7 +73,7 @@ def loadDefaultConfig():
     #My front end
     tasks = """serveTask extractLightcurveTask
         computeCentroidsTask rollPhaseTask cotrendDataTask detrendDataTask
-        blsTask trapezoidFitTask""".split()
+        blsTask trapezoidFitTask vetTask""".split()
     cfg['taskList'] = tasks
 
 
@@ -300,13 +301,6 @@ def trapezoidFitTask(clip):
         period_days, phase_bkjd, duration_hrs, depth_frac)
     clip['trapFit'] = out
 
-    #compute modelat all input time values
-    subSampleN= 15
-    ioBlock = trapFit.trapezoid_model_onemodel(time_days, period_days, \
-        out['epoch_bkjd'], 1e6*out['depth_frac'], out['duration_hrs'], \
-        out['ingress_hrs'], subSampleN)
-    clip['trapFit.bestFitModel'] = ioBlock.modellc - 1  #Want mean of zero
-
     clip['trapFit.period_days']
     clip['trapFit.epoch_bkjd']
     clip['trapFit.duration_hrs']
@@ -404,6 +398,9 @@ def vetTask(clip):
 #        return clip
 
     clip = lppMetricTask(clip)
+    if 'exception' in clip.keys():
+        return clip
+
     Tlpp = clip['lpp.TLpp']
     if Tlpp > lppThreshold:
         out['isCandidate'] = False
@@ -413,6 +410,8 @@ def vetTask(clip):
 #        return clip
 
     clip = modshiftTask(clip)
+    if 'exception' in clip.keys():
+        return clip
     modshift = clip['modshift']
     fluxVetDict = RoboVet.roboVet(modshift)
     out['fluxVet'] = fluxVetDict
@@ -426,6 +425,8 @@ def vetTask(clip):
 #        return clip
 
     clip = measureDiffImgCentroidsTask(clip)
+    if 'exception' in clip.keys():
+        return clip
     centroids = clip['diffImg.centroid_timeseries']
 
     result = cent.measureOffsetInTimeseries(centroids)
