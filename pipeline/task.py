@@ -107,6 +107,8 @@ def task(func):
             raise(e)
         except Exception, e:
             if debug:
+                #Cancel timeout, if any
+                signal.alarm(0)
                 print e
                 pdb.post_mortem(sys.exc_info()[2])
                 raise e
