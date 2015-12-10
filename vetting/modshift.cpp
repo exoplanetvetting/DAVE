@@ -160,7 +160,8 @@ ndat = i;
 period/=2;  // Set period back to normal
 DO_SHIFT();  // Run shift
 results.sigodd = results.sigpri;  // Record sigodd
-syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-odd.dat";
+//syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-odd.dat";
+syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-odd.dat";
 system(syscmd.c_str());
 
 
@@ -187,7 +188,8 @@ ndat = i;
 period/=2;  // Set period back to normal
 DO_SHIFT();  // Run shift
 results.sigevn = results.sigpri;  // Record sigevn
-syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-evn.dat";
+//syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-evn.dat";
+syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-evn.dat";
 system(syscmd.c_str());
 
 
@@ -422,7 +424,8 @@ void DO_SHIFT()
   // Now look at convolved data to find pri, sec, etc. and do other things
   nintrans=0; 
   chi2low = 9E9;
-  tmpstr1 = "outfile1-" + basename + ".dat";
+  // tmpstr1 = "outfile1-" + basename + ".dat";
+  tmpstr1 = basename + "-outfile1.dat";
   outfile.open(tmpstr1.c_str());
   for(i=0;i<ndat;i++)  // Calculate chi squared and find lowest chi squared value
     {
@@ -612,7 +615,8 @@ void DO_SHIFT()
   
   // Uncoment for Plotting
   // Output file for plotting
-  tmpstr1 = "outfile2-" + basename + ".dat";
+  //tmpstr1 = "outfile2-" + basename + ".dat";
+  tmpstr1 = basename + "-outfile2.dat";
   outfile.open(tmpstr1.c_str());
   for(i=0;i<ndat;i++)
     outfile << fixed << setprecision(10) << data[midti+i].phase/period << " " << rms[i] << " " << chi2[i] << " " << results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med) << endl;
@@ -624,17 +628,21 @@ void DO_SHIFT()
 void PLOT()
   {
   // Sort for plotting
-  tmpstr1 = "sort -k 1n outfile2-" + basename + ".dat > outfile3-" + basename + ".dat";
+  // tmpstr1 = "sort -k 1n outfile2-" + basename + ".dat > outfile3-" + basename + ".dat";
+  tmpstr1 = "sort -k 1n " + basename + "-outfile2.dat > " + basename + "-outfile3.dat";
   system(tmpstr1.c_str());
 
   // Make files for binning
-  syscmd = "awk '{print($1,$2)}' outfile1-" + basename + ".dat > " + basename +"-bininput.dat";
+  //syscmd = "awk '{print($1,$2)}' outfile1-" + basename + ".dat > " + basename +"-bininput.dat";
+  syscmd = "awk '{print($1,$2)}' " + basename + "-outfile1.dat > " + basename +"-bininput.dat";
   system(syscmd.c_str());
 
-  syscmd = "awk '{print($1,$2)}' outfile1-" + basename + "-odd.dat > " + basename +"-bininput-odd.dat";
+  // syscmd = "awk '{print($1,$2)}' outfile1-" + basename + "-odd.dat > " + basename +"-bininput-odd.dat";
+  syscmd = "awk '{print($1,$2)}' " +  basename + "-outfile1-odd.dat > " + basename +"-bininput-odd.dat";
   system(syscmd.c_str());
   
-  syscmd = "awk '{print($1,$2)}' outfile1-" + basename + "-evn.dat > " + basename +"-bininput-evn.dat";
+  //syscmd = "awk '{print($1,$2)}' outfile1-" + basename + "-evn.dat > " + basename +"-bininput-evn.dat";
+  syscmd = "awk '{print($1,$2)}' " + basename + "-outfile1-evn.dat > " + basename +"-bininput-evn.dat";
   system(syscmd.c_str());
 
   // Bin data for the binned data
@@ -757,7 +765,7 @@ void PLOT()
   // outfile << "set yrange []" << endl;
   outfile << "set yrange [1.0E6*STATS_min-0.5*(STATS_max-STATS_min) to 1.0E6*STATS_max+0.5*(STATS_max-STATS_min)]" << endl;
   outfile << "set autoscale y" << endl;
-  outfile << "plot 'outfile1-" << basename << ".dat' u 1:($2*1.0E6) pt 7 ps 0.1 lc 1 notitle, '' u ($1+1.0):($2*1.0E6) pt 7 ps 0.1 lc 1 notitle, '' u ($1+2.0):($2*1.0E6) pt 7 ps 0.1 lc 1 notitle, '" << basename << "-binned2.dat' u 1:($2*1.0E6) pt 7 ps 0.1 lc 3 notitle, '' u ($1+1.0):($2*1.0E6) pt 7 ps 0.1 lc 3 notitle, 'outfile1-" << basename << ".dat' u 1:($3*1.0E6) with lines lt 1 lc 7 lw 5 notitle, '' u ($1+1.0):($3*1.0E6) with lines lt 1 lc 7 lw 5 notitle" << endl;
+  outfile << "plot '" << basename << "-outfile1.dat' u 1:($2*1.0E6) pt 7 ps 0.1 lc 1 notitle, '' u ($1+1.0):($2*1.0E6) pt 7 ps 0.1 lc 1 notitle, '' u ($1+2.0):($2*1.0E6) pt 7 ps 0.1 lc 1 notitle, '" << basename << "-binned2.dat' u 1:($2*1.0E6) pt 7 ps 0.1 lc 3 notitle, '' u ($1+1.0):($2*1.0E6) pt 7 ps 0.1 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1.0E6) with lines lt 1 lc 7 lw 5 notitle, '' u ($1+1.0):($3*1.0E6) with lines lt 1 lc 7 lw 5 notitle" << endl;
 
   // Second Plot
   outfile << "set origin 0.0,0.435" << endl;
@@ -776,7 +784,7 @@ void PLOT()
   outfile << "set label '' at " << setprecision(10) << results.sechightime/period << ", graph 0.985 front point pt 11 ps 0.8" << endl;
   outfile << "set label '' at " << setprecision(10) << results.terlowtime/period  << ", graph 0.015 front point pt 8  ps 0.8" << endl;
   outfile << "set object rect from 0.75,-1E7 to 1.25,1E7 fc rgb '#D3D3D3' lw 0" << endl;
-  outfile << "plot 'outfile3-" << basename << ".dat' u 1:(1E6*$4) with lines lt 1 lc 7 notitle, '' u ($1+1.0):(1E6*$4) with lines lt 1 lc 7 notitle, 0 with lines lt 2 lc 1 lw 5 notitle, " << setprecision(10) << results.sigfa1*1E6*results.depsig << " with lines lt 2 lc 3 lw 5 notitle, " << -1.0*results.sigfa1*1.0E6*results.depsig << " with lines lt 2 lc 3 lw 5 notitle" << endl;
+  outfile << "plot '" << basename << "-outfile3.dat' u 1:(1E6*$4) with lines lt 1 lc 7 notitle, '' u ($1+1.0):(1E6*$4) with lines lt 1 lc 7 notitle, 0 with lines lt 2 lc 1 lw 5 notitle, " << setprecision(10) << results.sigfa1*1E6*results.depsig << " with lines lt 2 lc 3 lw 5 notitle, " << -1.0*results.sigfa1*1.0E6*results.depsig << " with lines lt 2 lc 3 lw 5 notitle" << endl;
 
   outfile << "unset arrow" << endl;
   outfile << "unset object" << endl;
@@ -798,7 +806,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel 'Flux (ppm)'" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u 1:($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6) with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
 
@@ -819,7 +827,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2-odd.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u 1:($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2-odd.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6) with lines lt 1 lc 7 notitle" << endl;
   
   outfile << "unset label" << endl;
   
@@ -839,7 +847,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2-evn.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u 1:($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2-evn.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6) with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
   
@@ -860,7 +868,7 @@ void PLOT()
   outfile << "set ytics auto" << endl;
   outfile << "unset ylabel" << endl;
   outfile << "set ylabel 'Flux (ppm)'" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u ($1+" << setprecision(10) << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
 
@@ -880,7 +888,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u ($1+" << setprecision(10) << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
 
@@ -900,7 +908,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, 'outfile1-" << basename << ".dat' u ($1+" << setprecision(10) << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
   
@@ -912,14 +920,14 @@ void PLOT()
 
 
   // Clean up files
-//   syscmd = "cp outfile1-" + basename + ".dat " + basename + ".cln";  // Make clean file for use later
-//   system(syscmd.c_str());
-//   syscmd = "rm outfile?-" + basename + ".dat";
-//   system(syscmd.c_str());
-  //syscmd = "rm " + basename + "-bin*dat";
-  //system(syscmd.c_str());
-//   syscmd = "rm " + basename + "-ModShift.gnu";
-//   system(syscmd.c_str());
+  // syscmd = "cp outfile1-" + basename + ".dat " + basename + ".cln";  // Make clean file for use later - COMMENTING OUT - NOT NEEDED AT PRESENT
+  // system(syscmd.c_str());
+  syscmd = "rm " + basename + "-outfile*.dat";
+  system(syscmd.c_str());
+  syscmd = "rm " + basename + "-bin*dat";
+  system(syscmd.c_str());
+  syscmd = "rm " + basename + "-ModShift.gnu";
+  system(syscmd.c_str());
   }
   
 //////////////////////////////////////////////////////////////////////////////
