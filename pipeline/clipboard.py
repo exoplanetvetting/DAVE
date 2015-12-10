@@ -11,8 +11,9 @@ __URL__ = "$URL: svn+ssh://flux/home/fmullall/svn/kepler/k2phot/clipboard.py $"
 def loadClipboard(filename):
     """Load a previously saved clipboard"""
     sh = shelve.open(filename)
-    if not os.path.exists(filename+".dat"):
-        raise IOError("File not found: %s" %(filename))
+    if not os.path.exists(filename):
+        if not os.path.exists(filename+".dat"):
+            raise IOError("File not found: %s" %(filename))
 
     clip = sh['clip']
     return clip
