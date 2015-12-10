@@ -1,6 +1,7 @@
-import os
 from subprocess import check_output, CalledProcessError
+import signal
 import numpy
+import os
 
 
 def runModShift(time,flux,model,basename,period,epoch):
@@ -67,14 +68,20 @@ def runModShift(time,flux,model,basename,period,epoch):
 #    flux  = data[:,1]
 #    model = data[:,2]
 
+
+    timeout_sec = 10
     # Write data to a file so it can be read by model-shift compiled C code
     tmpFilename = 'model-shift-in.txt'
     numpy.savetxt(tmpFilename, numpy.c_[time,flux,model])
 
     # Run modshift, and return the output
+    #Python 2's subprocess module does not easily support timeouts, so
+    #instead we use the shell's version
+    #Insert rant here asking why subprocess doesn't have a timeout when it's
+    #the complicated module that was supposed to communication better.
     path = getModShiftDir()
-    cmd = ["%s/modshift" %(path), 'model-shift-in.txt', basename, \
-        str(period), str(epoch)]
+    cmd = ["timeout", "%i" %(timeout_sec),  "%s/modshift" %(path), \
+        'model-shift-in.txt', basename, str(period), str(epoch)]
 
     try:
         modshiftcmdout = check_output(cmd)
@@ -82,6 +89,7 @@ def runModShift(time,flux,model,basename,period,epoch):
         #The called process error message isn't very helpful
         msg = "FAIL: modshift returned error: %s" %(e.output)
         raise IOError(msg)
+
 
     # Delete the input text file
     os.remove(tmpFilename)
