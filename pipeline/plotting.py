@@ -37,15 +37,23 @@ def plotFolded(clip):
     time = clip['serve.time']
     flux = clip['detrend.flux_frac']
     period = clip['trapFit.period_days']
+    epoch = clip['trapFit.epoch_bkjd']
 
-    phi = np.fmod(time- .25*period, period)
+#    phi = np.fmod(time- epoch + .25*period, period)
+    if epoch > time[0]:
+        diff = epoch-time[0]
+        epoch -= period*np.ceil(diff/period)
+        print "Reducing epoch"
+        print
+
+    print epoch, time[0]
+    phi = np.fmod(time-epoch + .25*period, period)
+#    phi = np.fmod(time, period)
     plt.plot(phi[~fl], flux[~fl], 'k.')
 
-    #Fudge to account for the fact that bls doesn't return the *right* model
-    model = clip['trapFit.bestfitModel']
-    x = phi[~fl]
-    n = min(len(x), len(model))
-    plt.plot(x[:n], model[:n], 'r.')
+    model = clip['trapFit.bestFitModel']
+    plt.plot(phi[~fl], model[~fl], 'r.')
+    plt.xlabel("Phase (days)")
 
 
 
