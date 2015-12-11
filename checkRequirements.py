@@ -14,7 +14,7 @@ import pip
 
 
 def checkInstalled(cmd):
-    print("Checking for %s".format(cmd))
+    print("Checking for {}".format(cmd))
     try:
         res = subprocess.check_output(cmd.split())
     except OSError:
@@ -53,6 +53,8 @@ def main():
     isOk &= checkInstalled("python2.7 --version")
     isOk &= checkInstalled("g++ -dumpversion")
     isOk &= checkInstalled("octave --version")
+    isOk &= checkInstalled("gnuplot --version")
+
 #    isOk &= checkInstalled("")
 
     isOk &= checkImport("numpy")
