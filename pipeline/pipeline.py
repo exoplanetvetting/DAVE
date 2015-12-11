@@ -18,7 +18,12 @@ import numpy as np
 
 import dave.pipeline.clipboard as clipboard
 import dave.fileio.kplrfits as kplrfits
-import dave.lpp.calcLPPoctave as lpp
+
+try:
+    import dave.lpp.calcLPPoctave as lpp
+except ImportError:
+    print "Warn: LPP can't be imported"
+
 import dave.fileio.mastio as mastio
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
@@ -402,13 +407,13 @@ def vetTask(clip):
     if 'exception' in clip.keys():
         return clip
 
-    Tlpp = clip['lpp.TLpp']
-    if Tlpp > lppThreshold:
-        out['isCandidate'] = False
-        out['reasonForFail'] = "TLpp (%.1f) above threshold %.1f" \
-            %(Tlpp, lppThreshold)
-#        clip['vet'] = out
-#        return clip
+#    Tlpp = clip['lpp.TLpp']
+#    if Tlpp > lppThreshold:
+#        out['isCandidate'] = False
+#        out['reasonForFail'] = "TLpp (%.1f) above threshold %.1f" \
+#            %(Tlpp, lppThreshold)
+##        clip['vet'] = out
+##        return clip
 
     clip = modshiftTask(clip)
     if 'exception' in clip.keys():
