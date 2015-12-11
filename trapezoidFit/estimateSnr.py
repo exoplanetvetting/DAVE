@@ -32,6 +32,7 @@ def getSnrOfTransit(time_days, flux_frac, unc, flags, period_days, phase_bkjd, \
     """
 
     idx = np.isfinite(time_days) & (np.isfinite(flux_frac))
+    idx = idx & ~flags
     ioblk = tf.trapezoid_fit(time_days[idx], 1+flux_frac[idx], unc[idx], \
                   period_days, phase_bkjd, duration_hrs, \
                   1e6*depth_frac, fitTrialN=13, fitRegion=10.0, \

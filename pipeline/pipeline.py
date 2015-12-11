@@ -301,9 +301,11 @@ def trapezoidFitTask(clip):
 
     assert(np.all(np.isfinite(time_days[~flags])))
     assert(np.all(np.isfinite(flux_norm[~flags])))
-    out = tf.getSnrOfTransit(time_days[~flags], flux_norm[~flags],\
-        unc[~flags], flags[~flags], \
+    out = tf.getSnrOfTransit(time_days, flux_norm,\
+        unc, flags, \
         period_days, phase_bkjd, duration_hrs, depth_frac)
+
+    assert(len(time_days) == len(out['bestFitModel']))
     clip['trapFit'] = out
 
     clip['trapFit.period_days']
