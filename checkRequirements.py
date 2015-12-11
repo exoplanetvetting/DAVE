@@ -54,6 +54,7 @@ def main():
     isOk &= checkInstalled("g++ -dumpversion")
     isOk &= checkInstalled("octave --version")
     isOk &= checkInstalled("gnuplot --version")
+    isOk &= checkInstalled("gfortran --version")
 
 #    isOk &= checkInstalled("")
 
