@@ -66,7 +66,7 @@ def loadDefaultConfig():
     path = lpp.getLppDir()
     cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
     cfg['modshiftBasename'] = "modshift"
-    
+
     #Location of the model PRF fits files.
     cfg['prfPath'] = os.path.join(os.environ['HOME'], ".mastio/keplerprf")
 
@@ -320,8 +320,8 @@ def modshiftTask(clip):
     flux = clip['detrend.flux_frac']
     fl = clip['detrend.flags']
 
-    basename = str(clip['value'])
-    #basename = clip['config.modshiftBasename']
+    epic = clip['value']
+    basename = clip['config.modshiftBasename'] + "%010i" %(epic)
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
     dur_hrs =  clip['trapFit.duration_hrs']
@@ -335,7 +335,7 @@ def modshiftTask(clip):
     model = ioBlock.modellc -1   #Want mean of zero
 #    model *= -1  #Invert for testing
 
-
+    basename = "%s-%010i" %(basename, epic)
     out = ModShift.runModShift(time[~fl], flux[~fl], model, basename, \
         period_days, epoch_bkjd)
 
