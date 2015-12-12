@@ -37,6 +37,7 @@ def runOne(k2id, config):
     clip = clipboard.Clipboard()
     clip['config'] = config
     clip['value'] = k2id
+    #clip['dataStorePath'] = config['dataStorePath']
 
     #Check that all the tasks are properly defined
     for t in taskList:
@@ -70,13 +71,15 @@ def loadDefaultConfig():
     #space where the transits cluster.
     path = lpp.getLppDir()
     cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
-    cfg['modshiftBasename'] = "modshift"
+    cfg['modshiftBasename'] = os.path.join(os.environ['HOME'],"daveOutput","modshift")
+    #Location of the place all the light curves and TPF files are stored
+    cfg['dataStorePath'] = os.path.join(os.environ['HOME'],".mastio/k2")
 
     #Location of the model PRF fits files.
     cfg['prfPath'] = os.path.join(os.environ['HOME'], ".mastio/keplerprf")
 
     #My front end
-    tasks = """serveTask extractLightcurveTask
+    tasks = """checkDirExistTask serveTask extractLightcurveTask
         computeCentroidsTask rollPhaseTask cotrendDataTask detrendDataTask
         blsTask trapezoidFitTask vetTask""".split()
     cfg['taskList'] = tasks
@@ -89,14 +92,47 @@ def loadDefaultConfig():
 
 
 
+@task.task
+def checkDirExistTask(clip):
+    """
+    Code checks to see if certain directories or files exist.
+    """
+    modbase=clip['config.modshiftBasename']
+    prfdir=clip['config.prfPath']
+    lppmap=clip['config.lppMapFilePath']
+    datadir=clip['config.dataStorePath']
+    
+    moddir=os.path.dirname(modbase)
+    
+    errors=[]
+    try:
+        open(lppmap)
+    except IOError:
+        errors.append(("Cannot Find LPP Map, %s " % lppmap))
+    if not (os.path.exists(moddir)):
+        errors.append("Cannot Find Modshift Write Dir, %s " % moddir)        
+    if not (os.access(moddir, os.W_OK)):
+        errors.append("Cannot Write to modshift directory %s " % moddir)
+    if not (os.access(prfdir,os.R_OK)):
+        errors.append("Cannot Read from prf Directory, %s "% prfdir)
+    if not (os.access(datadir,os.R_OK)):
+        errors.append("Cannot Read from Data Dir %s " % datadir)
+    
+    if len(errors) > 0:
+        new="\n"
+        msg=new.join(errors)
+        raise IOError(msg)
+    
 
+    
 
 @task.task
 def serveTask(clip):
     k2id = clip['value']
     campaign = clip['config.campaign']
+    storeDir = clip['config.dataStorePath']
 
-    clip['serve'] = loadTpfAndLc(k2id, campaign)
+    clip['serve'] = loadTpfAndLc(k2id, campaign, storeDir)
 
     #Enforce contract. (Make sure expected keys are in place)
     clip['serve.time']
@@ -499,8 +535,8 @@ def saveClip(clip):
     sh.close()
     return clip
 
-def loadTpfAndLc(k2id, campaign):
-    ar = mastio.K2Archive()
+def loadTpfAndLc(k2id, campaign, storeDir):
+    ar = mastio.K2Archive(storeDir)
 
     out = dict()
     fits, hdr = ar.getLongTpf(k2id, campaign, header=True)

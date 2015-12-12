@@ -18,6 +18,8 @@ fid=open(outfile,'a')
 
 cfg = pipe.loadDefaultConfig()
 cfg['debug'] = False
+cfg['modshiftBasename']='/home/sthomp/daveOut/jj/modshift';
+cfg['prfPath']='morejunk/junk';
 
 data=np.loadtxt(infile,dtype='float',delimiter=',',comments='#')
 #%%
