@@ -3,8 +3,9 @@
 import sys
 import Gnuplot, Gnuplot.funcutils
 import numpy
+import math
 
-def onepage(basename,time,rawflux,detrendflux,modelflux):
+def onepage(basename,time,rawflux,detrendflux,modelflux,period,epoch):
 
     """Make diagnostic plots
 
@@ -18,8 +19,13 @@ def onepage(basename,time,rawflux,detrendflux,modelflux):
         The full raw flux time series 
     detrendflux
         The detrended flux time series
-    model
-        The fitted model
+    modelflux
+        The fitted model flux time series
+    period
+        The period of the system in days.
+    epoch
+        The epoch of the system in days.
+        
 
     Returns:
     -------------
@@ -30,31 +36,31 @@ def onepage(basename,time,rawflux,detrendflux,modelflux):
     A pdf of plots
     """
 
-    # Remove NAN's
-    #badvals = ~numpy.isnan(rawflux)
-    #time        =        time[badvals]
-    #rawflux     =     rawflux[badvals]
-    #detrendflux = detrendflux[badvals]
-    #modelflux   =   modelflux[badvals]
-    
-    #time        =        time[~flags]
-    #rawflux     =     rawflux[~flags]
-    #detrendflux = detrendflux[~flags]
-    #modelflux   =   modelflux[~flags]
 
-    #print(len(rawflux))
+    
 
     g = Gnuplot.Gnuplot(persist=1)
-    g("set terminal pdfcairo font ',6'")
+    g("set terminal pdfcairo font 'Droid Sans Mono,6'")
     g("set output '"+basename+".pdf'")
-    g("set xlabel 'Time'")
-    g("set format y '%4.2E'")
+    g("set xlabel 'Time (BKJD)'")
+    g("set format y '%8.1E'")
     g("set ylabel 'Raw Flux'")
     g("set multiplot layout 3,1")
     #g("set 
     g.plot(Gnuplot.Data(time,rawflux, with_='points pt 7 lc 7 ps 0.05'))
     g("set ylabel 'Detrended Flux'")
-    g.plot(Gnuplot.Data(time,detrendflux, with_='points pt 7 lc 7 ps 0.5'),Gnuplot.Data(time,modelflux, with_='lines lt 1 lc 1 lw 1')  )
+    g.plot(Gnuplot.Data(time,modelflux, with_='lines lt 1 lc 1 lw 1'),Gnuplot.Data(time,detrendflux, with_='points pt 7 lc 7 ps 0.05'))
+    
+    
+    # Plot phased data
+    phase = (time-epoch)/period - numpy.around((time-epoch)/period)
+    p = phase.argsort()
+    phase = phase[p]
+    detrendflux = detrendflux[p]
+    modelflux = modelflux[p]
+    
+    g("set xlabel 'Phase'")
+    g.plot(Gnuplot.Data(phase,modelflux, with_='lines lt 1 lc 1 lw 3'),Gnuplot.Data(phase,detrendflux, with_='points pt 7 lc 7 ps 0.05'))
     g("unset multiplot")
 
 
