@@ -507,6 +507,34 @@ def vetTask(clip):
 #    return clip
 
 
+def plotTask(clip):
+    
+    time = clip['serve.time']
+    raw  = clip['extract.rawLightcurve']
+    flux = clip['detrend.flux_frac']
+    fl = clip['detrend.flags']
+    
+    epic = clip['value']
+    basename = clip['config.modshiftBasename'] + "%010i" %(epic)
+    period_days = clip['trapFit.period_days']
+    epoch_bkjd = clip['trapFit.epoch_bkjd']
+    #dur_hrs =  clip['trapFit.duration_hrs']
+    #ingress_hrs = clip['trapFit.ingress_hrs']
+    #depth_ppm = 1e6*clip['trapFit.depth_frac']
+
+    subSampleN= 15
+    ioBlock = trapFit.trapezoid_model_onemodel(time[~fl], period_days, \
+        epoch_bkjd, depth_ppm, dur_hrs, \
+        ingress_hrs, subSampleN)
+    model = ioBlock.modellc -1   #Want mean of zero
+
+    out = daveplot.onepage(basename,time,raw,flux,model)
+
+    clip['plot'] = out
+
+    return clip
+  
+
 def saveOnError(clip):
     """Note this is not a task, because it should run even if
     an exception is raised"""
