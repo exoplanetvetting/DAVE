@@ -71,8 +71,8 @@ def loadDefaultConfig():
     #space where the transits cluster.
     path = lpp.getLppDir()
     cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
-    cfg['modshiftBasename'] = os.path.join(os.environ['HOME'],"daveOutput","modshift")
-    cfg['onepageBasename'] = os.path.join(os.environ['HOME'],"daveOutput","onepage")
+    cfg['modshiftBasename'] = os.path.join(os.environ['HOME'],"daveOutput","")  # Jeff removed modshift from the start of the basename, since the modshift code appends "modshift" at the end of the filename
+    cfg['onepageBasename']  = os.path.join(os.environ['HOME'],"daveOutput","") # Jeff added this. 
     #Location of the place all the light curves and TPF files are stored
     cfg['dataStorePath'] = os.path.join(os.environ['HOME'],".mastio/k2")
 
@@ -82,7 +82,7 @@ def loadDefaultConfig():
     #My front end
     tasks = """checkDirExistTask serveTask extractLightcurveTask
         computeCentroidsTask rollPhaseTask cotrendDataTask detrendDataTask
-        blsTask trapezoidFitTask vetTask""".split()
+        blsTask trapezoidFitTask vetTask plotTask""".split()   # Jeff added plotTask
     cfg['taskList'] = tasks
 
 
@@ -99,11 +99,13 @@ def checkDirExistTask(clip):
     Code checks to see if certain directories or files exist.
     """
     modbase=clip['config.modshiftBasename']
+    plotbase=clip['config.onepageBasename']  # Jeff added this
     prfdir=clip['config.prfPath']
     lppmap=clip['config.lppMapFilePath']
     datadir=clip['config.dataStorePath']
     
     moddir=os.path.dirname(modbase)
+    plotdir=os.path.dirname(plotbase)
     
     errors=[]
     try:
@@ -114,6 +116,10 @@ def checkDirExistTask(clip):
         errors.append("Cannot Find Modshift Write Dir, %s " % moddir)        
     if not (os.access(moddir, os.W_OK)):
         errors.append("Cannot Write to modshift directory %s " % moddir)
+    if not (os.path.exists(plotdir)):                                          # Jeff added this and next three lines
+        errors.append("Cannot Find Plotting Write Dir, %s " % plotdir)        
+    if not (os.access(plotdir, os.W_OK)):
+        errors.append("Cannot Write to plotting directory %s " % plotdir)
     if not (os.access(prfdir,os.R_OK)):
         errors.append("Cannot Read from prf Directory, %s "% prfdir)
     if not (os.access(datadir,os.R_OK)):
@@ -124,6 +130,7 @@ def checkDirExistTask(clip):
         msg=new.join(errors)
         raise IOError(msg)
     
+    return clip  # Jeff added this line - without it task was throwing exception and crashing
 
     
 
@@ -365,7 +372,7 @@ def modshiftTask(clip):
     fl = clip['detrend.flags']
 
     epic = clip['value']
-    basename = clip['config.modshiftBasename'] + "%010i" %(epic)
+    basename = clip['config.modshiftBasename'] #  Jeff edited to remove ->  + "%010i" %(epic)   since modshift cpp code already appends basename
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
     dur_hrs =  clip['trapFit.duration_hrs']
@@ -379,7 +386,7 @@ def modshiftTask(clip):
     model = ioBlock.modellc -1   #Want mean of zero
 #    model *= -1  #Invert for testing
 
-    basename = "%s-%010i" %(basename, epic)
+    basename = "%s%010i" %(basename, epic)  # Jeff modified
     out = ModShift.runModShift(time[~fl], flux[~fl], model, basename, \
         period_days, epoch_bkjd)
 
@@ -508,6 +515,8 @@ def vetTask(clip):
 #    return clip
 
 
+import dave.plot.daveplot as daveplot
+@task.task
 def plotTask(clip):
     
     time = clip['serve.time']
@@ -516,12 +525,14 @@ def plotTask(clip):
     fl = clip['detrend.flags']
     
     epic = clip['value']
-    basename = clip['config.onepageBasename'] + "%010i" %(epic)
+    basename = clip['config.onepageBasename'] #  Jeff removed end so it isn't redudant with plotting module epic adding + "%010i" %(epic)
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
     dur_hrs =  clip['trapFit.duration_hrs']
-    #ingress_hrs = clip['trapFit.ingress_hrs']
-    #depth_ppm = 1e6*clip['trapFit.depth_frac']
+    ingress_hrs = clip['trapFit.ingress_hrs']
+    depth_ppm = 1e6*clip['trapFit.depth_frac']
+
+    basename = "%s%010i" %(basename, epic)
 
     subSampleN= 15
     ioBlock = trapFit.trapezoid_model_onemodel(time[~fl], period_days, \

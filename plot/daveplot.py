@@ -87,25 +87,27 @@ def onepage(pdfname,epicname,time,rawflux,detrendflux,modelflux,period,epoch,dur
 
     # Start plotting
     g = Gnuplot.Gnuplot(persist=1)
-    g("set terminal pdfcairo font 'Droid Sans Mono,5'")
-    g("set output '"+pdfname+".pdf'")
+    g("set terminal pdfcairo size 11in,8.5in font 'Droid Sans Mono,12'")
+    g("set output '"+pdfname+"-onepage.pdf'")
     g("set xlabel 'Time (BKJD)'")
     g("set format y '%7.1E'")
     g("set ylabel 'Raw Flux'")
-    g("set multiplot layout 4,1 title 'EPIC " + str(epicname) + ", P = " + str(period)[:8] + " days, E = " + str(epoch)[:11] + " BKJD' font ',10'")
+    g("set multiplot layout 4,1 title 'EPIC " + str(epicname) + ", P = " + str(period)[:8] + " days, E = " + str(epoch)[:11] + " BKJD' font ',22'")
 
     # Raw Flux
-    g.plot(Gnuplot.Data(time,rawflux, with_='points pt 7 lc 7 ps 0.05'))
+    g("set xrange [] writeback")
+    g.plot(Gnuplot.Data(time,rawflux, with_='points pt 7 lc 7 ps 0.25'))
     
     # Detrended full time-series will full model repeated
     g("set format y '%7.0f'")
     g("set ylabel 'Detrended Flux (ppm)'")
-    g.plot(Gnuplot.Data(fullphase,fullmod, with_='lines lt 1 lc 1 lw 1'),Gnuplot.Data(time,detrendflux, with_='points pt 7 lc 7 ps 0.05'))
+    g("set xrange restore")
+    g.plot(Gnuplot.Data(fullphase,fullmod, with_='lines lt 1 lc 1 lw 3'),Gnuplot.Data(time,detrendflux, with_='points pt 7 lc 7 ps 0.25'))
 
     # Phased full light curve
     g("set xlabel 'Phase'")
     g("set xrange [-0.25 to 1.25]")
-    g.plot(Gnuplot.Data(phase,modelfluxphased, with_='lines lt 1 lc 1 lw 3'),Gnuplot.Data(phase,detrendfluxphased, with_='points pt 7 lc 7 ps 0.05'))
+    g.plot(Gnuplot.Data(phase,modelfluxphased, with_='lines lt 1 lc 1 lw 10'),Gnuplot.Data(phase,detrendfluxphased, with_='points pt 7 lc 7 ps 0.25'))
     
     # Phased Zoomed Primary
     g("set size 0.36,0.25")
@@ -113,9 +115,10 @@ def onepage(pdfname,epicname,time,rawflux,detrendflux,modelflux,period,epoch,dur
     g("set label 1 'All' at graph 0.5, graph 0.9 center")
     g("set xrange [" + str(-2.5*duration/period) + " to " + str(2.5*duration/period) + "]")
     g("set yrange [] writeback")
+    g("set y2range [] writeback")
     g("set ylabel ' '")
     g("set ytics ('       ' 0)")
-    g.plot(Gnuplot.Data(phase,modelfluxphased, with_='lines lt 1 lc 1 lw 3'),Gnuplot.Data(phase,detrendfluxphased, with_='points pt 7 lc 7 ps 0.05'))
+    g.plot(Gnuplot.Data(phase,modelfluxphased, with_='lines lt 1 lc 1 lw 10'),Gnuplot.Data(phase,detrendfluxphased, with_='points pt 7 lc 7 ps 0.25'))
     
     # Odd transits
     g("set size 0.36,0.25")
@@ -127,7 +130,7 @@ def onepage(pdfname,epicname,time,rawflux,detrendflux,modelflux,period,epoch,dur
     g("set ylabel 'Detrended Flux (ppm)'")
     g("set format y '%7.0f'")
     g("unset y2label")
-    g.plot(Gnuplot.Data(oddphase,oddmodelfluxphased, with_='lines lt 1 lc 1 lw 3'),Gnuplot.Data(oddphase,odddetrendfluxphased, with_='points pt 7 lc 7 ps 0.05'))
+    g.plot(Gnuplot.Data(oddphase,oddmodelfluxphased, with_='lines lt 1 lc 1 lw 10'),Gnuplot.Data(oddphase,odddetrendfluxphased, with_='points pt 7 lc 7 ps 0.25'))
     
     # Even transits
     g("set size 0.36,0.25")
@@ -138,9 +141,10 @@ def onepage(pdfname,epicname,time,rawflux,detrendflux,modelflux,period,epoch,dur
     g("set y2label 'Detrended Flux (ppm)'")
     g("set y2tics mirror")
     g("set yrange restore")
+    g("set y2range restore")
     g("set format y '%7.0f'")
     g("set xrange [" + str(-2.5*duration/period) + " to " + str(2.5*duration/period) + "]")
-    g.plot(Gnuplot.Data(evnphase,evnmodelfluxphased, with_='lines lt 1 lc 1 lw 3'),Gnuplot.Data(evnphase,evndetrendfluxphased, with_='points pt 7 lc 7 ps 0.05'))
+    g.plot(Gnuplot.Data(evnphase,evnmodelfluxphased, with_='lines lt 1 lc 1 lw 10'),Gnuplot.Data(evnphase,evndetrendfluxphased, with_='points pt 7 lc 7 ps 0.25'))
      
     
     g("unset multiplot")
