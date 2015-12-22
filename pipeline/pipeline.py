@@ -48,6 +48,14 @@ def runOne(k2id, config):
         f = eval(t)
         clip = f(clip)
 
+    if 'ODD_EVEN_DIFF' in clip['vet.reasonForFail']:             # If it failed due to odd-even, then
+        clip['bls.period'] = 2*clip['bls.period']                # Double the period
+        taskList = """trapezoidFitTask vetTask plotTask""".split()  # And re-fit, re-vet, and re-plot
+        clip['vet.fluxVetcomments'] = clip['vet.fluxVet.comments'] + "Re-fit at twice period due to odd/even"   # Make a note we re-fit at 2*period
+        for t in taskList:
+          f = eval(t)
+          clip = f(clip)
+    
     return clip
 
 
