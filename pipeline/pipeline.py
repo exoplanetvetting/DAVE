@@ -519,7 +519,7 @@ def plotTask(clip):
     basename = clip['config.onepageBasename'] + "%010i" %(epic)
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
-    #dur_hrs =  clip['trapFit.duration_hrs']
+    dur_hrs =  clip['trapFit.duration_hrs']
     #ingress_hrs = clip['trapFit.ingress_hrs']
     #depth_ppm = 1e6*clip['trapFit.depth_frac']
 
@@ -529,7 +529,7 @@ def plotTask(clip):
         ingress_hrs, subSampleN)
     model = ioBlock.modellc -1   #Want mean of zero
 
-    out = daveplot.onepage(basename,time[~fl],raw[~fl],flux[~fl],model,period_days,epoch_bkjd)
+    out = daveplot.onepage(basename,epic,time[~fl],raw[~fl],flux[~fl],model,period_days,epoch_bkjd,dur_hrs/24.0)
 
     clip['plot'] = out
 
