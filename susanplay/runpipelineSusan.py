@@ -9,22 +9,22 @@ import dave.pipeline.pipeline as pipe
 import numpy as np
 import dave.pipeline.plotting as pp
 import matplotlib.pyplot as plt
-import sueplotting as sp
-
-infile='/home/sthomp/DAVE/playK2/k2_go3049.txt'
-#infile='/home/sthomp/DAVE/playK2/k2_short.txt'
-outfile='/home/sthomp/DAVE/playK2/k2_go3049_bad.txt'
+import dave.susanplay.sueplotting as sp
+cfg
+#infile='/home/sthomp/DAVE/playK2/k2_go3049.txt'
+infile='/home/sthomp/DAVE/playK2/k2_short.txt'
+outfile='/home/sthomp/DAVE/playK2/k2_short_bad.txt'
 fid=open(outfile,'a')
 #%%
 
 cfg = pipe.loadDefaultConfig()
 cfg['debug'] = False
-cfg['modshiftBasename']='/home/sthomp/daveOutput/';
+cfg['modshiftBasename']='/home/sthomp/daveOutput/vet';
 #cfg['prfPath']='morejunk/junk';
 
 data=np.loadtxt(infile,dtype='float',delimiter=',',comments='#')
 #%%
-for i,v in enumerate(data[72:74,0]):
+for i,v in enumerate(data[3:4,0]):
     
     epicid=np.int(v)
     print epicid

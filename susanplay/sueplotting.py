@@ -42,5 +42,5 @@ def indivPlot(output):
     """Plot individual transits."""
     
     
-def setlimits(frac):
+#def setlimits(frac):
     

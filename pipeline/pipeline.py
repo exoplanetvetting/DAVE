@@ -116,6 +116,8 @@ def checkDirExistTask(clip):
     
     moddir=os.path.dirname(modbase)
     plotdir=os.path.dirname(plotbase)
+    vetdir=getVetDir()
+    vetExName="%s%s" % (vetdir, "/modshift")
     
     errors=[]
     try:
@@ -134,6 +136,9 @@ def checkDirExistTask(clip):
         errors.append("Cannot Read from prf Directory, %s "% prfdir)
     if not (os.access(datadir,os.R_OK)):
         errors.append("Cannot Read from Data Dir %s " % datadir)
+    if not (os.access(vetExName,os.EX_OK)):
+        errors.append("Make not run on Modshift Makefile, executable not found. %s " % vetExName )
+    
     
     if len(errors) > 0:
         new="\n"
@@ -142,6 +147,13 @@ def checkDirExistTask(clip):
     
     return clip  # Jeff added this line - without it task was throwing exception and crashing
 
+def getVetDir():
+    """Get the path where Vetting stores its executables"""
+    pathSep = "/"
+    path = os.path.realpath(__file__)
+    path = pathSep.join(path.split(pathSep)[:-2])
+    path = "%s%s" % (path,"/vetting")
+    return path
     
 
 @task.task
