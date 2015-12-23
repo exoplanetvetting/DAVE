@@ -55,8 +55,8 @@ def runOne(k2id, config):
                 taskList = """trapezoidFitTask vetTask plotTask""".split()  # And re-fit, re-vet, and re-plot
                 clip['vet.fluxVet.comments'] = clip['vet.fluxVet.comments'] + "Re-fit at twice period due to odd/even"   # Make a note we re-fit at 2*period
                 for t in taskList:
-                  f = eval(t)
-                  clip = f(clip)
+                    f = eval(t)
+                    clip = f(clip)
     
     return clip
 
