@@ -102,30 +102,30 @@ def checkDirExistTask(clip):
     prfdir=clip['config.prfPath']
     lppmap=clip['config.lppMapFilePath']
     datadir=clip['config.dataStorePath']
-    
+
     moddir=os.path.dirname(modbase)
-    
+
     errors=[]
     try:
         open(lppmap)
     except IOError:
         errors.append(("Cannot Find LPP Map, %s " % lppmap))
     if not (os.path.exists(moddir)):
-        errors.append("Cannot Find Modshift Write Dir, %s " % moddir)        
+        errors.append("Cannot Find Modshift Write Dir, %s " % moddir)
     if not (os.access(moddir, os.W_OK)):
         errors.append("Cannot Write to modshift directory %s " % moddir)
     if not (os.access(prfdir,os.R_OK)):
         errors.append("Cannot Read from prf Directory, %s "% prfdir)
     if not (os.access(datadir,os.R_OK)):
         errors.append("Cannot Read from Data Dir %s " % datadir)
-    
+
     if len(errors) > 0:
         new="\n"
         msg=new.join(errors)
         raise IOError(msg)
-    
 
-    
+    return clip
+
 
 @task.task
 def serveTask(clip):
@@ -509,12 +509,12 @@ def vetTask(clip):
 
 
 def plotTask(clip):
-    
+
     time = clip['serve.time']
     raw  = clip['extract.rawLightcurve']
     flux = clip['detrend.flux_frac']
     fl = clip['detrend.flags']
-    
+
     epic = clip['value']
     basename = clip['config.onepageBasename'] + "%010i" %(epic)
     period_days = clip['trapFit.period_days']
@@ -534,7 +534,7 @@ def plotTask(clip):
     clip['plot'] = out
 
     return clip
-  
+
 
 def saveOnError(clip):
     """Note this is not a task, because it should run even if
