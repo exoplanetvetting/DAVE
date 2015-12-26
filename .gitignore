@@ -58,3 +58,6 @@ target/
 
 #Susan
 *.orig
+vetting/modshift
+vetting/jktebop
+vetting/jktld
