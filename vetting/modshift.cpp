@@ -3,6 +3,9 @@
 
 Last modified: 2015-11-25
    
+   ///TO-DO:  RIGHT NOW CODE ASSUMES THAT THE MODEL IS A GOOD FIT TO THE DATA. THIS MAY NOT BE THE CASE, ESP IN CASE OF ODD/EVEN TRANSITS. I NEED TO SCALE THE MODEL TO FIT THE DATA 
+
+   
 */
 
 
@@ -27,7 +30,7 @@ const double THREESIGCONF = 0.997300203936740; // Three-sigma confidence interva
 
 // Declare Functions
 void DO_SHIFT(),PLOT(),BIN_NOERR(string, double, string);
-double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),INVERFC(double),MAD(double[],int),MEAN(double[],int);
+double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),INVERFC(double),MAD(double[],int),MEAN(double[],int),MODSCALE(double[],double[],int);
 string FORMAT(double);
 
 struct datastruct {double time; double phase; double flux; double model; double resid;};  // Time, Phase, Flux, Model, Residual
@@ -41,7 +44,7 @@ double flat[2*N]; // residual assuming flat baseline
 datastruct inpdata[N];  // Input data for binning
 datastruct bindat[N];   // Output binned data
 
-struct resultstruct {double sigpri; double sigsec; double sigter; double sigpos; double sigodd; double sigevn; double sigfa1; double sigfa2; double fred; double prilowtime; double seclowtime; double terlowtime; double sechightime; double depfacsec; double depfacter; double depfacpos; double depsig; double tdepth;};
+struct resultstruct {double sigpri; double sigsec; double sigter; double sigpos; double sigodd; double sigevn; double sigfa1; double sigfa2; double fred; double prilowtime; double seclowtime; double terlowtime; double sechightime; double depfacsec; double depfacter; double depfacpos; double depsig; double tdepth; double odddepth; double evndepth; double odddeptherr; double evndeptherr; double sigoe;};
 resultstruct results;
 
 int ndat,ndatorig;
@@ -55,6 +58,9 @@ string syscmd;
 
 double tstart,tend;
 string tmpstr1;
+
+double modscale;
+
   
 // Sorting functions
 bool double_sort (double lhs, double rhs) {return lhs < rhs;}
@@ -139,6 +145,7 @@ for(i=0;i<ndat;i++)
 
 
 
+
 // Compute for Odd transits only first
 ndat = ndatorig;  // Restore original ndat
 for(i=0;i<ndat;i++)  // Load original data
@@ -146,23 +153,35 @@ for(i=0;i<ndat;i++)  // Load original data
 period = periodorig;  // Load original period
 epoch = epochorig;  // Load original epoch
 
+// epoch-=0.5*period
 period*=2;   // Compute phase assuming twice period
 for(i=0;i<ndat;i++)  // Phase data
+  {
   data[i].phase = ((data[i].time-epoch)/period - int((data[i].time-epoch)/period));
+  if(data[i].phase > 0.75)
+    data[i].phase-=1.0;  // Make pahse go from -0.25 to 0.75
+  }
 
 sort(data,data+ndat,phase_sort);  // Sort data on phase
 
+
+
 i=0;
-while(data[i].phase < 0.5)  // Find data that now have phase less than 0.5 - these are the odd transits
+while(data[i].phase < 0.25)  // Find data that now have phase less than 0.5 - these are the odd transits
   i++;
 ndat = i;
 
 period/=2;  // Set period back to normal
 DO_SHIFT();  // Run shift
-results.sigodd = results.sigpri;  // Record sigodd
+// results.sigodd = results.sigpri;  // Record sigodd
+results.odddepth = results.tdepth;
+results.odddeptherr = results.depsig;
+
 //syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-odd.dat";
 syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-odd.dat";
 system(syscmd.c_str());
+
+
 
 
 
@@ -176,21 +195,33 @@ epoch = epochorig;  // Load original epoch
 epoch-=period;   // Select only even transits. Doing minus so epoch stays earlier than first data time
 period*=2;   // Compute phase assuming twice period
 for(i=0;i<ndat;i++)  // Phase data
+  {
   data[i].phase = ((data[i].time-epoch)/period - int((data[i].time-epoch)/period));
+  if(data[i].phase > 0.75)
+    data[i].phase-=1.0;  // Make phase go from -0.25 to 0.75
+  }
 
 sort(data,data+ndat,phase_sort);  // Sort data on phase
 
 i=0;
-while(data[i].phase < 0.5)  // Find data that now have phase less than 0.5 - these are the odd transits
+while(data[i].phase < 0.25)  // Find data that now have phase less than 0.5 - these are the odd transits
   i++;
 ndat = i;
 
 period/=2;  // Set period back to normal
 DO_SHIFT();  // Run shift
-results.sigevn = results.sigpri;  // Record sigevn
+// results.sigevn = results.sigpri;  // Record sigevn
+results.evndepth = results.tdepth;
+results.evndeptherr = results.depsig;
 //syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-evn.dat";
 syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-evn.dat";
 system(syscmd.c_str());
+
+
+// Compute odd/even sigma
+results.sigoe = fabs(results.odddepth - results.evndepth)/sqrt(pow(results.odddeptherr,2) + pow(results.evndeptherr,2));
+
+
 
 
 // Okay now do it normally
@@ -203,9 +234,13 @@ epoch = epochorig;  // Load original epoch
 DO_SHIFT();  // Run shift
 
 
+outfile.open("tmpout");
+outfile << setprecision(20) << results.odddepth << " " << results.odddeptherr << endl << results.evndepth << " " << results.evndeptherr << endl << results.tdepth << " " << results.depsig << endl << results.sigoe << endl;
+outfile.close();
 
 // Terminal output
-cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigodd << " " << results.sigevn << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
+cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigoe << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
+// cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigodd << " " << results.sigevn << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
 //cout << fixed << setprecision(6) << basename <<  " " << results.depfacsec*results.tdepth << " " << results.depsig << endl;
 
 
@@ -219,6 +254,61 @@ return 0;
 
 
 /////////////////////////////////////////////////////////////////////////////////////
+
+// Scale model so that it best-fits the data and return the scale factor
+
+double MODSCALE(double flux[], double model[], int ndat)
+  {
+  double modscale,rmsscale,modscaletmp,rmsorig,rmsscaletmp,dscale;
+  int sw1; // 0 is try up, 1 is try down
+  
+  // Starting values
+  modscale = 1.0;
+  dscale = 0.1;
+  sw1=0;
+  
+  // Compute current rms
+  for(i=0;i<ndat;i++)
+    tmpdob3[i] = flux[i] - modscale*model[i];  // Calculate residuals
+  rmsscale = RMS(tmpdob3,ndat);  // Compute rms of residuals
+
+  while(dscale>1E-6)
+    {
+    if(sw1==0)
+      modscaletmp = modscale + dscale*modscale;
+    else
+      modscaletmp = modscale - dscale*modscale;
+    
+    for(i=0;i<ndat;i++)
+      tmpdob3[i] = flux[i] - modscaletmp*model[i];  // Calculate residuals
+    rmsscaletmp = RMS(tmpdob3,ndat);  // Compute rms of residuals
+    
+    if(rmsscaletmp < rmsscale)  // If we found a better fit
+      {
+      modscale = modscaletmp;  // Update modscale
+      rmsscale = rmsscaletmp;
+      sw1=-1;  // Reset switch to -1. Will get incremented to 0 in next iteration
+      }
+      
+    sw1++;  // Increment switch
+    
+    if(sw1>1) // Neither up nor down produced  better fit
+      dscale /= 10;  // Use smaller increment
+    
+    }
+  
+  
+  return modscale;
+  
+  }
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////
 
 void DO_SHIFT()
   {
@@ -270,7 +360,7 @@ void DO_SHIFT()
     }
 
 
-// 
+
 
 
 
@@ -286,6 +376,21 @@ void DO_SHIFT()
     }
 
 
+  //  WARNING: IN HERE I NEED TO ADD SOMETHING THAT SCALES THE MODEL TO BEST-FIT THE DATA. WHILE USUALLY FIT IS GOOD TO DATa, IF ODD/EVEN EXISTS THEN IT IS NO LONGER A GOOD FIT.
+
+    
+  // Scale model to fit data best (Should be the case, but may not due to odd/even stuff.)
+  for(i=0;i<ndat;i++)
+    {
+    tmpdob1[i] = data[i].flux;;  // Calculate residuals
+    tmpdob2[i] = data[i].model;
+    }
+  modscale = MODSCALE(tmpdob1,tmpdob2,ndat);
+  
+  for(i=0;i<ndat;i++)
+    data[i].model *= modscale;
+  
+    
 
   // Record model depth of primary transit
   results.tdepth = -fabs(data[midti].model - baseflux);
@@ -367,7 +472,7 @@ void DO_SHIFT()
     data[i+ndat].phase = data[i].phase;
     data[i+ndat].flux = data[i].flux;
     data[i+ndat].model = data[i].model;
-    data[i+ndat].resid = data[i].resid; 
+    data[i+ndat].resid = data[i].resid;
     }  
 
 
@@ -646,9 +751,9 @@ void PLOT()
   system(syscmd.c_str());
 
   // Bin data for the binned data
-  BIN_NOERR(basename+"-bininput.dat",((tend-tstart)/period)/8,basename+"-binned2.dat");
-  BIN_NOERR(basename+"-bininput-odd.dat",((tend-tstart)/period)/8,basename+"-binned2-evn.dat");
-  BIN_NOERR(basename+"-bininput-odd.dat",((tend-tstart)/period)/8,basename+"-binned2-odd.dat");
+  BIN_NOERR(basename+"-bininput.dat",((tend-tstart)/period)/10,basename+"-binned2.dat");
+  BIN_NOERR(basename+"-bininput-odd.dat",((tend-tstart)/period)/10,basename+"-binned2-odd.dat");
+  BIN_NOERR(basename+"-bininput-evn.dat",((tend-tstart)/period)/10,basename+"-binned2-evn.dat");
   
   
   // Make plot file
@@ -743,8 +848,8 @@ void PLOT()
   outfile << "set label \"" <<  FORMAT(results.sigsec-results.sigpos)        << "\" at screen (c+5*d),(e-0.025) center font ',16'";
   if(results.sigsec-results.sigpos>results.sigfa2) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
 
-  outfile << "set label \"" <<  FORMAT(fabs(results.sigodd-results.sigevn)) << "\" at screen (c+6*d),(e-0.025) center font ',16'";
-  if(fabs(results.sigodd-results.sigevn)>results.sigfa1) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
+  outfile << "set label \"" <<  FORMAT(results.sigoe) << "\" at screen (c+6*d),(e-0.025) center font ',16'";
+  if(results.sigoe/results.fred>results.sigfa2) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
 
 
   // First plot
@@ -827,7 +932,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2-odd.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2-odd.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6*" << results.odddepth/results.tdepth << ") with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6*" << results.odddepth/results.tdepth << ") with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6*" << results.odddepth/results.tdepth << ") with lines lt 1 lc 7 notitle" << endl;
   
   outfile << "unset label" << endl;
   
@@ -847,7 +952,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2-evn.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2-evn.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6*" << results.evndepth/results.tdepth << ") with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6*" << results.evndepth/results.tdepth << ") with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6*" << results.evndepth/results.tdepth << ") with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
   
@@ -924,8 +1029,8 @@ void PLOT()
   // system(syscmd.c_str());
   syscmd = "rm " + basename + "-outfile*.dat";
   system(syscmd.c_str());
-  syscmd = "rm " + basename + "-bin*dat";
-  system(syscmd.c_str());
+//   syscmd = "rm " + basename + "-bin*dat";
+//   system(syscmd.c_str());
   syscmd = "rm " + basename + "-ModShift.gnu";
   system(syscmd.c_str());
   }
