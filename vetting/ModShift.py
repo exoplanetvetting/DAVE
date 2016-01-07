@@ -79,7 +79,7 @@ def runModShift(time,flux,model,basename,period,epoch):
     #the complicated module that was supposed to communication better.
     path = getModShiftDir()
     cmd = ["timeout", "%i" %(timeout_sec),  "%s/modshift" %(path), \
-        'model-shift-in.txt', basename, str(period), str(epoch)]
+        'model-shift-in.txt', str(epic), str(period), str(epoch)]
 
     try:
         modshiftcmdout = check_output(cmd)
