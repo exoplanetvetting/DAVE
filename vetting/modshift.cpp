@@ -234,9 +234,9 @@ epoch = epochorig;  // Load original epoch
 DO_SHIFT();  // Run shift
 
 
-outfile.open("tmpout");
-outfile << setprecision(20) << results.odddepth << " " << results.odddeptherr << endl << results.evndepth << " " << results.evndeptherr << endl << results.tdepth << " " << results.depsig << endl << results.sigoe << endl;
-outfile.close();
+// outfile.open("tmpout");
+// outfile << setprecision(20) << results.odddepth << " " << results.odddeptherr << endl << results.evndepth << " " << results.evndeptherr << endl << results.tdepth << " " << results.depsig << endl << results.sigoe << endl;
+// outfile.close();
 
 // Terminal output
 cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigoe << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
