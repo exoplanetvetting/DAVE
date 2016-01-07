@@ -4,7 +4,7 @@ import numpy
 import os
 
 
-def runModShift(time,flux,model,basename,period,epoch):
+def runModShift(time,flux,model,plotname,objectname,period,epoch):
     """Run the Model-Shift test
 
     Inputs:
@@ -15,8 +15,10 @@ def runModShift(time,flux,model,basename,period,epoch):
         The array of observed fluxes correspodnding to each time.
     model
         The array of model fluxes corresponding to each time.
-    basename
-        The basename for the output plot
+    plotname
+        The name for the output plot
+    objectname
+        The name of the object, to be displayed in the plot title
     period
         The period of the system in days.
     epoch
@@ -79,7 +81,7 @@ def runModShift(time,flux,model,basename,period,epoch):
     #the complicated module that was supposed to communication better.
     path = getModShiftDir()
     cmd = ["timeout", "%i" %(timeout_sec),  "%s/modshift" %(path), \
-        'model-shift-in.txt', str(epic), str(period), str(epoch)]
+        'model-shift-in.txt', plotname, objectname, str(period), str(epoch)]
 
     try:
         modshiftcmdout = check_output(cmd)

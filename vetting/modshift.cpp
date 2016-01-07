@@ -49,7 +49,7 @@ resultstruct results;
 
 int ndat,ndatorig;
 double period,epoch,periodorig,epochorig,baseflux;
-string basename,infilename;
+string basename,infilename,objectname;
 
 int i,j,k,l,m,n;
 ifstream infile;
@@ -89,18 +89,27 @@ else
   {
   cout << "Name of basename? ";
   cin >> basename;
-  }  
-
+  }
+  
 if(argc>3)
-  period = atof(argv[3]);
+  objectname = argv[3];
+else
+  {
+  cout << "Name of object? ";
+  cin >> objectname;
+  }
+  
+
+if(argc>4)
+  period = atof(argv[4]);
 else
   {
   cout << "Period? ";
   cin >> period;
   }
   
-if(argc>4)
-  epoch = atof(argv[4]);
+if(argc>5)
+  epoch = atof(argv[5]);
 else
   {
   cout << "Epoch? ";
@@ -761,7 +770,7 @@ void PLOT()
   outfile.open(tmpstr1.c_str());
   outfile << "set term pdfcairo enhanced dashed size 8.5in,11in font ',16'" << endl; //pdfcairo enhanced size 5.5in,4.25in" << endl;
   outfile << "set output '" << basename << "-modshift.pdf'" << endl;
-  outfile << "set multiplot layout 4,1 title \"TCE " << basename << ", P = " << setprecision(6) << period << " Days, E = " << setprecision(6) << epoch << " Days\" font ',20'" << endl;
+  outfile << "set multiplot layout 4,1 title \"" << objectname << ", P = " << setprecision(6) << period << " Days, E = " << setprecision(6) << epoch << " Days\" font ',20'" << endl;
 
   
   
