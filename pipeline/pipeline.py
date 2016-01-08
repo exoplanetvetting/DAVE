@@ -409,9 +409,8 @@ def modshiftTask(clip):
         epoch_bkjd, depth_ppm, dur_hrs, \
         ingress_hrs, subSampleN)
     model = ioBlock.modellc -1   #Want mean of zero
-#    model *= -1  #Invert for testing
+    #model *= -1  #Invert for testing
 
-    
     out = ModShift.runModShift(time[~fl], flux[~fl], model, basename, \
         objectname, period_days, epoch_bkjd)
 

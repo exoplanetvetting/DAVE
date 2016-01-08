@@ -2,9 +2,8 @@
    modshift-v4.cpp
 
 Last modified: 2015-11-25
-   
-   ///TO-DO:  RIGHT NOW CODE ASSUMES THAT THE MODEL IS A GOOD FIT TO THE DATA. THIS MAY NOT BE THE CASE, ESP IN CASE OF ODD/EVEN TRANSITS. I NEED TO SCALE THE MODEL TO FIT THE DATA 
 
+TO-DO: Find a secondary every time.
    
 */
 
@@ -23,9 +22,6 @@ using namespace std;
 
 // Declare constants
 const int N=100000;  // Max number of data points. Increase if needed.
-const double ONESIGCONF = 0.682689492137;  // One-sigma confidence interval
-const double TWOSIGCONF = 0.954499736104;  // Two-sigma confidence interval
-const double THREESIGCONF = 0.997300203936740; // Three-sigma confidence interval
 
 
 // Declare Functions
@@ -58,8 +54,7 @@ string syscmd;
 
 double tstart,tend;
 string tmpstr1;
-
-double modscale;
+double modscale;  // Variable to scale model to data, if it is not already good fit
 
   
 // Sorting functions
@@ -71,8 +66,6 @@ bool time_sort (datastruct lhs, datastruct rhs) {return lhs.time < rhs.time;}
 // And main prog here
 int main (int argc, char* argv[]) {
 
-
-// clock_t startTime = clock();
 
 
 if(argc>1)
@@ -265,15 +258,16 @@ return 0;
 /////////////////////////////////////////////////////////////////////////////////////
 
 // Scale model so that it best-fits the data and return the scale factor
+// Not the best written search algorithm, but works fast enough I think.
 
 double MODSCALE(double flux[], double model[], int ndat)
   {
-  double modscale,rmsscale,modscaletmp,rmsorig,rmsscaletmp,dscale;
+  double modscale,rmsscale,modscaletmp,rmsorig,rmsscaletmp,dinc;
   int sw1; // 0 is try up, 1 is try down
   
   // Starting values
-  modscale = 1.0;
-  dscale = 0.1;
+  modscale = modscaletmp = 1.0;
+  dinc = 1.0;
   sw1=0;
   
   // Compute current rms
@@ -281,40 +275,45 @@ double MODSCALE(double flux[], double model[], int ndat)
     tmpdob3[i] = flux[i] - modscale*model[i];  // Calculate residuals
   rmsscale = RMS(tmpdob3,ndat);  // Compute rms of residuals
 
-  while(dscale>1E-6)
+  while(dinc>1E-8)  // 1E-8 seems like plenty of good accuracy not that long to converge. Allows for ppm level precision.
     {
     if(sw1==0)
-      modscaletmp = modscale + dscale*modscale;
-    else
-      modscaletmp = modscale - dscale*modscale;
-    
+      modscaletmp += dinc;  // Try going positive
+    if(sw1==1)
+      modscaletmp -= dinc;  // Try going negative
+      
     for(i=0;i<ndat;i++)
       tmpdob3[i] = flux[i] - modscaletmp*model[i];  // Calculate residuals
     rmsscaletmp = RMS(tmpdob3,ndat);  // Compute rms of residuals
-    
+        
     if(rmsscaletmp < rmsscale)  // If we found a better fit
       {
-      modscale = modscaletmp;  // Update modscale
-      rmsscale = rmsscaletmp;
-      sw1=-1;  // Reset switch to -1. Will get incremented to 0 in next iteration
+      modscale = modscaletmp;  // Update modscale with that of best-fit
+      rmsscale = rmsscaletmp;  // Update rmsscale with that of best-fit
+      if(sw1==0)
+        sw1=-1;  // Set switch to -1. Will get incremented to 0 in next iteration. Keeps searching upward
+      if(sw1==1)
+        sw1=0;   // Set switch to 0. Will get incremented to 1 in next iteration. Keeps searching downward
+      }
+    else // If better fit was not found, set modescaletmp back to what it was before it was modified
+      {
+      if(sw1==0)
+        modscaletmp -= dinc;
+      if(sw1==1)
+        modscaletmp += dinc;
       }
       
     sw1++;  // Increment switch
     
-    if(sw1>1) // Neither up nor down produced  better fit
-      dscale /= 10;  // Use smaller increment
-    
+    if(sw1==2) // Neither up nor down produced  better fit, search at a smaller increment
+      {
+      dinc /= 10;  // Use smaller increment
+      sw1=0;  // Will start next smaller search going positive
+      }
     }
-  
-  
-  return modscale;
-  
+    
+  return modscale;  // Return the thing we were fitting for
   }
-
-
-
-
-
 
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -329,7 +328,9 @@ void DO_SHIFT()
   double nintrans;
   double med,std,sigreject,mad;
   double tmpsum1,tmpsum2;
-    
+  
+//   clock_t startTime = clock();  
+  
   // Phase Data given period and epoch
   for(i=0;i<ndat;i++)
     {
@@ -384,9 +385,9 @@ void DO_SHIFT()
     exit(1);
     }
 
-
-  //  WARNING: IN HERE I NEED TO ADD SOMETHING THAT SCALES THE MODEL TO BEST-FIT THE DATA. WHILE USUALLY FIT IS GOOD TO DATa, IF ODD/EVEN EXISTS THEN IT IS NO LONGER A GOOD FIT.
-
+ 
+//   outfile.open("tmpout");
+//   outfile << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
     
   // Scale model to fit data best (Should be the case, but may not due to odd/even stuff.)
   for(i=0;i<ndat;i++)
@@ -399,7 +400,10 @@ void DO_SHIFT()
   for(i=0;i<ndat;i++)
     data[i].model *= modscale;
   
-    
+//   outfile << modscale << endl;
+//   outfile << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
+//   outfile.close();
+  
 
   // Record model depth of primary transit
   results.tdepth = -fabs(data[midti].model - baseflux);
