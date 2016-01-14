@@ -323,7 +323,7 @@ void DO_SHIFT()
   double rmsmin=9E9,chi2med,chi2outlow,chi2outhigh,chi2inlow,chi2low,chi2terlow;
   int sw1,sw2,ntmp;
   int midti,startti,endti;  // Index for middle of transit point, start of transit, and end of transit
-  int widthfac;
+  double widthfac;
   double width,halfwidth,tenthwidth;
   double nintrans;
   double med,std,sigreject,mad;
@@ -582,6 +582,18 @@ void DO_SHIFT()
         }
       }
     }
+  // Make sure we find a secondary no matter what
+  if(results.seclowtime == -2*period)  // If no secondary was found
+    for(i=0;i<ndat;i++)
+      if(data[i+midti].phase > 0.4*period && data[i+midti].phase < 0.6*period)
+        {
+        if(chi2[i]<chi2outlow)
+          {
+          chi2outlow=chi2[i];
+          results.seclowtime = data[i+midti].phase;
+          }
+        }
+  
     
   // Find tertiary and biggest positive peak that's outside primary and secondary eclipse
   chi2terlow = 9E9;
@@ -611,7 +623,26 @@ void DO_SHIFT()
         }
     }
 
-  // Compute median excluding primary and secondary eclipse. I have built in contigency in cases of sparse data so this should never fail.
+    
+  // Compute median excluding primary and secondary eclipse. I have built in contigency in cases of sparse data so this should never fail.  
+  widthfac=2;
+  ntmp=0;
+  while(ntmp<0.1*ndat)  // Require at least 3 points to exist out of transit & eclipse
+    {
+    ntmp=0;
+    for(i=0;i<ndat;i++)
+      if((data[i+midti].phase < results.prilowtime+widthfac*tstart || data[i+midti].phase > results.prilowtime+widthfac*tend) && (data[i+midti].phase < results.prilowtime+widthfac*tstart+period || data[i+midti].phase > results.prilowtime+widthfac*tend+period) && (data[i+midti].phase < results.prilowtime+widthfac*tstart-period || data[i+midti].phase > results.prilowtime+widthfac*tend-period) && (data[i+midti].phase < results.seclowtime+widthfac*tstart || data[i+midti].phase > results.seclowtime+widthfac*tend) && (data[i+midti].phase < results.seclowtime+widthfac*tstart+period || data[i+midti].phase > results.seclowtime+widthfac*tend)+period && (data[i+midti].phase < results.seclowtime+widthfac*tstart-period || data[i+midti].phase > results.seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
+        {
+        tmpdob1[ntmp]=chi2[i];
+        ntmp++;
+        }
+      widthfac-=0.01;  // Reduce width factor by -0.1 and search again if no points were found out of transit & eclipse
+    }
+  chi2med = MEDIAN(tmpdob1,ntmp);
+  
+
+  
+ /* 
   ntmp=0;
   widthfac=2;
   for(i=0;i<ndat;i++)
@@ -622,10 +653,10 @@ void DO_SHIFT()
       }
   if(ntmp>0)
     chi2med = MEDIAN(tmpdob1,ntmp);
-  else // First contigency - if there were no points outside twice the width of the pri and secondary eclipse, try again by only excluding data inside primary
+  else  // First contigency - if still can't find any data just outside primary, try it by allowing for just a widthfac of 1.5 instead of 2
     {
     ntmp=0;
-    widthfac=2;
+    widthfac=1.5;
     for(i=0;i<ndat;i++)
       if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
         {
@@ -634,10 +665,10 @@ void DO_SHIFT()
         }
     if(ntmp>0)
       chi2med = MEDIAN(tmpdob1,ntmp);
-    else  // Second contigency - if still can't find any data just outside primary, try it by allowing for just a widthfac of 1 instead of 2, i.e., literally anything outside transit
+    else  // Second contigency - if still can't find any data just outside primary, try it by allowing for just a widthfac of 1 instead of 1.5
       {
       ntmp=0;
-      widthfac=1;
+      widthfac=1.0;
       for(i=0;i<ndat;i++)
         if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
           {
@@ -646,40 +677,57 @@ void DO_SHIFT()
           }
       if(ntmp>0)
         chi2med = MEDIAN(tmpdob1,ntmp);
-      else  // Really? So the only data points we have are in-transit? Allright just use those...the only way we could fail now is if there is literally no data, in which case we should have crashed long ago.
+      else // Third contigency - if there were no points outside the width of the pri and secondary eclipse, try again by only excluding data inside primary
         {
         ntmp=0;
+        widthfac=1;
         for(i=0;i<ndat;i++)
-          {
-          tmpdob1[ntmp]=chi2[i];
-          ntmp++;
-          }
+          if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
+            {
+            tmpdob1[ntmp]=chi2[i];
+            ntmp++;
+            }
         if(ntmp>0)
           chi2med = MEDIAN(tmpdob1,ntmp);
-        else
+        else  // Really? So the only data points we have are in-transit? Allright just use those...the only way we could fail now is if there is literally no data, in which case we should have crashed long ago.
           {
-          cout << "You should never see this message. I think you have no data at all in your light curve." << endl;
-          exit(1);
+          ntmp=0;
+          for(i=0;i<ndat;i++)
+            {
+            tmpdob1[ntmp]=chi2[i];
+            ntmp++;
+            }
+          if(ntmp>0)
+            chi2med = MEDIAN(tmpdob1,ntmp);
+          else
+            {
+            cout << "You should never see this message. I think you have no data at all in your light curve." << endl;
+            exit(1);
+            }
           }
         }
       }
     }
-
+*/
 
     
   // Calculate rmsmin and Fred, ratio of gaussian noise to systematic noise, excluding primary and secondary
-  ntmp=0;
   widthfac=2;
-  for(i=0;i<ndat;i++)
-    if((data[i+midti].phase < results.prilowtime+widthfac*tstart || data[i+midti].phase > results.prilowtime+widthfac*tend) && (data[i+midti].phase < results.prilowtime+widthfac*tstart+period || data[i+midti].phase > results.prilowtime+widthfac*tend+period) && (data[i+midti].phase < results.prilowtime+widthfac*tstart-period || data[i+midti].phase > results.prilowtime+widthfac*tend-period) && (data[i+midti].phase < results.seclowtime+widthfac*tstart || data[i+midti].phase > results.seclowtime+widthfac*tend) && (data[i+midti].phase < results.seclowtime+widthfac*tstart+period || data[i+midti].phase > results.seclowtime+widthfac*tend)+period && (data[i+midti].phase < results.seclowtime+widthfac*tstart-period || data[i+midti].phase > results.seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
-      {
-      tmpdob1[ntmp]=data[i+midti].flux-data[i+midti].model;  // Original data
-      tmpdob2[ntmp]=results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med);  // Converted depth value of the convolved data
-      ntmp++;
-      }
-  rmsmin = RMS(tmpdob1,ntmp);  // RMS assuming gaussian noise and excluding pri and sec events
+  ntmp=0;
+  while(ntmp<0.1*ndat)  // Require at least 3 points to exist out of transit & eclipse
+    {
+    ntmp=0;
+    for(i=0;i<ndat;i++)
+      if((data[i+midti].phase < results.prilowtime+widthfac*tstart || data[i+midti].phase > results.prilowtime+widthfac*tend) && (data[i+midti].phase < results.prilowtime+widthfac*tstart+period || data[i+midti].phase > results.prilowtime+widthfac*tend+period) && (data[i+midti].phase < results.prilowtime+widthfac*tstart-period || data[i+midti].phase > results.prilowtime+widthfac*tend-period) && (data[i+midti].phase < results.seclowtime+widthfac*tstart || data[i+midti].phase > results.seclowtime+widthfac*tend) && (data[i+midti].phase < results.seclowtime+widthfac*tstart+period || data[i+midti].phase > results.seclowtime+widthfac*tend)+period && (data[i+midti].phase < results.seclowtime+widthfac*tstart-period || data[i+midti].phase > results.seclowtime+widthfac*tend-period)  )  // If outside primary and secondary     
+        {
+        tmpdob1[ntmp]=data[i+midti].flux-data[i+midti].model;  // Original data
+        tmpdob2[ntmp]=results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med);  // Converted depth value of the convolved data
+        ntmp++;
+        }
+    widthfac-=0.01;  // Reduce width factor by -0.1 and search again if no points were found out of transit & eclipse
+    }
+  rmsmin = RMS(tmpdob1,ntmp);  // RMS assuming gaussian noise and excluding pri and sec events  
   results.fred = sqrt(nintrans)*STDEV(tmpdob2,ntmp)/rmsmin;  // Have to account for the number of points in-transit we're averaging over.
-
 
 
   // Calculate Sigma_FA - the false alarm rate. I've set it so we shoudl only see one false alarm in 10,000 KOIs, assuming gaussian noise.
@@ -862,7 +910,7 @@ void PLOT()
   if(results.sigsec-results.sigpos>results.sigfa2) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
 
   outfile << "set label \"" <<  FORMAT(results.sigoe) << "\" at screen (c+6*d),(e-0.025) center font ',16'";
-  if(results.sigoe/results.fred>results.sigfa2) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
+  if(results.sigoe>results.sigfa1) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
 
 
   // First plot
@@ -991,43 +1039,49 @@ void PLOT()
   outfile << "unset label" << endl;
 
   // Ter Zoom
-  outfile << "set size square 0.375,0.275" << endl;
-  outfile << "set origin 0.315, -0.015" << endl;
-  outfile << "set label 'Tertiary' at graph 0.5,0.925 center front" << endl;
-  outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
-  outfile << "set xtics format '%5.3f' mirror" << endl;
-  outfile << "set xrange [" << setprecision(10) << results.terlowtime/period+3*tstart/period << " to " << results.terlowtime/period+3*tend/period << "]" << endl;
-  outfile << "set xlabel 'Phase'" << endl;
-  outfile << "unset x2tics" << endl;
-  outfile << "unset x2label" << endl;
-  outfile << "unset y2tics" << endl;
-  outfile << "unset y2label" << endl;
-  outfile << "set autoscale y" << endl;
-  outfile << "set ytics format '%6.0f' mirror" << endl;
-  outfile << "set ytics auto" << endl;
-  outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
-
+  if(results.terlowtime>-0.25)
+    {
+    outfile << "set size square 0.375,0.275" << endl;
+    outfile << "set origin 0.315, -0.015" << endl;
+    outfile << "set label 'Tertiary' at graph 0.5,0.925 center front" << endl;
+    outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
+    outfile << "set xtics format '%5.3f' mirror" << endl;
+    outfile << "set xrange [" << setprecision(10) << results.terlowtime/period+3*tstart/period << " to " << results.terlowtime/period+3*tend/period << "]" << endl;
+    outfile << "set xlabel 'Phase'" << endl;
+    outfile << "unset x2tics" << endl;
+    outfile << "unset x2label" << endl;
+    outfile << "unset y2tics" << endl;
+    outfile << "unset y2label" << endl;
+    outfile << "set autoscale y" << endl;
+    outfile << "set ytics format '%6.0f' mirror" << endl;
+    outfile << "set ytics auto" << endl;
+    outfile << "set ylabel ' '" << endl;
+    outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
+    }
+  
   outfile << "unset label" << endl;
 
   // Pos Zoom
-  outfile << "set size square 0.375,0.375" << endl;
-  outfile << "set origin 0.63, -0.065" << endl;
-  outfile << "set label 'Positive' at graph 0.5,0.075 center front" << endl;
-  outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
-  outfile << "set xtics format '%5.3f' mirror" << endl;
-  outfile << "set xrange [" << setprecision(10) << results.sechightime/period+3*tstart/period << " to " << results.sechightime/period+3*tend/period << "]" << endl;
-  outfile << "set xlabel 'Phase'" << endl;
-  outfile << "unset x2tics" << endl;
-  outfile << "unset x2label" << endl;
-  outfile << "unset y2tics" << endl;
-  outfile << "unset y2label" << endl;
-  outfile << "set autoscale y" << endl;
-  outfile << "set ytics format '%6.0f' mirror" << endl;
-  outfile << "set ytics auto" << endl;
-  outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
-
+  if(results.sechightime>-0.25)
+    {
+    outfile << "set size square 0.375,0.375" << endl;
+    outfile << "set origin 0.63, -0.065" << endl;
+    outfile << "set label 'Positive' at graph 0.5,0.075 center front" << endl;
+    outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
+    outfile << "set xtics format '%5.3f' mirror" << endl;
+    outfile << "set xrange [" << setprecision(10) << results.sechightime/period+3*tstart/period << " to " << results.sechightime/period+3*tend/period << "]" << endl;
+    outfile << "set xlabel 'Phase'" << endl;
+    outfile << "unset x2tics" << endl;
+    outfile << "unset x2label" << endl;
+    outfile << "unset y2tics" << endl;
+    outfile << "unset y2label" << endl;
+    outfile << "set autoscale y" << endl;
+    outfile << "set ytics format '%6.0f' mirror" << endl;
+    outfile << "set ytics auto" << endl;
+    outfile << "set ylabel ' '" << endl;
+    outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
+    }
+  
   outfile << "unset label" << endl;
   
   

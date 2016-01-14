@@ -100,7 +100,7 @@ def sig_sec(modshift):
 
 
     # Check Odd/Even from model-shift
-    if modshift['mod_sig_oe'] / modshift['mod_Fred'] > modshift['mod_sig_fa2']:
+    if modshift['mod_sig_oe'] > modshift['mod_sig_fa1']:
         if comments != '':
             comments += '---'
         comments += 'ODD_EVEN_DIFF'
