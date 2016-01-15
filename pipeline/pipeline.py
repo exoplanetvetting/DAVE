@@ -396,22 +396,24 @@ def modshiftTask(clip):
 
     epic = clip['value']
     basename = clip['config.modshiftBasename'] #  Jeff edited to remove ->  + "%010i" %(epic)   since modshift cpp code already appends basename
+    basename = "%s%010i" %(basename, epic)  # Jeff modified
+    
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
     dur_hrs =  clip['trapFit.duration_hrs']
     ingress_hrs = clip['trapFit.ingress_hrs']
     depth_ppm = 1e6*clip['trapFit.depth_frac']
+    objectname = "EPIC " + str(epic)  # Name that will go in title of modshift plot
 
     subSampleN= 15
     ioBlock = trapFit.trapezoid_model_onemodel(time[~fl], period_days, \
         epoch_bkjd, depth_ppm, dur_hrs, \
         ingress_hrs, subSampleN)
     model = ioBlock.modellc -1   #Want mean of zero
-#    model *= -1  #Invert for testing
+    #model *= -1  #Invert for testing
 
-    basename = "%s%010i" %(basename, epic)  # Jeff modified
     out = ModShift.runModShift(time[~fl], flux[~fl], model, basename, \
-        period_days, epoch_bkjd)
+        objectname, period_days, epoch_bkjd)
 
     clip['modshift'] = out
 
