@@ -2,6 +2,8 @@
    modshift-v4.cpp
 
 Last modified: 2015-11-25
+
+TO-DO: Find a secondary every time.
    
 */
 
@@ -20,14 +22,11 @@ using namespace std;
 
 // Declare constants
 const int N=100000;  // Max number of data points. Increase if needed.
-const double ONESIGCONF = 0.682689492137;  // One-sigma confidence interval
-const double TWOSIGCONF = 0.954499736104;  // Two-sigma confidence interval
-const double THREESIGCONF = 0.997300203936740; // Three-sigma confidence interval
 
 
 // Declare Functions
 void DO_SHIFT(),PLOT(),BIN_NOERR(string, double, string);
-double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),INVERFC(double),MAD(double[],int),MEAN(double[],int);
+double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),INVERFC(double),MAD(double[],int),MEAN(double[],int),MODSCALE(double[],double[],int);
 string FORMAT(double);
 
 struct datastruct {double time; double phase; double flux; double model; double resid;};  // Time, Phase, Flux, Model, Residual
@@ -41,12 +40,12 @@ double flat[2*N]; // residual assuming flat baseline
 datastruct inpdata[N];  // Input data for binning
 datastruct bindat[N];   // Output binned data
 
-struct resultstruct {double sigpri; double sigsec; double sigter; double sigpos; double sigodd; double sigevn; double sigfa1; double sigfa2; double fred; double prilowtime; double seclowtime; double terlowtime; double sechightime; double depfacsec; double depfacter; double depfacpos; double depsig; double tdepth;};
+struct resultstruct {double sigpri; double sigsec; double sigter; double sigpos; double sigodd; double sigevn; double sigfa1; double sigfa2; double fred; double prilowtime; double seclowtime; double terlowtime; double sechightime; double depfacsec; double depfacter; double depfacpos; double depsig; double tdepth; double odddepth; double evndepth; double odddeptherr; double evndeptherr; double sigoe;};
 resultstruct results;
 
 int ndat,ndatorig;
 double period,epoch,periodorig,epochorig,baseflux;
-string basename,infilename;
+string basename,infilename,objectname;
 
 int i,j,k,l,m,n;
 ifstream infile;
@@ -55,6 +54,8 @@ string syscmd;
 
 double tstart,tend;
 string tmpstr1;
+double modscale;  // Variable to scale model to data, if it is not already good fit
+
   
 // Sorting functions
 bool double_sort (double lhs, double rhs) {return lhs < rhs;}
@@ -65,8 +66,6 @@ bool time_sort (datastruct lhs, datastruct rhs) {return lhs.time < rhs.time;}
 // And main prog here
 int main (int argc, char* argv[]) {
 
-
-// clock_t startTime = clock();
 
 
 if(argc>1)
@@ -83,18 +82,27 @@ else
   {
   cout << "Name of basename? ";
   cin >> basename;
-  }  
-
+  }
+  
 if(argc>3)
-  period = atof(argv[3]);
+  objectname = argv[3];
+else
+  {
+  cout << "Name of object? ";
+  cin >> objectname;
+  }
+  
+
+if(argc>4)
+  period = atof(argv[4]);
 else
   {
   cout << "Period? ";
   cin >> period;
   }
   
-if(argc>4)
-  epoch = atof(argv[4]);
+if(argc>5)
+  epoch = atof(argv[5]);
 else
   {
   cout << "Epoch? ";
@@ -139,6 +147,7 @@ for(i=0;i<ndat;i++)
 
 
 
+
 // Compute for Odd transits only first
 ndat = ndatorig;  // Restore original ndat
 for(i=0;i<ndat;i++)  // Load original data
@@ -146,23 +155,35 @@ for(i=0;i<ndat;i++)  // Load original data
 period = periodorig;  // Load original period
 epoch = epochorig;  // Load original epoch
 
+// epoch-=0.5*period
 period*=2;   // Compute phase assuming twice period
 for(i=0;i<ndat;i++)  // Phase data
+  {
   data[i].phase = ((data[i].time-epoch)/period - int((data[i].time-epoch)/period));
+  if(data[i].phase > 0.75)
+    data[i].phase-=1.0;  // Make pahse go from -0.25 to 0.75
+  }
 
 sort(data,data+ndat,phase_sort);  // Sort data on phase
 
+
+
 i=0;
-while(data[i].phase < 0.5)  // Find data that now have phase less than 0.5 - these are the odd transits
+while(data[i].phase < 0.25)  // Find data that now have phase less than 0.5 - these are the odd transits
   i++;
 ndat = i;
 
 period/=2;  // Set period back to normal
 DO_SHIFT();  // Run shift
-results.sigodd = results.sigpri;  // Record sigodd
+// results.sigodd = results.sigpri;  // Record sigodd
+results.odddepth = results.tdepth;
+results.odddeptherr = results.depsig;
+
 //syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-odd.dat";
 syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-odd.dat";
 system(syscmd.c_str());
+
+
 
 
 
@@ -176,21 +197,33 @@ epoch = epochorig;  // Load original epoch
 epoch-=period;   // Select only even transits. Doing minus so epoch stays earlier than first data time
 period*=2;   // Compute phase assuming twice period
 for(i=0;i<ndat;i++)  // Phase data
+  {
   data[i].phase = ((data[i].time-epoch)/period - int((data[i].time-epoch)/period));
+  if(data[i].phase > 0.75)
+    data[i].phase-=1.0;  // Make phase go from -0.25 to 0.75
+  }
 
 sort(data,data+ndat,phase_sort);  // Sort data on phase
 
 i=0;
-while(data[i].phase < 0.5)  // Find data that now have phase less than 0.5 - these are the odd transits
+while(data[i].phase < 0.25)  // Find data that now have phase less than 0.5 - these are the odd transits
   i++;
 ndat = i;
 
 period/=2;  // Set period back to normal
 DO_SHIFT();  // Run shift
-results.sigevn = results.sigpri;  // Record sigevn
+// results.sigevn = results.sigpri;  // Record sigevn
+results.evndepth = results.tdepth;
+results.evndeptherr = results.depsig;
 //syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-evn.dat";
 syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-evn.dat";
 system(syscmd.c_str());
+
+
+// Compute odd/even sigma
+results.sigoe = fabs(results.odddepth - results.evndepth)/sqrt(pow(results.odddeptherr,2) + pow(results.evndeptherr,2));
+
+
 
 
 // Okay now do it normally
@@ -203,9 +236,13 @@ epoch = epochorig;  // Load original epoch
 DO_SHIFT();  // Run shift
 
 
+// outfile.open("tmpout");
+// outfile << setprecision(20) << results.odddepth << " " << results.odddeptherr << endl << results.evndepth << " " << results.evndeptherr << endl << results.tdepth << " " << results.depsig << endl << results.sigoe << endl;
+// outfile.close();
 
 // Terminal output
-cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigodd << " " << results.sigevn << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
+cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigoe << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
+// cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigodd << " " << results.sigevn << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
 //cout << fixed << setprecision(6) << basename <<  " " << results.depfacsec*results.tdepth << " " << results.depsig << endl;
 
 
@@ -220,17 +257,80 @@ return 0;
 
 /////////////////////////////////////////////////////////////////////////////////////
 
+// Scale model so that it best-fits the data and return the scale factor
+// Not the best written search algorithm, but works fast enough I think.
+
+double MODSCALE(double flux[], double model[], int ndat)
+  {
+  double modscale,rmsscale,modscaletmp,rmsorig,rmsscaletmp,dinc;
+  int sw1; // 0 is try up, 1 is try down
+  
+  // Starting values
+  modscale = modscaletmp = 1.0;
+  dinc = 1.0;
+  sw1=0;
+  
+  // Compute current rms
+  for(i=0;i<ndat;i++)
+    tmpdob3[i] = flux[i] - modscale*model[i];  // Calculate residuals
+  rmsscale = RMS(tmpdob3,ndat);  // Compute rms of residuals
+
+  while(dinc>1E-8)  // 1E-8 seems like plenty of good accuracy not that long to converge. Allows for ppm level precision.
+    {
+    if(sw1==0)
+      modscaletmp += dinc;  // Try going positive
+    if(sw1==1)
+      modscaletmp -= dinc;  // Try going negative
+      
+    for(i=0;i<ndat;i++)
+      tmpdob3[i] = flux[i] - modscaletmp*model[i];  // Calculate residuals
+    rmsscaletmp = RMS(tmpdob3,ndat);  // Compute rms of residuals
+        
+    if(rmsscaletmp < rmsscale)  // If we found a better fit
+      {
+      modscale = modscaletmp;  // Update modscale with that of best-fit
+      rmsscale = rmsscaletmp;  // Update rmsscale with that of best-fit
+      if(sw1==0)
+        sw1=-1;  // Set switch to -1. Will get incremented to 0 in next iteration. Keeps searching upward
+      if(sw1==1)
+        sw1=0;   // Set switch to 0. Will get incremented to 1 in next iteration. Keeps searching downward
+      }
+    else // If better fit was not found, set modescaletmp back to what it was before it was modified
+      {
+      if(sw1==0)
+        modscaletmp -= dinc;
+      if(sw1==1)
+        modscaletmp += dinc;
+      }
+      
+    sw1++;  // Increment switch
+    
+    if(sw1==2) // Neither up nor down produced  better fit, search at a smaller increment
+      {
+      dinc /= 10;  // Use smaller increment
+      sw1=0;  // Will start next smaller search going positive
+      }
+    }
+    
+  return modscale;  // Return the thing we were fitting for
+  }
+
+
+////////////////////////////////////////////////////////////////////////////////////
+
 void DO_SHIFT()
   {
   double rmsmin=9E9,chi2med,chi2outlow,chi2outhigh,chi2inlow,chi2low,chi2terlow;
   int sw1,sw2,ntmp;
   int midti,startti,endti;  // Index for middle of transit point, start of transit, and end of transit
-  int widthfac;
+  double widthfac;
   double width,halfwidth,tenthwidth;
   double nintrans;
   double med,std,sigreject,mad;
   double tmpsum1,tmpsum2;
-    
+  
+//   clock_t startTime = clock();  
+  
   // Phase Data given period and epoch
   for(i=0;i<ndat;i++)
     {
@@ -270,7 +370,7 @@ void DO_SHIFT()
     }
 
 
-// 
+
 
 
 
@@ -285,7 +385,25 @@ void DO_SHIFT()
     exit(1);
     }
 
-
+ 
+//   outfile.open("tmpout");
+//   outfile << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
+    
+  // Scale model to fit data best (Should be the case, but may not due to odd/even stuff.)
+  for(i=0;i<ndat;i++)
+    {
+    tmpdob1[i] = data[i].flux;;  // Calculate residuals
+    tmpdob2[i] = data[i].model;
+    }
+  modscale = MODSCALE(tmpdob1,tmpdob2,ndat);
+  
+  for(i=0;i<ndat;i++)
+    data[i].model *= modscale;
+  
+//   outfile << modscale << endl;
+//   outfile << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
+//   outfile.close();
+  
 
   // Record model depth of primary transit
   results.tdepth = -fabs(data[midti].model - baseflux);
@@ -367,7 +485,7 @@ void DO_SHIFT()
     data[i+ndat].phase = data[i].phase;
     data[i+ndat].flux = data[i].flux;
     data[i+ndat].model = data[i].model;
-    data[i+ndat].resid = data[i].resid; 
+    data[i+ndat].resid = data[i].resid;
     }  
 
 
@@ -464,6 +582,18 @@ void DO_SHIFT()
         }
       }
     }
+  // Make sure we find a secondary no matter what
+  if(results.seclowtime == -2*period)  // If no secondary was found
+    for(i=0;i<ndat;i++)
+      if(data[i+midti].phase > 0.4*period && data[i+midti].phase < 0.6*period)
+        {
+        if(chi2[i]<chi2outlow)
+          {
+          chi2outlow=chi2[i];
+          results.seclowtime = data[i+midti].phase;
+          }
+        }
+  
     
   // Find tertiary and biggest positive peak that's outside primary and secondary eclipse
   chi2terlow = 9E9;
@@ -493,7 +623,26 @@ void DO_SHIFT()
         }
     }
 
-  // Compute median excluding primary and secondary eclipse. I have built in contigency in cases of sparse data so this should never fail.
+    
+  // Compute median excluding primary and secondary eclipse. I have built in contigency in cases of sparse data so this should never fail.  
+  widthfac=2;
+  ntmp=0;
+  while(ntmp<0.1*ndat)  // Require at least 3 points to exist out of transit & eclipse
+    {
+    ntmp=0;
+    for(i=0;i<ndat;i++)
+      if((data[i+midti].phase < results.prilowtime+widthfac*tstart || data[i+midti].phase > results.prilowtime+widthfac*tend) && (data[i+midti].phase < results.prilowtime+widthfac*tstart+period || data[i+midti].phase > results.prilowtime+widthfac*tend+period) && (data[i+midti].phase < results.prilowtime+widthfac*tstart-period || data[i+midti].phase > results.prilowtime+widthfac*tend-period) && (data[i+midti].phase < results.seclowtime+widthfac*tstart || data[i+midti].phase > results.seclowtime+widthfac*tend) && (data[i+midti].phase < results.seclowtime+widthfac*tstart+period || data[i+midti].phase > results.seclowtime+widthfac*tend)+period && (data[i+midti].phase < results.seclowtime+widthfac*tstart-period || data[i+midti].phase > results.seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
+        {
+        tmpdob1[ntmp]=chi2[i];
+        ntmp++;
+        }
+      widthfac-=0.01;  // Reduce width factor by -0.1 and search again if no points were found out of transit & eclipse
+    }
+  chi2med = MEDIAN(tmpdob1,ntmp);
+  
+
+  
+ /* 
   ntmp=0;
   widthfac=2;
   for(i=0;i<ndat;i++)
@@ -504,10 +653,10 @@ void DO_SHIFT()
       }
   if(ntmp>0)
     chi2med = MEDIAN(tmpdob1,ntmp);
-  else // First contigency - if there were no points outside twice the width of the pri and secondary eclipse, try again by only excluding data inside primary
+  else  // First contigency - if still can't find any data just outside primary, try it by allowing for just a widthfac of 1.5 instead of 2
     {
     ntmp=0;
-    widthfac=2;
+    widthfac=1.5;
     for(i=0;i<ndat;i++)
       if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
         {
@@ -516,10 +665,10 @@ void DO_SHIFT()
         }
     if(ntmp>0)
       chi2med = MEDIAN(tmpdob1,ntmp);
-    else  // Second contigency - if still can't find any data just outside primary, try it by allowing for just a widthfac of 1 instead of 2, i.e., literally anything outside transit
+    else  // Second contigency - if still can't find any data just outside primary, try it by allowing for just a widthfac of 1 instead of 1.5
       {
       ntmp=0;
-      widthfac=1;
+      widthfac=1.0;
       for(i=0;i<ndat;i++)
         if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
           {
@@ -528,40 +677,57 @@ void DO_SHIFT()
           }
       if(ntmp>0)
         chi2med = MEDIAN(tmpdob1,ntmp);
-      else  // Really? So the only data points we have are in-transit? Allright just use those...the only way we could fail now is if there is literally no data, in which case we should have crashed long ago.
+      else // Third contigency - if there were no points outside the width of the pri and secondary eclipse, try again by only excluding data inside primary
         {
         ntmp=0;
+        widthfac=1;
         for(i=0;i<ndat;i++)
-          {
-          tmpdob1[ntmp]=chi2[i];
-          ntmp++;
-          }
+          if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
+            {
+            tmpdob1[ntmp]=chi2[i];
+            ntmp++;
+            }
         if(ntmp>0)
           chi2med = MEDIAN(tmpdob1,ntmp);
-        else
+        else  // Really? So the only data points we have are in-transit? Allright just use those...the only way we could fail now is if there is literally no data, in which case we should have crashed long ago.
           {
-          cout << "You should never see this message. I think you have no data at all in your light curve." << endl;
-          exit(1);
+          ntmp=0;
+          for(i=0;i<ndat;i++)
+            {
+            tmpdob1[ntmp]=chi2[i];
+            ntmp++;
+            }
+          if(ntmp>0)
+            chi2med = MEDIAN(tmpdob1,ntmp);
+          else
+            {
+            cout << "You should never see this message. I think you have no data at all in your light curve." << endl;
+            exit(1);
+            }
           }
         }
       }
     }
-
+*/
 
     
   // Calculate rmsmin and Fred, ratio of gaussian noise to systematic noise, excluding primary and secondary
-  ntmp=0;
   widthfac=2;
-  for(i=0;i<ndat;i++)
-    if((data[i+midti].phase < results.prilowtime+widthfac*tstart || data[i+midti].phase > results.prilowtime+widthfac*tend) && (data[i+midti].phase < results.prilowtime+widthfac*tstart+period || data[i+midti].phase > results.prilowtime+widthfac*tend+period) && (data[i+midti].phase < results.prilowtime+widthfac*tstart-period || data[i+midti].phase > results.prilowtime+widthfac*tend-period) && (data[i+midti].phase < results.seclowtime+widthfac*tstart || data[i+midti].phase > results.seclowtime+widthfac*tend) && (data[i+midti].phase < results.seclowtime+widthfac*tstart+period || data[i+midti].phase > results.seclowtime+widthfac*tend)+period && (data[i+midti].phase < results.seclowtime+widthfac*tstart-period || data[i+midti].phase > results.seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
-      {
-      tmpdob1[ntmp]=data[i+midti].flux-data[i+midti].model;  // Original data
-      tmpdob2[ntmp]=results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med);  // Converted depth value of the convolved data
-      ntmp++;
-      }
-  rmsmin = RMS(tmpdob1,ntmp);  // RMS assuming gaussian noise and excluding pri and sec events
+  ntmp=0;
+  while(ntmp<0.1*ndat)  // Require at least 3 points to exist out of transit & eclipse
+    {
+    ntmp=0;
+    for(i=0;i<ndat;i++)
+      if((data[i+midti].phase < results.prilowtime+widthfac*tstart || data[i+midti].phase > results.prilowtime+widthfac*tend) && (data[i+midti].phase < results.prilowtime+widthfac*tstart+period || data[i+midti].phase > results.prilowtime+widthfac*tend+period) && (data[i+midti].phase < results.prilowtime+widthfac*tstart-period || data[i+midti].phase > results.prilowtime+widthfac*tend-period) && (data[i+midti].phase < results.seclowtime+widthfac*tstart || data[i+midti].phase > results.seclowtime+widthfac*tend) && (data[i+midti].phase < results.seclowtime+widthfac*tstart+period || data[i+midti].phase > results.seclowtime+widthfac*tend)+period && (data[i+midti].phase < results.seclowtime+widthfac*tstart-period || data[i+midti].phase > results.seclowtime+widthfac*tend-period)  )  // If outside primary and secondary     
+        {
+        tmpdob1[ntmp]=data[i+midti].flux-data[i+midti].model;  // Original data
+        tmpdob2[ntmp]=results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med);  // Converted depth value of the convolved data
+        ntmp++;
+        }
+    widthfac-=0.01;  // Reduce width factor by -0.1 and search again if no points were found out of transit & eclipse
+    }
+  rmsmin = RMS(tmpdob1,ntmp);  // RMS assuming gaussian noise and excluding pri and sec events  
   results.fred = sqrt(nintrans)*STDEV(tmpdob2,ntmp)/rmsmin;  // Have to account for the number of points in-transit we're averaging over.
-
 
 
   // Calculate Sigma_FA - the false alarm rate. I've set it so we shoudl only see one false alarm in 10,000 KOIs, assuming gaussian noise.
@@ -646,9 +812,9 @@ void PLOT()
   system(syscmd.c_str());
 
   // Bin data for the binned data
-  BIN_NOERR(basename+"-bininput.dat",((tend-tstart)/period)/8,basename+"-binned2.dat");
-  BIN_NOERR(basename+"-bininput-odd.dat",((tend-tstart)/period)/8,basename+"-binned2-evn.dat");
-  BIN_NOERR(basename+"-bininput-odd.dat",((tend-tstart)/period)/8,basename+"-binned2-odd.dat");
+  BIN_NOERR(basename+"-bininput.dat",((tend-tstart)/period)/10,basename+"-binned2.dat");
+  BIN_NOERR(basename+"-bininput-odd.dat",((tend-tstart)/period)/10,basename+"-binned2-odd.dat");
+  BIN_NOERR(basename+"-bininput-evn.dat",((tend-tstart)/period)/10,basename+"-binned2-evn.dat");
   
   
   // Make plot file
@@ -656,7 +822,7 @@ void PLOT()
   outfile.open(tmpstr1.c_str());
   outfile << "set term pdfcairo enhanced dashed size 8.5in,11in font ',16'" << endl; //pdfcairo enhanced size 5.5in,4.25in" << endl;
   outfile << "set output '" << basename << "-modshift.pdf'" << endl;
-  outfile << "set multiplot layout 4,1 title \"TCE " << basename << ", P = " << setprecision(6) << period << " Days, E = " << setprecision(6) << epoch << " Days\" font ',20'" << endl;
+  outfile << "set multiplot layout 4,1 title \"" << objectname << ", P = " << setprecision(6) << period << " Days, E = " << setprecision(6) << epoch << " Days\" font ',20'" << endl;
 
   
   
@@ -743,8 +909,8 @@ void PLOT()
   outfile << "set label \"" <<  FORMAT(results.sigsec-results.sigpos)        << "\" at screen (c+5*d),(e-0.025) center font ',16'";
   if(results.sigsec-results.sigpos>results.sigfa2) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
 
-  outfile << "set label \"" <<  FORMAT(fabs(results.sigodd-results.sigevn)) << "\" at screen (c+6*d),(e-0.025) center font ',16'";
-  if(fabs(results.sigodd-results.sigevn)>results.sigfa1) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
+  outfile << "set label \"" <<  FORMAT(results.sigoe) << "\" at screen (c+6*d),(e-0.025) center font ',16'";
+  if(results.sigoe>results.sigfa1) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
 
 
   // First plot
@@ -827,7 +993,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2-odd.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2-odd.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6*" << results.odddepth/results.tdepth << ") with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6*" << results.odddepth/results.tdepth << ") with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6*" << results.odddepth/results.tdepth << ") with lines lt 1 lc 7 notitle" << endl;
   
   outfile << "unset label" << endl;
   
@@ -847,7 +1013,7 @@ void PLOT()
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2-evn.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2-evn.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u 1:($3*1E6*" << results.evndepth/results.tdepth << ") with lines lt 1 lc 7 notitle, '' u ($1+1.0):($3*1E6*" << results.evndepth/results.tdepth << ") with lines lt 1 lc 7 notitle, '' u ($1-1.0):($3*1E6*" << results.evndepth/results.tdepth << ") with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
   
@@ -873,43 +1039,49 @@ void PLOT()
   outfile << "unset label" << endl;
 
   // Ter Zoom
-  outfile << "set size square 0.375,0.275" << endl;
-  outfile << "set origin 0.315, -0.015" << endl;
-  outfile << "set label 'Tertiary' at graph 0.5,0.925 center front" << endl;
-  outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
-  outfile << "set xtics format '%5.3f' mirror" << endl;
-  outfile << "set xrange [" << setprecision(10) << results.terlowtime/period+3*tstart/period << " to " << results.terlowtime/period+3*tend/period << "]" << endl;
-  outfile << "set xlabel 'Phase'" << endl;
-  outfile << "unset x2tics" << endl;
-  outfile << "unset x2label" << endl;
-  outfile << "unset y2tics" << endl;
-  outfile << "unset y2label" << endl;
-  outfile << "set autoscale y" << endl;
-  outfile << "set ytics format '%6.0f' mirror" << endl;
-  outfile << "set ytics auto" << endl;
-  outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
-
+  if(results.terlowtime>-0.25)
+    {
+    outfile << "set size square 0.375,0.275" << endl;
+    outfile << "set origin 0.315, -0.015" << endl;
+    outfile << "set label 'Tertiary' at graph 0.5,0.925 center front" << endl;
+    outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
+    outfile << "set xtics format '%5.3f' mirror" << endl;
+    outfile << "set xrange [" << setprecision(10) << results.terlowtime/period+3*tstart/period << " to " << results.terlowtime/period+3*tend/period << "]" << endl;
+    outfile << "set xlabel 'Phase'" << endl;
+    outfile << "unset x2tics" << endl;
+    outfile << "unset x2label" << endl;
+    outfile << "unset y2tics" << endl;
+    outfile << "unset y2label" << endl;
+    outfile << "set autoscale y" << endl;
+    outfile << "set ytics format '%6.0f' mirror" << endl;
+    outfile << "set ytics auto" << endl;
+    outfile << "set ylabel ' '" << endl;
+    outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
+    }
+  
   outfile << "unset label" << endl;
 
   // Pos Zoom
-  outfile << "set size square 0.375,0.375" << endl;
-  outfile << "set origin 0.63, -0.065" << endl;
-  outfile << "set label 'Positive' at graph 0.5,0.075 center front" << endl;
-  outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
-  outfile << "set xtics format '%5.3f' mirror" << endl;
-  outfile << "set xrange [" << setprecision(10) << results.sechightime/period+3*tstart/period << " to " << results.sechightime/period+3*tend/period << "]" << endl;
-  outfile << "set xlabel 'Phase'" << endl;
-  outfile << "unset x2tics" << endl;
-  outfile << "unset x2label" << endl;
-  outfile << "unset y2tics" << endl;
-  outfile << "unset y2label" << endl;
-  outfile << "set autoscale y" << endl;
-  outfile << "set ytics format '%6.0f' mirror" << endl;
-  outfile << "set ytics auto" << endl;
-  outfile << "set ylabel ' '" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
-
+  if(results.sechightime>-0.25)
+    {
+    outfile << "set size square 0.375,0.375" << endl;
+    outfile << "set origin 0.63, -0.065" << endl;
+    outfile << "set label 'Positive' at graph 0.5,0.075 center front" << endl;
+    outfile << "set xtics " << setprecision(10) << (3*tend/period-3*tstart/period)/3.0 << endl;
+    outfile << "set xtics format '%5.3f' mirror" << endl;
+    outfile << "set xrange [" << setprecision(10) << results.sechightime/period+3*tstart/period << " to " << results.sechightime/period+3*tend/period << "]" << endl;
+    outfile << "set xlabel 'Phase'" << endl;
+    outfile << "unset x2tics" << endl;
+    outfile << "unset x2label" << endl;
+    outfile << "unset y2tics" << endl;
+    outfile << "unset y2label" << endl;
+    outfile << "set autoscale y" << endl;
+    outfile << "set ytics format '%6.0f' mirror" << endl;
+    outfile << "set ytics auto" << endl;
+    outfile << "set ylabel ' '" << endl;
+    outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
+    }
+  
   outfile << "unset label" << endl;
   
   
@@ -924,8 +1096,8 @@ void PLOT()
   // system(syscmd.c_str());
   syscmd = "rm " + basename + "-outfile*.dat";
   system(syscmd.c_str());
-  syscmd = "rm " + basename + "-bin*dat";
-  system(syscmd.c_str());
+//   syscmd = "rm " + basename + "-bin*dat";
+//   system(syscmd.c_str());
   syscmd = "rm " + basename + "-ModShift.gnu";
   system(syscmd.c_str());
   }
