@@ -87,8 +87,8 @@ def sig_sec(modshift):
 
     # Check if a significant secondary exists in phased light curve from model-shift
     if modshift['mod_sig_sec'] / modshift['mod_Fred']    > modshift['mod_sig_fa1'] and modshift['mod_sig_sec'] > 0 and \
-       modshift['mod_sig_sec'] - modshift['mod_sig_ter'] > modshift['mod_sig_fa2'] and modshift['mod_sig_ter'] > 0 and \
-       modshift['mod_sig_sec'] - modshift['mod_sig_pri'] > modshift['mod_sig_fa2'] and modshift['mod_sig_pri'] > 0:
+       (modshift['mod_sig_sec'] - modshift['mod_sig_ter'] > modshift['mod_sig_fa2'] or modshift['mod_sig_ter'] > 0) and \
+       (modshift['mod_sig_sec'] - modshift['mod_sig_pri'] > modshift['mod_sig_fa2'] or modshift['mod_sig_pri'] > 0):
         if comments != '':
             comments += '---'
         comments += 'SIG_SEC_IN_MODEL_SHIFT'
