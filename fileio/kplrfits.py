@@ -551,15 +551,8 @@ except ImportError:
 
 
 
-def getIndicesOfTransits(time, period_days, epoch_bkjd, transitDuration_days):
-    print "WARN: getIndicesOfTransits DEPRECATED"
-    print "Use markTransitCadences instead"
-
-    return markTransitCadences(time, period_days, epoch_bkjd, transitDuration_days)
-
-
 def markTransitCadences(time, period_days, epoch_bkjd, duration_days,\
-    numberOfDurations=1):
+    numberOfDurations=1, flags=None):
     """Create a logical array indicating which cadences are
     affected by a transit
 
@@ -583,14 +576,26 @@ def markTransitCadences(time, period_days, epoch_bkjd, duration_days,\
         1/2 the transit duration either side of
         transit center.
 
+    Optional Inputs:
+    flags:
+        If set, must be an array of booleans of length ``time``.
+        Cadences where this array is true are ignored in the
+        calculation. This is useful if some of the entries of time
+        are Nan.
 
     Returns:
     -------------
     Array of length len(time) of booleans. Element set to true
     are affected by transits
     """
-    i0 = np.floor((np.min(time)-epoch_bkjd)/period_days)
-    i1 = np.ceil((np.max(time)-epoch_bkjd)/period_days)
+
+    if flags is None:
+        flags = np.zeros_like(time, dtype=bool)
+
+    i0 = np.floor((np.min(time[~flags])-epoch_bkjd)/period_days)
+    i1 =  np.ceil((np.max(time[~flags])-epoch_bkjd)/period_days)
+    assert(np.isfinite(i0))
+    assert(np.isfinite(i1))
 
     irange = np.arange(i0, i1+1)
     transitTimes = epoch_bkjd + period_days*irange
