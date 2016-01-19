@@ -62,6 +62,7 @@ def main():
     isOk &= checkImport("scipy")
     isOk &= checkImport("matplotlib")
     isOk &= checkImport("oct2py")
+    isOk &= checkImport("Gnuplot")
 
     #This is specialised code.
     isOk &= checkImport("bls", False)
