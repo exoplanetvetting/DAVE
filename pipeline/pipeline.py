@@ -98,6 +98,9 @@ def loadDefaultConfig():
         blsTask trapezoidFitTask vetTask plotTask""".split()   # Jeff added plotTask
     cfg['taskList'] = tasks
 
+    searchTaskList = """blsTask trapezoidFitTask modshiftTask
+    measureDiffImgCentroidsTask dispositionTask""".split()
+    cfg['searchTaskList'] = searchTaskList
 
     cfg['clipSavePath'] = "./clips"
     cfg['keysToIgnoreWhenSaving'] = ["serve"]
@@ -299,11 +302,11 @@ def singleEventSearchTask(clip):
     return clip
 
 
-import dave.fileio.kplrfits as kplrfits
 def searchForEvent(clip):
     subClip = clip.shallowCopy()
 
     originalKeyList = subClip.keys()
+    taskList = clip['config.searchTaskList']
 
     #Set the flags attribute of the new subclip
     #Problem with this code is it closely tied to the behaviour
@@ -315,13 +318,21 @@ def searchForEvent(clip):
         flags = clip['detrend.flags']
     subClip['flags'] = flags
 
+    #Check that all the tasks are properly defined
+    for t in taskList:
+        f = eval(t)
 
-    #@TODO List of tasks to run should be config param
-    subClip = placeholderBls(subClip)
-    subClip = trapezoidFitTask(subClip)
-    subClip = modshiftTask(subClip)
-    subClip = measureDiffImgCentroidsTask(subClip)
-    subClip = dispositionTask(subClip)
+    #Now run them.
+    for t in taskList:
+        f = eval(t)
+        subClip = f(subClip)
+
+#    #@TODO List of tasks to run should be config param
+#    subClip = placeholderBls(subClip)
+#    subClip = trapezoidFitTask(subClip)
+#    subClip = modshiftTask(subClip)
+#    subClip = measureDiffImgCentroidsTask(subClip)
+#    subClip = dispositionTask(subClip)
 
     newKeys = list(set(subClip.keys()) - set(originalKeyList))
     out = clipboard.Clipboard(__meta__=subClip['__meta__'])
