@@ -125,6 +125,14 @@ class Clipboard(object):
         self.__dict__.update(data)
 
 
+    def shallowCopy(self):
+        """Return a shallow copy of a clipboard"""
+        out = Clipboard()
+        for k in self.keys():
+            out[k] = self.store[k]
+
+        return out
+
     def save(self, filename):
         sh = shelve.open(filename)
         sh['clip'] = self
