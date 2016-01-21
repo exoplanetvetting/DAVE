@@ -10,6 +10,7 @@ youname_main.py, then run and edit that file.
 import dave.pipeline.pipeline as dpp
 import dave.pipeline.clipboard as clipboard
 
+
 def main():
     """A bare bones main program"""
     cfg = loadMyConfiguration()
@@ -32,10 +33,17 @@ def loadMyConfiguration():
 
     tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
         dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-        dpp.detrendDataTask dpp.placeholderBls dpp.trapezoidFitTask
-        dpp.dispostionTask dpp.plotTask dpp.saveOnError""".split()   # Jeff added
+        dpp.detrendDataTask dpp.singleEventSearchTask dpp.saveOnError""".split()
+
     cfg['taskList'] = tasks
 
+
+#    searchTaskList = """placeholderBls trapezoidFitTask modshiftTask
+#    measureDiffImgCentroidsTask dispositionTask""".split()
+    searchTaskList = """blsTask trapezoidFitTask modshiftTask
+    measureDiffImgCentroidsTask dispositionTask""".split()
+
+    cfg['searchTaskList'] = searchTaskList
     return cfg
 
 
