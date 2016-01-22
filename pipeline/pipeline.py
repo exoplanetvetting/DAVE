@@ -119,6 +119,7 @@ def checkDirExistTask(clip):
     prfdir=clip['config.prfPath']
     lppmap=clip['config.lppMapFilePath']
     datadir=clip['config.dataStorePath']
+    clipdir=clip['config.clipSavePath']
 
     moddir=os.path.dirname(modbase)
     plotdir=os.path.dirname(plotbase)
@@ -138,6 +139,8 @@ def checkDirExistTask(clip):
         errors.append("Cannot Find Plotting Write Dir, %s " % plotdir)
     if not (os.access(plotdir, os.W_OK)):
         errors.append("Cannot Write to plotting directory %s " % plotdir)
+    if not (os.access(clipdir,os.W_OK)):
+        errors.append("Can not write to clip directory %s" % clipdir )
     if not (os.access(prfdir,os.R_OK)):
         errors.append("Cannot Read from prf Directory, %s "% prfdir)
     if not (os.access(datadir,os.R_OK)):
