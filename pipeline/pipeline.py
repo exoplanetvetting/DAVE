@@ -737,6 +737,11 @@ def saveClip(clip):
     keysToSkip = clip.get('config.keysToIgnoreWhenSaving', [])
 
     fn = "clip-%09i-%02i.shelf" %(value, campaign)
+    fn = os.path.join(path, fn)
+
+    if os.path.exists(fn):
+        os.remove(fn)
+
     sh = shelve.open(os.path.join(path, fn))
     for k in clip.keys():
         if k in keysToSkip:
