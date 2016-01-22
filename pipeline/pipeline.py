@@ -728,29 +728,34 @@ def saveOnError(clip):
 
 import shelve
 def saveClip(clip):
-    value = clip['value']
-    campaign = clip['config.campaign']
-    path = clip.get('config.clipSavePath', ".")
 
-    #The problem with this is how do I which tasks to run
-    #when I restore?
-    keysToSkip = clip.get('config.keysToIgnoreWhenSaving', [])
+    try:
+        value = clip['value']
+        campaign = clip['config.campaign']
+        path = clip.get('config.clipSavePath', ".")
 
-    fn = "clip-%09i-%02i.shelf" %(value, campaign)
-    fn = os.path.join(path, fn)
+        #The problem with this is how do I which tasks to run
+        #when I restore?
+        keysToSkip = clip.get('config.keysToIgnoreWhenSaving', [])
 
-    if os.path.exists(fn):
-        os.remove(fn)
+        fn = "clip-%09i-%02i.shelf" %(value, campaign)
+        fn = os.path.join(path, fn)
 
-    sh = shelve.open(os.path.join(path, fn))
-    for k in clip.keys():
-        if k in keysToSkip:
-            sh[k] = "Clip not saved"
-        else:
-            sh[k] = clip[k]
-    sh.close()
+        if os.path.exists(fn):
+            os.remove(fn)
+
+        sh = shelve.open(fn)
+        for k in clip.keys():
+            if k in keysToSkip:
+                sh[k] = "Clip not saved"
+            else:
+                sh[k] = clip[k]
+        sh.close()
+    except Exception, e:
+        print "WARN: Error in saveClip: %s" %(e)
+        clip['exception'] = str(e)
+
     return clip
-
 
 def loadTpfAndLc(k2id, campaign, storeDir):
     ar = mastio.K2Archive(storeDir)
