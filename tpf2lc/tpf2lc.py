@@ -81,12 +81,41 @@ def bg_sub(fla):
     return fla
 
 
-def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=False, toss_resat=True, bg_cut=5, skip_cads=None, skip=None):
+def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=False, toss_resat=True, bg_cut=5, skip=0):
+    """
+    This routine determines an optimal apertures and outputs the flux (i.e. a light curve) from a TPF.
 
-    if skip is not None:
-        skip = skip_cads
-    else:
-        skip = 0
+    
+    Inputs:
+    ------------
+    t_time = 1D array of 'TIME' from TPF
+    t_fluxarr = 1D array of 'FLUX' from TPF
+    t_quality = 1D array of 'QUALITY' from TPF
+    qual_cut = exclude cadences with a non-zero quality flag; this is False by default
+    return_qual = if True then nothing is returned; this is True by default 
+    toss_resat = exclude cadences where there is a wheel resaturation event; this is True by default
+    bg_cut = threshold to find pixels that are bg_cut * MAD above the median
+    skip = index of first cadence that should be used in the time series
+
+    Outputs:
+    ------------
+    time = 1D array of time in BKJD
+    lc = 1D array of flux measured in optimal aperture
+    xbar = 1D array of x-coordinate of target centroid
+    ybar = 1D array of y-coordinate of target centroid
+    regnum = integer value of brightest pixel  
+    lab = 2D array identifying pixels used in aperture
+    
+    Usage:
+    ------------    
+    tpf,tpf_hdr = ar.getLongTpf(k2id, campaign, header=True)
+
+    tpf_time = tpf['TIME']
+    tpf_flux = tpf['FLUX']
+    tpf_quality = tpf['QUALITY']
+        
+    time,lc,xbar,ybar,regnum,lab = optimalAperture(tpf_time, tpf_flux, tpf_quality, qual_cut=False, return_qual=False, toss_resat=True, bg_cut=5, skip=0)
+    """
 
     time = t_time[skip:]
     fluxarr = t_fluxarr[skip:]
@@ -160,37 +189,3 @@ def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=Fa
         return (time,lc, xbar / np.nanmean(xbar), ybar / np.nanmean(xbar), regnum, lab)
        
 if __name__=="__main__":
-
-    
-    #download K2 TPF from MAST
-    path = "."  #Current path
-    ar = mastio.K2Archive(path)
-
-    campaign = 3
-    test_file = 'GO3106-targets.csv'
-
-    tbl = Table.read(test_file)
-    
-    epicid = tbl["EPIC ID"]
-    kpmags = tbl["magnitude"]
-
-
-    for i in range(len(epicid)):
-        
-        k2id = epicid[i]
-        
-        #extract flux from TPF
-        tpf,tpf_hdr = ar.getLongTpf(k2id, campaign, header=True)
-
-        tpf_time = tpf['TIME']
-        tpf_flux = tpf['FLUX']
-        tpf_quality = tpf['QUALITY']
-        
-        time,lc,xbar,ybar,regnum,lab = optimalAperture(tpf_time, tpf_flux, tpf_quality, qual_cut=False, return_qual=False, toss_resat=True, bg_cut=5, skip_cads=None, skip=None)
-
-        bad_1 = ~np.isfinite(lc)
-
-        #save time, flux, x, y, bad data flag
-        #np.savetxt(''+str(k2id)+'_c'+str(campaign)+'_lc_opt.txt',np.c_[time,lc,xbar,ybar,bad_1])
-
-        

@@ -157,6 +157,8 @@ def run_C0_detrend(time, lc, xbar, ybar, skip, cadstep=200):
                 npoly_dsdt,sigma_dsdt,npoly_arfl,
                 sigma_arfl,2,'crapfile',
                 0)
+        if len(th_c) == 489:
+            pass
         outflux = np.r_[outflux,outf]
         outcorr = np.r_[outcorr,outc]
         thr_cad = np.r_[thr_cad,th_c]

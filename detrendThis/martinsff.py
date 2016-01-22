@@ -67,13 +67,19 @@ def martinsff(intime,indata,centr1,centr2,
     centr1_good = array([],'float32')
     centr2_good = array([],'float32')
     flux_good = array([],'float32')
-    cad_good = array([],'int')
+    cad_good = array([],dtype=bool)
     for i in range(len(cfit)):
         if abs(centr2[i] - cfit[i]) < sigma_cxcy * csig[i]:
+            cad_good = append(cad_good, True)
             time_good = append(time_good,intime[i])
             centr1_good = append(centr1_good,centr1[i])
             centr2_good = append(centr2_good,centr2[i])
             flux_good = append(flux_good,indata[i])
+        else:
+            #import ipdb
+            #ipdb.set_trace()
+            cad_good = append(cad_good, False)
+            print(intime[i])
 
 # covariance matrix for centroid time series
 
@@ -229,5 +235,17 @@ def martinsff(intime,indata,centr1,centr2,
 
     out_detsap = indata / cfac
 
-    return out_detsap, cfac, thr_cadence
+    #add back in the missing thr_cadence data
+    new_thr = np.zeros_like(cad_good)
+    j = 0
+    if np.all(cad_good == True):
+        pass
+    else:
+        for i,c in enumerate(cad_good):
+            if c == False:
+                j+=1
+            else:
+                new_thr[i] = thr_cadence[i-j]
+
+    return out_detsap, cfac, new_thr
 

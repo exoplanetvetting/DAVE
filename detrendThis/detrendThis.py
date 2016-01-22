@@ -15,8 +15,23 @@ def twostepreplace(arr1, arr2, idx1, idx2, zpt):
     return arr1
 
 
-def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None, inpflag=None,
+def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None,
+                inpflag=None,
                 ap=4.0):
+
+    """
+    code to run self flat field on K2 data
+    
+    Keyword arguments:
+    time -- time time array
+    flux -- the array of brightnesses
+    xpos -- the x-pixel position
+    ypos -- the y-pixel position
+    ferr -- flux error, will be assumed to be uniform if None
+    qflags -- data quality flags
+    inpflag -- flags to use to explude data, non-zero values are removed
+    ap -- a random number
+    """
 
     if ferr is None:
         ferr = np.ones_like(time)
@@ -49,7 +64,6 @@ def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None, inpflag=None,
 
     outflux, correction, thr_cad = extract_lc.run_C0_detrend(
         time, flatlc, xpos, ypos, cadstep=cadstep, skip=None)
-
     not_thr = ~thr_cad
     corflux = (flux[zpt:][not_thr] /
                np.median(flux[zpt:][not_thr]) /
