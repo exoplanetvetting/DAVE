@@ -32,6 +32,8 @@ import os
 
 
 def runOne(k2id, config):
+
+    print "WARN: This function is deprecated. See main.py instead."
     taskList = config['taskList']
 
     clip = clipboard.Clipboard()
@@ -57,7 +59,8 @@ def runOne(k2id, config):
                 for t in taskList:
                     f = eval(t)
                     clip = f(clip)
-    
+
+    print "WARN: This function is deprecated. See main.py instead."
     return clip
 
 
@@ -82,7 +85,7 @@ def loadDefaultConfig():
     path = lpp.getLppDir()
     cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
     cfg['modshiftBasename'] = os.path.join(os.environ['HOME'],"daveOutput","")  # Jeff removed modshift from the start of the basename, since the modshift code appends "modshift" at the end of the filename
-    cfg['onepageBasename']  = os.path.join(os.environ['HOME'],"daveOutput","") # Jeff added this. 
+    cfg['onepageBasename']  = os.path.join(os.environ['HOME'],"daveOutput","") # Jeff added this.
     #Location of the place all the light curves and TPF files are stored
     cfg['dataStorePath'] = os.path.join(os.environ['HOME'],".mastio/k2")
 
@@ -95,6 +98,9 @@ def loadDefaultConfig():
         blsTask trapezoidFitTask vetTask plotTask""".split()   # Jeff added plotTask
     cfg['taskList'] = tasks
 
+    searchTaskList = """blsTask trapezoidFitTask modshiftTask
+    measureDiffImgCentroidsTask dispositionTask""".split()
+    cfg['searchTaskList'] = searchTaskList
 
     cfg['clipSavePath'] = "./clips"
     cfg['keysToIgnoreWhenSaving'] = ["serve"]
@@ -113,39 +119,43 @@ def checkDirExistTask(clip):
     prfdir=clip['config.prfPath']
     lppmap=clip['config.lppMapFilePath']
     datadir=clip['config.dataStorePath']
-    
+    clipdir=clip['config.clipSavePath']
+
     moddir=os.path.dirname(modbase)
     plotdir=os.path.dirname(plotbase)
     vetdir=getVetDir()
     vetExName="%s%s" % (vetdir, "/modshift")
-    
+
     errors=[]
     try:
         open(lppmap)
     except IOError:
         errors.append(("Cannot Find LPP Map, %s " % lppmap))
     if not (os.path.exists(moddir)):
-        errors.append("Cannot Find Modshift Write Dir, %s " % moddir)        
+        errors.append("Cannot Find Modshift Write Dir, %s " % moddir)
     if not (os.access(moddir, os.W_OK)):
         errors.append("Cannot Write to modshift directory %s " % moddir)
-    if not (os.path.exists(plotdir)):                                          # Jeff added this and next three lines
-        errors.append("Cannot Find Plotting Write Dir, %s " % plotdir)        
+    if not (os.path.exists(plotdir)):
+        errors.append("Cannot Find Plotting Write Dir, %s " % plotdir)
     if not (os.access(plotdir, os.W_OK)):
         errors.append("Cannot Write to plotting directory %s " % plotdir)
+    if not (os.access(clipdir,os.W_OK)):
+        errors.append("Can not write to clip directory %s" % clipdir )
     if not (os.access(prfdir,os.R_OK)):
         errors.append("Cannot Read from prf Directory, %s "% prfdir)
     if not (os.access(datadir,os.R_OK)):
         errors.append("Cannot Read from Data Dir %s " % datadir)
     if not (os.access(vetExName,os.EX_OK)):
-        errors.append("Make not run on Modshift Makefile, executable not found. %s " % vetExName )
-    
-    
+        errors.append("%s not found. Did you run make?" % vetExName )
+
+
     if len(errors) > 0:
         new="\n"
         msg=new.join(errors)
         raise IOError(msg)
-    
-    return clip  # Jeff added this line - without it task was throwing exception and crashing
+
+    return clip
+
 
 def getVetDir():
     """Get the path where Vetting stores its executables"""
@@ -154,7 +164,7 @@ def getVetDir():
     path = pathSep.join(path.split(pathSep)[:-2])
     path = "%s%s" % (path,"/vetting")
     return path
-    
+
 
 @task.task
 def serveTask(clip):
@@ -205,8 +215,10 @@ def cotrendDataTask(clip):
 
     data = clip['serve.socData']
     flags = clip['extract.flags']
+    time = data[:, 'TIME']
     flux = data[:, 'PDCSAP_FLUX']
 
+    flags |= ~np.isfinite(time)
     flags |= ~np.isfinite(flux)
 
     #Remove dc offset
@@ -273,6 +285,78 @@ def rollPhaseTask(clip):
 
     clip['rollPhase'] = {'rollPhase':rollPhase}
     return clip
+
+
+
+
+
+@task.task
+def singleEventSearchTask(clip):
+
+
+    clip['eventList'] = []
+    subClip = searchForEvent(clip)
+
+    if 'exception' in subClip.keys():
+        clip['exception'] = subClip['exception']
+        clip['backtrace'] = subClip['backtrace']
+
+    clip['eventList'].append(subClip)
+    return clip
+
+
+def searchForEvent(clip):
+    subClip = clip.shallowCopy()
+
+    originalKeyList = subClip.keys()
+    taskList = clip['config.searchTaskList']
+
+    #Set the flags attribute of the new subclip
+    #Problem with this code is it closely tied to the behaviour
+    #of multiEventSearchTask
+    try:
+        tmp = clip.eventList[-1]
+        flags = tmp['flags']
+    except (IndexError, KeyError):
+        flags = clip['detrend.flags']
+    subClip['flags'] = flags
+
+    #Check that all the tasks are properly defined
+    for t in taskList:
+        f = eval(t)
+
+    #Now run them.
+    for t in taskList:
+        f = eval(t)
+        subClip = f(subClip)
+
+#    #@TODO List of tasks to run should be config param
+#    subClip = placeholderBls(subClip)
+#    subClip = trapezoidFitTask(subClip)
+#    subClip = modshiftTask(subClip)
+#    subClip = measureDiffImgCentroidsTask(subClip)
+#    subClip = dispositionTask(subClip)
+
+    newKeys = list(set(subClip.keys()) - set(originalKeyList))
+    out = clipboard.Clipboard(__meta__=subClip['__meta__'])
+    for k in newKeys:
+        out[k] = subClip[k]
+
+
+    #Mark all locations for this event as data not to be used.
+    time = subClip['serve.time']
+    period_days = subClip['trapFit.period_days']
+    epoch_bkjd = subClip['trapFit.epoch_bkjd']
+    duration_days = subClip['trapFit.duration_hrs'] / 24.
+
+#    assert(np.all(np.isfinite(time[~flags])))
+#    assert(np.any(flags))
+    idx = kplrfits.markTransitCadences(time, period_days, epoch_bkjd, \
+        duration_days, numberOfDurations=2, flags=flags)
+
+    out['flags'] = flags | idx
+
+    return out
 
 
 import dave.blsCode.bls_ktwo as bls
@@ -396,7 +480,7 @@ def modshiftTask(clip):
     epic = clip['value']
     basename = clip['config.modshiftBasename'] #  Jeff edited to remove ->  + "%010i" %(epic)   since modshift cpp code already appends basename
     basename = "%s%010i" %(basename, epic)  # Jeff modified
-    
+
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
     dur_hrs =  clip['trapFit.duration_hrs']
@@ -457,9 +541,12 @@ def measureDiffImgCentroidsTask(clip):
     return clip
 
 
-import dave.vetting.RoboVet as RoboVet
+#import dave.vetting.RoboVet as RoboVet
 @task.task
 def vetTask(clip):
+
+    print "WARN: vetTask is deprecated. Use dispostionTask instead"
+
     snr = clip['trapFit.snr']
     snrThreshold = clip['config.minSnrForDetection']
     lppThreshold = clip['config.maxLppForTransit']
@@ -527,27 +614,83 @@ def vetTask(clip):
 
 
 
-#@task.task
-#def plotDiagnosticsTask(clip):
-#
-#    time = clip['serve.time']
-#    rawLc = clip['extract.rawLightCurve']
-#    cotrendLc = clip['cotrend.cotrendedLightcurve']
-#    detrendLc = clip['detrend.detrendedLightcurve']
-#
-#    plotting.plotDiagnosticLightcurves(time, rawLc, cotrendLc, detrendLc)
-#    return clip
+import dave.vetting.RoboVet as RoboVet
+@task.task
+def dispositionTask(clip):
+    """Decide whether an event is a planet candidate or not
+
+    TODO:
+    Much of this should be parcelled off into a function
+    """
+
+    #Thresholds
+    snrThreshold = clip['config.minSnrForDetection']
+    lppThreshold = clip['config.maxLppForTransit']
+    offsetThreshold_sigma = clip['config.minCentroidSignifForFp']
+
+    #Data on which to make a decision
+    snr = clip['trapFit.snr']
+    modshiftDict = clip['modshift']
+    centroidArray = clip['diffImg.centroid_timeseries']
+
+    out = clipboard.Clipboard(isSignificantEvent=True, isCandidate=True, \
+        reasonForFail="None")
+
+    #Check SNR
+    if snr < snrThreshold:
+        out['isSignificantEvent'] = False
+        out['isCandidate'] = False
+        out['reasonForFail'] = "SNR (%.1f) below threshold %.1f" \
+            %(snr, snrThreshold)
+
+    #Check LPP, if it's available
+    Tlpp_linear = clip.get('lpp.TLpp', 0)
+    if Tlpp_linear > lppThreshold:
+        out['isCandidate'] = False
+        out['reasonForFail'] = "TLpp (%.1f) above threshold %.1f" \
+            %(Tlpp_linear, lppThreshold)
+
+
+    #Parse modshift results
+    fluxVetDict = RoboVet.roboVet(modshiftDict)
+    out['fluxVet'] = fluxVetDict
+    assert(fluxVetDict['disp'] in ["candidate", "false positive"])
+
+    if fluxVetDict['disp'] == "false positive":
+        out['isCandidate'] = False
+        out['reasonForFail'] = fluxVetDict['comments']
+
+    #Compute centroid offset and significance
+    result = cent.measureOffsetInTimeseries(centroidArray)
+    out['centroidVet'] = result
+    signif = result['signif']
+    offset = result['offset']
+
+    if signif > offsetThreshold_sigma:
+        out['isCandidate'] = False
+        out['reasonForFail'] = "Centroid offset of %.2f (%.1f sigma) detected" \
+            %( offset, signif)
+
+    clip['disposition'] = out
+
+    #Enforce contract
+    clip['disposition.isSignificantEvent']
+    clip['disposition.isCandidate']
+    clip['disposition.reasonForFail']
+    return clip
+
+
 
 
 import dave.plot.daveplot as daveplot
 @task.task
 def plotTask(clip):
-    
+
     time = clip['serve.time']
     raw  = clip['extract.rawLightcurve']
     flux = clip['detrend.flux_frac']
     fl = clip['detrend.flags']
-    
+
     epic = clip['value']
     basename = clip['config.onepageBasename'] #  Jeff removed end so it isn't redudant with plotting module epic adding + "%010i" %(epic)
     period_days = clip['trapFit.period_days']
@@ -569,12 +712,16 @@ def plotTask(clip):
     clip['plot'] = out
 
     return clip
-  
+
+
 
 def saveOnError(clip):
     """Note this is not a task, because it should run even if
     an exception is raised"""
+
     if 'exception' in clip.keys():
+        print "Error found, saving clip..."
+        print clip['exception']
         saveClip(clip)
     return clip
 
@@ -590,6 +737,11 @@ def saveClip(clip):
     keysToSkip = clip.get('config.keysToIgnoreWhenSaving', [])
 
     fn = "clip-%09i-%02i.shelf" %(value, campaign)
+    fn = os.path.join(path, fn)
+
+    if os.path.exists(fn):
+        os.remove(fn)
+
     sh = shelve.open(os.path.join(path, fn))
     for k in clip.keys():
         if k in keysToSkip:
@@ -598,6 +750,7 @@ def saveClip(clip):
             sh[k] = clip[k]
     sh.close()
     return clip
+
 
 def loadTpfAndLc(k2id, campaign, storeDir):
     ar = mastio.K2Archive(storeDir)
@@ -627,8 +780,5 @@ def loadTpfAndLc(k2id, campaign, storeDir):
     return out
 
 
-if __name__ == "__main__":
-    cfg = loadDefaultConfig()
-    runOne(206103150, cfg)
 
 
