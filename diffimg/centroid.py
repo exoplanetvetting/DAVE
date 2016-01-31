@@ -22,10 +22,13 @@ import numpy as np
 
 import dave.fileio.mastio as mastio
 import dave.fileio.tpf as tpf
+import dave.fileio.kplrfits as kplrfits
+
 import dave.diffimg.prf as prf
 import dave.diffimg.diffimg as diffimg
 import dave.diffimg.arclen as arclen
 import dave.misc.plotTpf
+
 
 import scipy.optimize as sopt
 np.ones
@@ -62,7 +65,7 @@ def exampleDiffImgCentroiding():
     epoch = fits['time'][491]
     dur = 3.0
 
-    out = measureDiffOffset(period, epoch, dur, time, prfObj, \
+    out, log = measureDiffOffset(period, epoch, dur, time, prfObj, \
         ccdMod, ccdOut, cube, bbox, rollPhase, flags)
 
     idx = out[:,1] > 0
@@ -179,7 +182,7 @@ def measureOffsetInTimeseries(offsets):
 
 
 def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
-    time, prfObj, ccdMod, ccdOut, cube, bbox, rollPhase, flags):
+    time, prfObj, ccdMod, ccdOut, cube, bbox, rollPhase, flags, qFlags):
     """Measure Centroid shift between intransit and difference image
     for every in-transit cadence
 
@@ -220,6 +223,9 @@ def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
         Currently a non-zero value of flags indicates a bad
         cadence.
 
+    qFlags
+        (1d array) SAP Quality flags from lightcurve files
+
     Returns:
     -------------
     A array with 5 columns, and as many rows as there are
@@ -236,21 +242,29 @@ def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
     on the target.
     """
 
+    duration_days = duration_hrs/24.
+
     log = []
-    idx = getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time)
+#    idx = getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time)
+    idx = kplrfits.markTransitCadences(time, period_days, epoch_bkjd,\
+        duration_days, flags=flags)
     wh = np.where(idx)[0]
     out = -1 * np.ones((len(wh), 5))
+    diagnostics = range(len(wh))
+
     for i,w in enumerate(wh):
         out[i,0] = w
         try:
-            out[i, 1:] = measureInTransitAndDiffCentroidForOneImg(\
-                prfObj, ccdMod, ccdOut, cube, w, bbox, rollPhase, flags, \
+            out[i, 1:], dDict = measureInTransitAndDiffCentroidForOneImg(\
+                prfObj, ccdMod, ccdOut, cube, w, bbox, rollPhase, qFlags, \
                 hdr=None, plot=False)
+            diagnostics[i] = dDict
         except ValueError, e:
             log.append("Img %i: %s" %(w, e))
             pass
 
-    return out, log
+
+    return out, diagnostics, log
 
 
 def getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time_bkjd):
@@ -271,6 +285,8 @@ def getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time_bkjd):
     An array of booleans of length equal to length of time_bkjd.
     Cadences in transit are set to true, all other cadences to false
     """
+
+    raise DeprecatedWarning("use fileio.kplrfits.markTransitCadences")
 
     time = time_bkjd #Mneumonic
     n1 = int(np.floor((time[0] - epoch_bkjd)/period_days))
@@ -338,14 +354,23 @@ def measureInTransitAndDiffCentroidForOneImg(prfObj, ccdMod, ccdOut, cube, rin, 
 
     Returns:
     -------------
+    A two element tuple
+
     A 4 element numpy array
     ic  In transit centroid column
     ir  In transit centroid row
     dc  Difference image centroid column
     dr  Difference image centroid row
+
+    A dictionary containing some diagnostics describing the cadences used
+    then creating the difference image.
     """
     inTrans = cube[rin]
-    diff, oot= diffimg.constructK2DifferenceImage(cube, rin, rollPhase, flags)
+    diff, oot, diagnostics = diffimg.constructK2DifferenceImage(cube, rin, \
+        rollPhase, flags)
+
+    if np.max(np.fabs(oot)) == 0:
+        return np.array([-1,-1,-1,-1]), diagnostics
 
     ootRes = fitPrfCentroidForImage(oot, ccdMod, ccdOut, bbox, prfObj)
     diffRes = fitPrfCentroidForImage(diff, ccdMod, ccdOut, bbox, prfObj)
@@ -361,7 +386,7 @@ def measureInTransitAndDiffCentroidForOneImg(prfObj, ccdMod, ccdOut, cube, rin, 
         mp.plot(ootRes.x[0], ootRes.x[1], 'ro', ms=12, alpha=.4)
         mp.plot(diffRes.x[0], diffRes.x[1], 'r^', ms=12, alpha=.4)
 
-    return np.array([ootRes.x[0], ootRes.x[1], diffRes.x[0], diffRes.x[1]])
+    return np.array([ootRes.x[0], ootRes.x[1], diffRes.x[0], diffRes.x[1]]), diagnostics
 
 
 
