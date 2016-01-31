@@ -525,17 +525,20 @@ def measureDiffImgCentroidsTask(clip):
     prfObj = prf.KeplerPrf(prfPath)
 
     time_days = clip['serve.time']
-    flags = clip['serve.flags']
+    qflags = clip['serve.flags']
+    flags = clip['detrend.flags']
 
 #    import pdb; pdb.set_trace()
-    out,log = cent.measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
-        time_days, prfObj, ccdMod, ccdOut, cube, bbox, rollPhase, flags)
+    out, diagnostics, log = cent.measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
+        time_days, prfObj, ccdMod, ccdOut, cube, bbox, rollPhase, flags, qflags)
 
     #Set column names
     out = nca.Nca(out)
     out.setLookup(1, "rin intr_col intr_row diff_col diff_row".split())
 
-    clip['diffImg'] = {'centroid_timeseries':out, 'log':log}
+    clip['diffImg'] = {'centroid_timeseries':out, \
+                       'diagnostics':diagnostics, \
+                       'log':log}
 
     clip['diffImg.centroid_timeseries']
     return clip
