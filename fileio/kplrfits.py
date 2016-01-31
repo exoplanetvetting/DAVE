@@ -608,7 +608,6 @@ def markTransitCadences(time, period_days, epoch_bkjd, duration_days,\
 
         idx = np.bitwise_or(idx, np.fabs(diff) < \
             .5*duration_days*numberOfDurations)
-        print .5*duration_days*numberOfDurations
 
     if not np.any(idx):
         print "WARN: No cadences found matching transit locations"

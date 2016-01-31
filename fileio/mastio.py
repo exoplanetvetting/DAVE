@@ -500,6 +500,7 @@ class K2Archive(MastArchive):
 
         if compressed:
             url = url + '.gz'
+#        print url
         return url
 
 
