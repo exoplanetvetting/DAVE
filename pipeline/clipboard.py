@@ -15,7 +15,7 @@ def loadClipboard(filename):
         if not os.path.exists(filename+".dat"):
             raise IOError("File not found: %s" %(filename))
 
-    clip = sh['clip']
+    clip = Clipboard(sh['clip'])
     return clip
 
 
@@ -165,7 +165,7 @@ class Clipboard(object):
 
 
     def unsetException(self):
-        if 'exception' in self.store:
+        if 'exception' in self.store.keys():
             del self.store['exception']
 
     def get(self, keyString, defaultValue=None, npCopy=True):
@@ -208,7 +208,10 @@ class Clipboard(object):
             clip.get('a.b', defaultValue=0)
 
         """
-        keys = keyString.split(".")
+        try:
+            keys = keyString.split(".")
+        except AttributeError:
+            return self.store[keyString]
 
         tmp = self.store
         for k in keys:
