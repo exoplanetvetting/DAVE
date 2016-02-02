@@ -38,8 +38,11 @@ def summaryPlot(output):
     plt.xlim((-.9,141.9))
     plt.title(lab)
     
-    plt.figtext(.25,.95,output['vet.fluxVet.disp'])
-    
+    try:
+        plt.figtext(.15,.96,output['vet.fluxVet.disp'],color='r',fontsize=14)
+        plt.figtext(.12,.93,output['vet.reasonForFail'],color='r',fontsize=14)
+    except:
+        pass
 def indivPlot(clip,ndur):
     """Plot individual transits
     only plot the first six if that many exist.
@@ -54,7 +57,7 @@ def indivPlot(clip,ndur):
     epoch = clip['trapFit.epoch_bkjd'] - tminus
     period = clip['trapFit.period_days']
     dur = clip['trapFit.duration_hrs']
-    depth=clip['bls.depth']*factor;
+    depth=np.abs(clip['bls.depth'])*factor;
     flags=clip['detrend.flags'];
     trapfit=clip['trapFit.bestFitModel']*factor;
     epic = str(clip['value'])
@@ -83,40 +86,63 @@ def indivPlot(clip,ndur):
     c=1;
     for i in ind[want]:
         idx=np.where(ind==i)
-        if c<=4:
-            plt.subplot(2,3,c)
+        if c<=6:
+            plt.subplot(3,3,c)
             plt.plot(time,flux,'k.')
             plt.xlim(posBegEpochs[idx[0]],posEndEpochs[idx[0]])
-            plt.ylim(-1.8*depth,0.8*depth)
+            plt.ylim(-2*depth,0.9*depth)
             ax=plt.gca()
-            plt.text(.1,.1, str(c),transform=ax.transAxes)
+            plt.text(.1,.1, str(i),transform=ax.transAxes,color='m',fontsize=13)
             c=c+1;
     #Plot odd and even light curves
-    plt.subplot(2,3,5)
+    plt.subplot(3,3,7)
     #plt.plot(time_days,trapfit,'r--')
+    
+    mid=  posBegEpochs[nt]+(posEndEpochs[nt] - posBegEpochs[nt])/2 
+    print mid
     
     for i in ind[want]:
         if np.mod(i,2)==1:
             plt.plot(time-i*period,flux,'k.')
     
     plt.xlim(posBegEpochs[nt],posEndEpochs[nt])
-    plt.ylim(-1.8*depth,0.8*depth)
-    plt.title('Odd')
+    plt.ylim(-2*depth,0.9*depth)
+    plt.plot((mid-0.5*dur/24,mid+0.5*dur/24),(-1*depth,-1*depth),'c-',linewidth=3) 
+    ax=plt.gca()
+    plt.text(.1,.1, 'Odd',transform=ax.transAxes,color='m',fontsize=13)
     
-    plt.subplot(2,3,6)
+    plt.subplot(3,3,8)
     
     for i in ind[want]:
         if np.mod(i,2)==0:
             plt.plot(time-i*period,flux,'k.')
     plt.xlim(posBegEpochs[nt],posEndEpochs[nt])
-    plt.ylim(-1.8*depth,0.8*depth)
-    plt.title('Even')
+    plt.ylim(-2*depth,0.9*depth)
+    plt.plot((mid-0.5*dur/24,mid+0.5*dur/24),(-1*depth,-1*depth),'c-',linewidth=3)
+    ax=plt.gca()
+    plt.text(.1,.1, 'Even',transform=ax.transAxes,color='m',fontsize=13)
+
+
+    plt.subplot(3,3,9) 
+    for i in ind[want]:
+        if np.mod(i,1)==0:
+            plt.plot(time-i*period/2,flux,'k.')
+    plt.xlim(posBegEpochs[nt],posEndEpochs[nt])
+    plt.ylim(-2*depth,0.9*depth)
+    plt.plot((mid-0.5*dur/24,mid+0.5*dur/24),(-1*depth,-1*depth),'c-',linewidth=3)
+    ax=plt.gca()
+    plt.text(.1,.1, 'half Period',transform=ax.transAxes,color='m',fontsize=13)
         
     
     plt.figtext(.48,.95,epic,size=14)
-    plt.figtext(.2,.95,clip['vet.fluxVet.disp'])
-    #Plot the even and odd ones
     
+    try:
+        
+        plt.figtext(.12,.95,clip['vet.fluxVet.disp'],color='r',fontsize=13)
+        plt.figtext(.8,.95,str(period),fontsize=13)
+    #Plot the even and odd ones
+    except:
+        pass
     
     
     

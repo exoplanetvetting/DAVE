@@ -50,14 +50,15 @@ def getSnrOfTransit(time_days, flux_frac, unc, flags, period_days, phase_bkjd, \
 
     #compute modelat all input time values
     subSampleN= 15
+    time_days[~idx] = 0  #Hide the Nans from one_model
+    assert(np.all(np.isfinite(time_days)))
     ioBlock = tf.trapezoid_model_onemodel(time_days, period_days, \
         out['epoch_bkjd'], 1e6*out['depth_frac'], out['duration_hrs'], \
         out['ingress_hrs'], subSampleN)
     out['bestFitModel'] = ioBlock.modellc - 1  #Want mean of zero
-
-#    import pdb; pdb.set_trace()
     out['snr'] = estimateSnr(time_days, flux_frac, flags, out['period_days'], \
         out['epoch_bkjd'], out['duration_hrs'], out['depth_frac'])
+
     return out
 
 

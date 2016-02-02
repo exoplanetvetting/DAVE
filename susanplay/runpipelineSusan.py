@@ -12,23 +12,27 @@ import matplotlib.pyplot as plt
 import dave.susanplay.sueplotting as sp
 
 #infile='/home/sthomp/DAVE/playK2/k2_go3049.txt'
-infile='/home/sthomp/DAVE/playK2/k2_search.txt'
-outfile='/home/sthomp/DAVE/playK2/k2_search_bad2.txt'
+infile='/home/sthomp/DAVE/playK2/k2_list.txt'
+outfile='/home/sthomp/DAVE/playK2/k2_list_bad.txt'
+#outcand='/home/sthomp/DAVE/playK2/k2_list_cand.txt'
 fid=open(outfile,'a')
 #%%
 
 cfg = pipe.loadDefaultConfig()
 cfg['debug'] = False
-cfg['modshiftBasename']='/home/sthomp/daveOutput/vet';
+cfg['modshiftBasename']='/home/sthomp/daveOutput/k2list/vet';
 #cfg['prfPath']='morejunk/junk';
 
 data=np.loadtxt(infile,dtype='float',delimiter=',',comments='#')
 #%%
-for i,v in enumerate(data[0:3,0]):
-    
+for i,v in enumerate(data[0:58,0]):    
     epicid=np.int(v)
     print epicid
+#    try:
     output=pipe.runOne(epicid, cfg)
+#    except KeyError:
+#        print "Silly Jeff error!"
+#        continue
         
     try:
         print output['exception']
@@ -42,7 +46,6 @@ for i,v in enumerate(data[0:3,0]):
         
     except KeyError:
         print epicid
-        print output['vet.fluxVet.disp']
         
         plt.figure(1)
         sp.summaryPlot(output)
@@ -52,7 +55,10 @@ for i,v in enumerate(data[0:3,0]):
         sp.indivPlot(output,6)
         outfig="%sind%s.png" % (cfg['modshiftBasename'],str(epicid))
         plt.savefig(outfig)
-
+        plt.pause(.1)
+        info = "%u   %s   %s\n" % (epicid, output['vet.fluxVet.disp'],output['vet.reasonForFail'])
+        fid.write(info)
+        
         
     
     
