@@ -56,9 +56,9 @@ def getSnrOfTransit(time_days, flux_frac, unc, flags, period_days, phase_bkjd, \
         out['epoch_bkjd'], 1e6*out['depth_frac'], out['duration_hrs'], \
         out['ingress_hrs'], subSampleN)
     out['bestFitModel'] = ioBlock.modellc - 1  #Want mean of zero
-    
     out['snr'] = estimateSnr(time_days, flux_frac, flags, out['period_days'], \
         out['epoch_bkjd'], out['duration_hrs'], out['depth_frac'])
+
     return out
 
 

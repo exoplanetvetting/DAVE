@@ -57,8 +57,8 @@ SapQuality=dict(
                 'NoData': 65536, \
                 'RollingBandOptimal': np.uint32(2**17), \
                 'RollingBandMask': np.uint32(2**18), \
-                'DefiniteRollTweak': np.uint32(2**19), \
-                'PossibleRollTweak': np.uint32(2**20), \
+                'PossibleRollTweak': np.uint32(2**19), \
+                'DefiniteRollTweak': np.uint32(2**20), \
             }
           )
 
@@ -603,6 +603,9 @@ def markTransitCadences(time, period_days, epoch_bkjd, duration_days,\
     idx = np.zeros( len(time), dtype=np.bool8)
     for tt in transitTimes:
         diff = time - tt
+        diff[flags] = 1e99  #A large value that isn't Nan
+        assert(np.all(np.isfinite(diff)), "Nan found in diff")
+
         idx = np.bitwise_or(idx, np.fabs(diff) < \
             .5*duration_days*numberOfDurations)
 

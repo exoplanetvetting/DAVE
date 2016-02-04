@@ -47,7 +47,7 @@ class MastArchive():
             if os.path.exists(localUrl):
                 isEmpty = os.stat(localUrl)[6]==0
                 if isEmpty:
-                    raise IOError("File %s returns 404" %(remoteUrl))
+                    raise IOError("File %s previously returned 404" %(remoteUrl))
 
         if not os.path.exists(localUrl):
             if compressedOnServer:
@@ -92,6 +92,7 @@ class MastArchive():
             fp = open(localUrl, 'w')
             fp.write("")
             fp.close()
+            raise ValueError("File not found at MAST: %s" %(remoteUrl))
             return
 
         try:
@@ -500,6 +501,7 @@ class K2Archive(MastArchive):
 
         if compressed:
             url = url + '.gz'
+#        print url
         return url
 
 

@@ -78,32 +78,15 @@ def constructK2DifferenceImage(cube, indexOfCadenceInTransit, rollPhase, flags, 
     assert(cube.shape[0] == len(rollPhase))
     i0 = indexOfCadenceInTransit
 
-
-#    if plot:
-
     try:
-        oot, before, after = getInterpolatedOotImage(cube, rollPhase, flags, i0)
+        oot, diagnostics = getInterpolatedOotImage(cube, rollPhase, flags, i0)
     except ValueError, e:
         msg = "WARN: While creating Diff Img for %i: %s" \
             %(i0, e)
         raise ValueError(msg)
 
     diff = oot - cube[i0]
-
-
-#    if plot:
-#        mp.figure(2)
-#        mp.subplot(121)
-#    #    img = np.log10(1+diff - np.min(diff[np.isfinite(diff)]))
-#        plotTpf.plotCadence(diff, axis="relative")
-#        mp.colorbar()
-#        mp.subplot(122)
-#        plotTpf.plotCadence(diff/np.sqrt(2*oot), axis="relative")
-#        mp.colorbar()
-#        mp.clim(-3.0, 3.0)
-#        mp.suptitle("Diff Img for RIN %i" %(i0))
-
-    return diff, oot
+    return diff, oot, diagnostics
 
 
 def plotRollPhaseDiagnosticPlot(x, rollPhase, flags, indexOfEvent):
@@ -180,18 +163,32 @@ def getInterpolatedOotImage(cube, rollPhase, flags, i0):
 
     Returns:
     -------------
-    3 elements
-    * A np 2d array containing the requested difference image
-    * A 2 element list showing the cadence range between roll tweaks
-      immediately before i0
-    * A 2 element list showing the cadence range between roll tweaks
-      immediately after i0
+    A two element tuple:
+
+    *  A np 2d array representing an interpolated image.
+    * A dictionary containing the indices of the cadences used for interpolation. The
+      keys of that dictionary are:
+
+    rangeBefore
+        (2 element tuple) The index range of between the two previous
+        thruster firings
+    rangeAfter
+        (2 element tuple) The index range of between the two succeeding
+        thruster firings
+    rinBefore
+        (2 element tuple) The bracking cadences interpolated to produce the
+        OOT image before the event
+    rinAfter
+        (2 element tuple) The bracking cadences interpolated to produce the
+        OOT image after the event
     """
 
-
     rollPhase0 = rollPhase[i0]
+    oot = np.zeros_like(cube[0])
+    diagnostics = dict()
+    diagnostics['errorMsg'] = "None"
 
-    dtFlag =kplrfits.SapQuality['PossibleRollTweak']
+    dtFlag =kplrfits.SapQuality['DefiniteRollTweak']
     thrusterFiringIndices = np.where( flags & dtFlag )[0]
     tfi = thrusterFiringIndices
     tfiBefore = tfi[tfi < i0]
@@ -199,28 +196,38 @@ def getInterpolatedOotImage(cube, rollPhase, flags, i0):
 
 #    import pdb; pdb.set_trace()
     lwrBefore, uprBefore = getThrusterFiringIntervalBefore(tfiBefore)
-
-    if lwrBefore is None:
-        raise ValueError("No suitable interval found before requested cadence")
-
-    try:
-        ootBefore = getDiffFromRange(cube, lwrBefore, uprBefore, rollPhase, \
-            rollPhase0)
-    except ValueError, e:
-        raise ValueError("Early diff img: %s" %(e))
-
     lwrAfter, uprAfter = getThrusterFiringIntervalAfter(tfiAfter)
-    if lwrAfter is None:
-        raise ValueError("No suitable interval found after requested cadence")
-    try:
-        ootAfter = getDiffFromRange(cube, lwrAfter, uprAfter, rollPhase, \
-            rollPhase0)
-    except ValueError, e:
-        raise ValueError("Later diff img: %s" %(e))
 
+    diagnostics['rangeBefore'] = (lwrBefore, uprBefore)
+    diagnostics['rangeAfter'] = (lwrAfter, uprAfter)
+
+
+    if lwrAfter is None:
+        diagnostics['errorMsg'] = "No suitable range found before cadence of interest"
+        return oot, diagnostics
+    if lwrBefore is None:
+        diagnostics['errorMsg'] = "No suitable range found after cadence of interest"
+        return oot, diagnostics
+
+    try:
+        ootBefore, rinBefore = \
+            getDiffFromRange(cube, lwrBefore, uprBefore, rollPhase, rollPhase0)
+        diagnostics['rinBefore'] = rinBefore
+    except ValueError, e:
+        diagnostics['errorMsg'] = "Early diff img: %s" %(e)
+        return oot, diagnostics
+
+    #@TODO: Should I just return OOT before here?
+    try:
+        ootAfter, rinAfter = getDiffFromRange(cube, lwrAfter, uprAfter, \
+            rollPhase, rollPhase0)
+        diagnostics['rinAfter'] = rinAfter
+    except ValueError, e:
+        diagnostics['errorMsg'] = "Later diff img: %s" %(e)
+        return oot, diagnostics
 
     oot = .5 * (ootBefore + ootAfter)
-    return oot, [lwrBefore, uprBefore], [lwrAfter, uprAfter]
+    return oot, diagnostics
 
 
 
@@ -255,8 +262,9 @@ def getDiffFromRange(cube, lwr, upr, rollPhase, rollPhase0):
 
     Returns:
     --------------
-    A np 2d array representing an interpolated image.
-
+    A two element tuple
+    *  A np 2d array representing an interpolated image.
+    * A tuple containing the indices of the cadences used for interpolation
 
     TODO:
     ------------
@@ -271,7 +279,7 @@ def getDiffFromRange(cube, lwr, upr, rollPhase, rollPhase0):
     if d1*d2 < 0 and np.fabs(d2-d1) < maxDiffBetweenAdjacentPoints:
         diff = interpolateImages(rollPhase[i0], rollPhase[i0+sgn], \
             cube[i0], cube[i0+sgn], rollPhase0 )
-        return diff
+        return diff, (i0, i0+sgn)
 
     raise ValueError("Can't produce difference image")
 

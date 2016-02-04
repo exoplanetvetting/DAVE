@@ -1,5 +1,5 @@
 """ Module to perform a trapezoid model fit to flux time seres data
-    Author: Christopher J Burke 
+    Author: Christopher J Burke
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,7 +21,7 @@ def phaseData(t, per, to):
 
 class trp_parameters:
     """Storage class for the parameters of the trapezoid fit algorithms
-       CONTENTS: 
+       CONTENTS:
          samplen - [Int] subsampling of LC model data
                    ***MUST BE ODD***  No checking this
          likehoodmoddisplay - [Int] If debugLevel > =3 display likelihood call
@@ -45,11 +45,11 @@ class trp_parameters:
 
 class trp_originalestimates:
     """Storage class for the original parameter estimations
-       CONTENTS: 
+       CONTENTS:
          period [Days] - Initial orbital period
                          ***By default this is fixed during fitting***
          epoch [Days] - Initial epoch
-         duration [Hours] - Initial duration fitted **In Hours** 
+         duration [Hours] - Initial duration fitted **In Hours**
          depth [ppm] - Initial depth
     """
     def __init__(self):
@@ -57,7 +57,7 @@ class trp_originalestimates:
         self.epoch = 0.1
         self.duration = 3.0
         self.depth = 100.0
-        
+
     def __str__(self):
         for k in self.__dict__:
             print k, self.__dict__[k]
@@ -89,7 +89,7 @@ class trp_planetestimates:
     """
     def __init__(self):
         self.u1 = 0.40 # limb darkening for Sun in Kepler passband
-        self.u2 = 0.27 
+        self.u2 = 0.27
         self.period = 1.0
         self.radiusRatio = 0.0
         self.impactParameter = 0.5
@@ -144,17 +144,17 @@ class trp_ioblk:
         self.normts = np.array([0.0])
         self.normots = np.array([0.0])
         self.timezpt = 0.0
-        
+
     def __str__(self):
         for k in self.__dict__:
             print k, self.__dict__[k]
         return ''
-        
+
 def boundedvals(ioblk):
     """Convert parameters to bounded versions that the minimzer will use
        INPUT:
          ioblk - [class] trp_ioblk class
-       OUTPUT: 
+       OUTPUT:
          ioblk - [class]
          err - [0 ok ; 1 not ok]
     """
@@ -165,7 +165,7 @@ def boundedvals(ioblk):
     if ~np.isfinite(ioblk.boundedvals).all():
         print "Bounded Vals Bad"
         print ioblk.boundedvals
-        print ioblk.physvals                 
+        print ioblk.physvals
         err = 1
     return ioblk, err
 
@@ -173,7 +173,7 @@ def unboundedvals(ioblk):
     """Convert bounded parameter values that the minimizer uses to physvals
        INPUT:
          ioblk - [class] trp_ioblk class
-       OUTPUT: 
+       OUTPUT:
          ioblk - [class]
          err - [0 ok ; 1 not ok]
     """
@@ -182,10 +182,10 @@ def unboundedvals(ioblk):
     ioblk.physvals = ioblk.physval_mins + \
                      (maxmindelta / (1.0 + np.exp( -ioblk.boundedvals )))
     #if np.sum( np.isfinite(ioblk.physvals) ) != np.size(ioblk.boundedvals) :
-    if ~np.isfinite(ioblk.physvals).all():                 
+    if ~np.isfinite(ioblk.physvals).all():
         print "UnBounded Vals Bad"
         print ioblk.boundedvals
-        print ioblk.physvals                 
+        print ioblk.physvals
         err = 1
     return ioblk, err
 
@@ -241,7 +241,7 @@ def trapezoid_model_onemodel(ts, period, epoch, depth, bigT, littleT, subsamplen
     # Calculate this from timeSeries
     ioblk.parm.cadlen = np.median(np.diff(ts))
     ioblk = trp_setup(ioblk)
-    # update the tratio 
+    # update the tratio
     ioblk.physvals[3] = littleT / bigT
     ioblk, err = boundedvals(ioblk)
 
@@ -249,7 +249,7 @@ def trapezoid_model_onemodel(ts, period, epoch, depth, bigT, littleT, subsamplen
     ioblk.boundedvalsavs = ioblk.boundedvals
     ioblk, err = trapezoid_model(ioblk)
     return ioblk
-    
+
 def trapezoid_model_raw(ioblk, epoch, depth, bigT, littleT):
     """If you have a preexisting ioblk from fit or trapezoid_model_onemodel()
         You can just call this function to get another model
@@ -275,13 +275,13 @@ def trapezoid_model_raw(ioblk, epoch, depth, bigT, littleT):
 
     ioblk, err = trapezoid_model(ioblk)
     return ioblk
-   
-    
+
+
 def trapezoid_model(ioblk):
     """Generate a subsampled model at the current parameters
        INPUT:
        ioblk - [class] trp_ioblk class structure
-       OUTPUT: 
+       OUTPUT:
        ioblk - [class] modified ioblk
        err - [0 ok; 1 not ok] Error flag
     """
@@ -308,21 +308,21 @@ def trapezoid_model(ioblk):
     if idx.size > 0:
         ztmp = phi[idx] * per
         deltaXSmall = cadlen / np.float(samplen)
-        smallBlock = np.linspace(-cadlen/2.0 + deltaXSmall/2.0, 
+        smallBlock = np.linspace(-cadlen/2.0 + deltaXSmall/2.0,
                                   cadlen/2.0 - deltaXSmall/2.0, samplen)
         oN = ztmp.size
         ztmp_highres = np.tile(ztmp, samplen)
-        ztmp_highres = np.reshape(ztmp_highres, (samplen, oN)) 
+        ztmp_highres = np.reshape(ztmp_highres, (samplen, oN))
         smallBlock_highres = np.tile(smallBlock, oN)
         smallBlock_highres = np.reshape(smallBlock_highres, (oN, samplen))
         smallBlock_highres = np.transpose(smallBlock_highres)
         ztmp_highres = ztmp_highres + smallBlock_highres
-        ztmp_highres = ztmp_highres.ravel(order='F')   
+        ztmp_highres = ztmp_highres.ravel(order='F')
         lctmp_highres = trapezoid(ztmp_highres, depth, bigT, littleT)
         nN = ztmp_highres.size
         lctmp = lctmp_highres.reshape([oN, nN/oN]).mean(1)
         lc[idx] = lctmp
-                      
+
     ioblk.modellc = lc
     if np.sum(np.isfinite(lc)) != lc.size:
         err = 1
@@ -332,7 +332,7 @@ def trp_setup(ioblk):
     """Setup various data products before minimizing
        INPUT:
        ioblk - [class] trp_ioblk class structure
-       OUTPUT: 
+       OUTPUT:
        ioblk - [class] modified ioblk
     """
     per = ioblk.origests.period
@@ -349,7 +349,7 @@ def trp_setup(ioblk):
     ioblk.normts = ioblk.normots - ioblk.timezpt
     # identify in transit data to over sample and fitting region
     phi = phaseData(ioblk.normts, per, 0.0)
-    ioblk.sampleit = np.where(abs(phi) < (phidur * 1.5), ioblk.parm.samplen, 1)  
+    ioblk.sampleit = np.where(abs(phi) < (phidur * 1.5), ioblk.parm.samplen, 1)
     ioblk.fitdata = np.where(abs(phi) < (phidur * ioblk.parm.fitregion),\
                              True, False)
     # always fit less than a 0.25 of phase space for stability
@@ -384,7 +384,7 @@ def trp_likehood(pars,ioblk):
     """Return a residual time series of data minus model
        trp_setup(ioblk) should be called before this function is called
        INPUT:
-       pars - [numpy array] vector of parameter values 
+       pars - [numpy array] vector of parameter values
        ioblk - [class] trp_ioblk class structure
        OUTPUT:
        residuals - sum of squares of residuals of data - model
@@ -394,7 +394,7 @@ def trp_likehood(pars,ioblk):
     # Update parameters into bounded values
     idx = np.where(ioblk.fixed == 0)[0]
     ioblk.boundedvals[idx] = pars
-    ioblk.boundedvals = np.where(ioblk.fixed == 1, ioblk.boundedvalsavs, 
+    ioblk.boundedvals = np.where(ioblk.fixed == 1, ioblk.boundedvalsavs,
                                  ioblk.boundedvals)
     # Convert to unbounded values
     ioblk, err = unboundedvals(ioblk)
@@ -405,15 +405,15 @@ def trp_likehood(pars,ioblk):
     residuals = (ioblk.normlc[idx] - ioblk.modellc[idx])/(ioblk.normes[idx] * ioblk.errscl)
     # Return scalar summed residuals
     residuals = np.sum(residuals**2)
-    
-    # Do plotting 
+
+    # Do plotting
     if ioblk.parm.debugLevel > 2:
         if ioblk.likecount == 1: # Setup  figures for first time
             ioblk.fighandle = plt.figure(figsize=(3,2),dpi=300,
                                          facecolor='white')
             ioblk.axhandle = plt.gca()
             ioblk.axhandle.set_position([0.125, 0.125, 0.825, 0.825])
-            ioblk.axhandle.set_axis_bgcolor('white')                             
+            ioblk.axhandle.set_axis_bgcolor('white')
         if np.mod(ioblk.likecount, ioblk.parm.likehoodmoddisplay) == 0 \
               or ioblk.likecount == 1:
             plt.figure(ioblk.fighandle.number)
@@ -431,7 +431,7 @@ def trp_likehood(pars,ioblk):
             if ioblk.parm.debugLevel > 3:
                 raw_input("Press [ENTER]")
     return residuals
-    
+
 def trp_iterate_solution(ioblk, nIter):
     """Peform multiple iterations starting from random initial conditions
        return the best solution in a chi2 sense among the nIter iterations
@@ -464,16 +464,16 @@ def trp_iterate_solution(ioblk, nIter):
         ioblk.boundedvals = np.where(ioblk.fixed == 1, ioblk.boundedvalsavs, \
                                      ioblk.boundedvals)
         ioblk, err = unboundedvals(ioblk)
-        chi2min = allOutput['fun'] 
+        chi2min = allOutput['fun']
         if ioblk.parm.debugLevel > 0:
             strout = "%s %d %s %f" % ("It: ",i," Chi2: ",chi2min)
-            print strout                          
+            print strout
             print ioblk.physvals
         if np.isfinite(ioblk.physvals).all():
             gdFits[i] = True
             bestChi2s[i] = chi2min
             bestParameters[:,i] = ioblk.physvals
-            
+
     # Done with iterations find the best one by chi2min
     bestMaskedIdx = np.argmin(bestChi2s[gdFits])
     ioblk.chi2min = bestChi2s[gdFits][bestMaskedIdx]
@@ -524,7 +524,7 @@ def trp_estimate_planet(ioblk):
                     np.sqrt(ioblk.planetests.surfaceBright)
 
     return ioblk
-    
+
 def trapezoid_fit(timeSeries, dataSeries, errorSeries, \
                   signalPeriod, signalEpoch, signalDuration, signalDepth, \
                   fitTrialN=13, fitRegion=4.0, errorScale=1.0, debugLevel=0,
@@ -546,7 +546,7 @@ def trapezoid_fit(timeSeries, dataSeries, errorSeries, \
                        initial locations.  Increase this if you find the
                        minimization is returning local minima
            fitRegion - Fit data within fitRegion*signalDuration of signalEpoch
-           errorScale - Default 1.0 - Scale the errorbars by this factor 
+           errorScale - Default 1.0 - Scale the errorbars by this factor
            debugLevel - 0 Show nothing; 1-Show some text about iterations
                         2 Show some more text; 3 - Show graphical fit in
                            progress; 4 - pause for each graphical fit
@@ -571,7 +571,7 @@ def trapezoid_fit(timeSeries, dataSeries, errorSeries, \
     ioblk.origests.epoch = signalEpoch
     ioblk.origests.duration = signalDuration   # input duration is hours
     ioblk.origests.depth = signalDepth
-    
+
     # Calculate this from timeSeries
     ioblk.parm.cadlen = np.median(np.diff(timeSeries))
 
@@ -619,7 +619,7 @@ if __name__ == "__main__":
     #Phase data
     phasedSeries = phaseData(timeSeries, signalPeriod, signalEpoch)
     # Insert signal
-    phaseDuration = signalDuration / signalPeriod 
+    phaseDuration = signalDuration / signalPeriod
     dataSeries = dataSeries * ioblk.modellc
     #plt.plot(phasedSeries, dataSeries, '.')
     #plt.show()
@@ -643,4 +643,3 @@ if __name__ == "__main__":
                     signalDurationHours*2.0, signalDurationHours*2.0*0.2)
     plt.plot(phasedSeries, newioblk.modellc, '.r')
     plt.show()
-    
