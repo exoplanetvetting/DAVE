@@ -15,19 +15,20 @@ def summaryPlot(output):
     Plot the data and some info from the clipboard
     """
     epicid=str(output['value'])
-    blsdur=output['bls.duration_hrs']
+    blsper=output['bls.period']
     trapsnr=output['trapFit.snr']
     trapper=output['trapFit.period_days']
+    trapdur=output['trapFit.period_days']
     logTlpp = np.log10(output['lpp.TLpp'])
     
     plt.clf()
     plt.subplot(2,2,(1,2))
     pp.plotData(output)
-    titlewords="%s dur=%.2f h"  %(epicid, blsdur)
+    titlewords="%s P=%.2f"  %(epicid,blsper)
     plt.title(titlewords)
     plt.subplot(223)
     pp.plotFolded(output)
-    titlewords="dur=%.2f h P=%.2f d SNR=%.1f " % (blsdur,trapper ,trapsnr)
+    titlewords="P=%.2f d dur=%.2f h SNR=%.1f " % (trapper, trapdur,trapsnr)
     plt.title(titlewords)
     plt.xlim((0,trapper))
     
@@ -39,8 +40,8 @@ def summaryPlot(output):
     plt.title(lab)
     
     try:
-        plt.figtext(.15,.96,output['vet.fluxVet.disp'],color='r',fontsize=14)
-        plt.figtext(.12,.93,output['vet.reasonForFail'],color='r',fontsize=14)
+        plt.figtext(.15,.96,output['disposition.fluxVet.disp'],color='r',fontsize=14)
+        plt.figtext(.12,.93,output['disposition.reasonForFail'],color='r',fontsize=10)
     except:
         pass
 def indivPlot(clip,ndur):
@@ -137,15 +138,45 @@ def indivPlot(clip,ndur):
     plt.figtext(.48,.95,epic,size=14)
     
     try:
-        
-        plt.figtext(.12,.95,clip['vet.fluxVet.disp'],color='r',fontsize=13)
-        plt.figtext(.8,.95,str(period),fontsize=13)
+        plt.figtext(.11,.98,'Individual Transits',color='k',fontsize=12)
+        plt.figtext(.11,.96,clip['disposition.fluxVet.disp'],color='r',fontsize=13)
+        plt.figtext(.13,.91,clip['disposition.reasonForFail'],color='r',fontsize=10)
+        plt.figtext(.8,.95,('P=%f d' % (period)),fontsize=13)
     #Plot the even and odd ones
     except:
         pass
     
+def blsPlot(clip):
+    """Plot the bls spectrum and info about the BLS search"""
     
     
+    periods=clip.bls.bls_search_periods;
+    bls=1e6*clip.bls.convolved_bls;
+    highper=clip.bls.period;
+    highdur=clip.bls.duration_hrs    
+    
+    
+    plt.subplot(211)
+    plt.plot(periods,bls,'k')
+    plt.plot(highper,max(bls),'rv',ms=9,alpha=.6)
+    plt.xscale('log')
+    plt.xlim(min(periods),1.05)
+    plt.title(('%u' %(clip.value)))
+    plt.ylabel('bls (ppm)')    
+    
+    plt.subplot(212)
+    plt.plot(periods,bls,'k')
+    plt.plot(highper,max(bls),'rv',ms=9,alpha=.6)
+    plt.xscale('log')
+    plt.xlim(.95,max(periods))
+    plt.xlabel('log10 (Period-days)')
+    plt.ylabel('bls (ppm)')
+    
+
+    plt.figtext(.11,.97,'BLS Spectrum',color='k',fontsize=12)
+    plt.figtext(.11,.94,clip['disposition.fluxVet.disp'],color='r',fontsize=12)
+    plt.figtext(.65,.92,('blsP=%.2f vs. trP=%.2f days' % (clip.bls.period,clip.trapFit.period_days)),fontsize=13)
+    #Mark the largest point.
     
     
     

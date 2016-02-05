@@ -82,3 +82,51 @@ def runOne(k2id, config):
     return clip
 
 
+
+def runOneEphem(k2id,period,epoch,duration, depth, config):
+    """
+    Run just the vetting and return an output.
+    Inputs:
+    -------------
+    k2id
+        (int) Epic id of the target to run on.
+    period
+        (float) period of the target
+    epoch
+        (float) Time in days
+    config
+        (dict) Dictionary of configuration parameters
+       
+    """
+    
+    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
+        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
+        dpp.detrendDataTask dpp.trapezoidFitTask dpp.lppMetricTask 
+        dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
+        dpp.plotTask dpp.saveOnError""".split()  
+    
+    
+    taskList = config['taskList']
+
+    clip = clipboard.Clipboard()
+    clip['config'] = config
+    clip['value'] = k2id
+    out = clipboard.Clipboard()
+    out['period'] = period
+    out['epoch'] = epoch
+    out['duration_hrs'] = duration
+    out['depth'] = depth
+    clip['bls'] = out
+            
+    
+
+    #Check that all the tasks are properly defined
+    for t in taskList:
+        f = eval(t)
+
+    #Now run them.
+    for t in taskList:
+        f = eval(t)
+        clip = f(clip)
+
+    return clip
