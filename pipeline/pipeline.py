@@ -64,7 +64,7 @@ def runOne(k2id, config):
     return clip
 
 
-
+#
 def loadDefaultConfig():
     cfg = dict()
     cfg['debug'] = True
@@ -77,7 +77,9 @@ def loadDefaultConfig():
     #Vetting parameters
     cfg['minSnrForDetection'] = 10.
     cfg['maxLppForTransit'] = 0.03
-    cfg['minCentroidSignifForFp'] = 3.0
+    #How significant must centroid offset be to claim a false positive.
+    #This value is between 0 and 1. Higher values mean fewer false positives
+    cfg['minProbDiffImgCentroidForFail'] = 0.99
 
 
     #The LPP mapping file is used by LPP to define the regions of param
@@ -629,7 +631,7 @@ def dispositionTask(clip):
     #Thresholds
     snrThreshold = clip['config.minSnrForDetection']
     lppThreshold = clip['config.maxLppForTransit']
-    offsetThreshold_sigma = clip['config.minCentroidSignifForFp']
+    minProbForFail = clip['config.minProbDiffImgCentroidForFail']
 
     #Data on which to make a decision
     snr = clip['trapFit.snr']
@@ -664,15 +666,23 @@ def dispositionTask(clip):
         out['reasonForFail'] = fluxVetDict['comments']
 
     #Compute centroid offset and significance
-    result = cent.measureOffsetInTimeseries(centroidArray)
-    out['centroidVet'] = result
-    signif = result['signif']
-    offset = result['offset']
+    prob, chisq = cent.measureOffsetProbabilityInTimeseries(centroidArray)
+    centVet = dict()
+    centVet['probabilityOfOffset'] = prob
+    centVet['chiSquaredOfOffset'] = chisq
+    centVet['numCadencesWithCentroids'] = int( np.sum(centroidArray[:,1] > 0))
 
-    if signif > offsetThreshold_sigma:
-        out['isCandidate'] = False
-        out['reasonForFail'] = "Centroid offset of %.2f (%.1f sigma) detected" \
-            %( offset, signif)
+
+    centVet['isCentroidFail'] = False
+    if np.isfinite(prob):
+        if prob > minProbForFail:
+            centVet['isCentroidFail'] = True
+            out['isCandidate'] = False
+            out['reasonForFail'] = "Centroid offset probability is %.1e" %(prob)
+    else:
+        centVet['Warning'] = "Probability is Nan"
+
+    out['centroidVet'] = centVet
 
     clip['disposition'] = out
 
