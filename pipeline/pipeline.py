@@ -666,8 +666,14 @@ def dispositionTask(clip):
         out['reasonForFail'] = fluxVetDict['comments']
 
     #Compute centroid offset and significance
-    prob, chisq = cent.measureOffsetProbabilityInTimeseries(centroidArray)
-    centVet = dict()
+    centVet = {'Warning':"None"}
+    try:
+        prob, chisq = cent.measureOffsetProbabilityInTimeseries(centroidArray)
+    except ValueError, e:
+        centVet['Warning'] = "Probability not computed: %s" %(e)
+        prob = 0
+        chisq = 0
+
     centVet['probabilityOfOffset'] = prob
     centVet['chiSquaredOfOffset'] = chisq
     centVet['numCadencesWithCentroids'] = int( np.sum(centroidArray[:,1] > 0))

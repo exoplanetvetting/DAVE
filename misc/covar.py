@@ -63,6 +63,10 @@ def computeProbabilityOfObservedOffset(x, y, p=None):
     p = np.array(p)
     assert(len(p) == 2)
 
+    assert(len(x) == len(y))
+    if len(x) < 2:
+        raise ValueError("Need at least two points to compute probability of offset")
+
     mu = np.array([np.mean(x), np.mean(y)])
     cov = np.cov(x, y) / np.sqrt(len(x))
 
@@ -144,6 +148,9 @@ def plotErrorEllipse(x, y, prob=[.68, .95, .997], **kwargs):
     prob = np.array(prob)
     assert(len(prob) >= 1)
     assert(np.all(prob > 0) & np.all(prob < 1))
+
+    if len(x) < 2:
+        raise ValueError("Need at least two points to generate centroid plots")
 
     # Default values for mp.plot
     marker = kwargs.pop('marker', 'o')

@@ -101,7 +101,7 @@ def exampleFitting():
     return res
 
 
-def measureOffsetSignificanceInTimeseries(offsets):
+def measureOffsetProbabilityInTimeseries(offsets):
     """
     Vet the centroid time series produced by measureDiffOffset()
 

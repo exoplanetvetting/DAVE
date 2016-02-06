@@ -70,8 +70,12 @@ def plotWrapper(clip):
 
     f2 = mp.figure(2)
     mp.clf()
-    titleStr = plotCentroidOffsets(centroids)
-    titleStr = "EPIC: %i  %s" %(epic, titleStr)
+    try:
+        titleStr = plotCentroidOffsets(centroids)
+        titleStr = "EPIC: %i  %s" %(epic, titleStr)
+    except ValueError, e:
+        titleStr = "Error: %s" %(e)
+        mp.axis([-1,1,-1,1])
     mp.title(titleStr)
 
 #    f3 = mp.figure(3)
