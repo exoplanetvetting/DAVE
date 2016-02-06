@@ -13,51 +13,6 @@ import matplotlib.pyplot as plt
 import dave.susanplay.sueplotting as sp
 import dave.plot.multipage as mp
 
-
-def createExportString(clip, delimiter=" ", badValue="nan"):
-    """Create a line of text for the exporter
-    
-    Inputs:
-    ------------
-    clip
-        A clipboard object
-    
-    Optional Inputs:
-    -----------------
-    delimiter:
-        (string) The character, or set of characters to separate elements
-       
-    badValue
-        (string) String to be output when a value isn't present
-    Returns:
-    -----------
-    Two strings. The first is the text to be exported. The second is the 
-    list of keys that were exported
-    """
-    keysForExport = (   ('value' , '%10i'), \
-                        ('trapFit.period_days', '%7.3f'), \
-                        ('trapFit.epoch_bkjd', '%12.6f'), \
-                        ('trapFit.duration_hrs', '%7.3f'), \
-                        ('trapFit.snr', '%6.2f'), \
-                        ('disposition.isSignificantEvent', '%1i'), \
-                        ('disposition.isCandidate', '%i'), \
-                        ('disposition.reasonForFail', '%s'), \
-                    )
-                    
-    hdr = []
-    text = []
-    
-    for tup in keysForExport:
-        key, fmt = tup
-        hdr.append(key)
-        try:
-            text.append( fmt % (clip[key]))
-        except KeyError:
-            text.append(badValue)
-            
-    text = delimiter.join(text)
-    hdr = delimiter.join(hdr)
-    return text, hdr
     
 #%%   
 #infile='/home/sthomp/DAVE/playK2/k2_go3049.txt'
@@ -66,7 +21,6 @@ infile='/home/sthomp/DAVE/playK2/KEES_2016_01_13.txt'
 outfile='/home/sthomp/DAVE/playK2/KEES_2016_01_13_out%s.txt' %(vers)
 #outcand='/home/sthomp/DAVE/playK2/k2_list_cand.txt'
 fid=open(outfile,'a')
-#%%
 
 cfg = mS.loadMyConfiguration()
 cfg['debug'] = False
@@ -131,4 +85,64 @@ for i,v in enumerate(data[span[0]:span[1],0]):
         
 fid.close()
 
+#%%
+#For running known candidates
+vers='20160205'
+ephemfile='k2candidatesc3.csv';
+outfile='k2candidatesc3_out.txt';
+fid=open(outfile,'a')
 
+cfg = mS.loadMyConfiguration()
+cfg['debug'] = False
+cfg['modshiftBasename']='/home/sthomp/DAVE/playK2/pcs/';
+#cfg['prfPath']='morejunk/junk';
+
+
+indata=np.loadtxt(ephemfile,dtype='string',delimiter=',',comments='#',usecols=[2,5,6,10,14,15])
+
+periods=indata[:,2].astype(float)
+ids=np.floor(indata[:,0].astype(float))
+epochs=indata[:,3].astype(float)-2454833;
+depths=indata[:,4].astype(float)/100.0;
+durs=indata[:,5].astype(float)*24.0;
+camps=indata[:,1].astype(int)
+#%
+span=[0,len(periods)]
+for i,v in enumerate(ids[span[0]:span[1]]):    
+    epicid=int(v)
+    acti=i+span[0]
+    cfg['campaign'] = int(camps[acti])
+    print epicid,cfg['campaign'], periods[acti]
+
+    output=mS.runOneEphem(ids[acti],periods[acti],epochs[acti], cfg,durs[acti],depths[acti])
+
+
+    try:
+        
+        print output['exception']
+        fid.write(('%f  %f  Exception\n' % (epicid,periods[acti])))
+        oneout="/home/sthomp/DAVE/playK2/pcs/epic%u%u.exc" % (epicid,np.floor(periods[acti]))
+        fida=open(oneout,'w')
+        fida.write(str(output['exception']))
+        fida.write(output['backtrace'])
+        fida.close()
+        
+    except KeyError:        
+        if output.disposition.isCandidate == 1:
+            disp="CANDIDATE"
+        else:
+            disp="FALSE POSITIVE"
+            
+        output.disposition.finaldisp=disp    
+        line, hdr= mp.createExportString(output,delimiter="|")        
+        fid.write("%s  |%s|  %f\n" % (line, disp, epochs[acti]))
+        plt.figure(10)
+        sp.summaryPlot(output)
+        try:
+            outfile="%s%s-%s-%smp.pdf" % (cfg['modshiftBasename'],str(epicid),vers,np.floor(periods[acti]))
+            info="version %s\n%u\n%s\n%s" % (vers,epicid,disp,output.disposition.reasonForFail)
+            mp.plot_all_multipages(outfile,output,info)
+        except:
+            pass
+    
+fid.close()

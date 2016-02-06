@@ -10,8 +10,8 @@ detected signals.
 
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
-import sueplotting as sp
- 
+import dave.susanplay.sueplotting as sp
+import dave.diffimg.plot as dip 
  
 def plot_all_multipages(outfile,clip,intext):
     """Take a clipboard, clip, and create plots
@@ -40,20 +40,84 @@ def plot_all_multipages(outfile,clip,intext):
     fig = plt.figure(figsize=figuresize, dpi=dotperinch)
     sp.indivPlot(clip,6)    
     pdf_pages.savefig(fig)
-
-    fig = plt.figure(figsize=figuresize, dpi=dotperinch)
-    sp.blsPlot(clip)    
-    pdf_pages.savefig(fig)
     plt.close()
 
-    fig =  plt.figure(figsize=figuresize, dpi=dotperinch)  
-    plt.figtext(0.2,0.35,clip.disposition,color='b',fontsize=14)
-    plt.title('Disposition Information in Clipboard')
-    pdf_pages.savefig(fig)
+    try:
+        fig = plt.figure(figsize=figuresize, dpi=dotperinch)
+        sp.blsPlot(clip)    
+        pdf_pages.savefig(fig)
+        plt.close()
+    except AttributeError:
+        pass
+
+    try:    
+        fig =  plt.figure(figsize=figuresize, dpi=dotperinch)
+        plt.figtext(0.2,0.35,clip.disposition,color='b',fontsize=14)
+        plt.title('Disposition Information in Clipboard')
+        pdf_pages.savefig(fig)
+        plt.close()
+    except:
+        pass
+    try:    
+        #Plot centroid plots
+        (fig1,fig2)=dip.plotWrapper(clip)
+    except:
+        fig1=plt.plot()
+        fig2=plt.plot()
+        
+    pdf_pages.savefig(fig2)
+    pdf_pages.savefig(fig1)
     plt.close()
+    plt.close()
+
     
     # Write the PDF document to the disk
     pdf_pages.close()
     
     plt.close()
+
+#%%
+def createExportString(clip, delimiter=" ", badValue="nan"):
+    """Create a line of text for the exporter
     
+    Inputs:
+    ------------
+    clip
+        A clipboard object
+    
+    Optional Inputs:
+    -----------------
+    delimiter:
+        (string) The character, or set of characters to separate elements
+       
+    badValue
+        (string) String to be output when a value isn't present
+    Returns:
+    -----------
+    Two strings. The first is the text to be exported. The second is the 
+    list of keys that were exported
+    """
+    keysForExport = (   ('value' , '%10i'), \
+                        ('trapFit.period_days', '%7.3f'), \
+                        ('trapFit.epoch_bkjd', '%12.6f'), \
+                        ('trapFit.duration_hrs', '%7.3f'), \
+                        ('trapFit.snr', '%6.2f'), \
+                        ('disposition.isSignificantEvent', '%1i'), \
+                        ('disposition.isCandidate', '%i'), \
+                        ('disposition.reasonForFail', '%s'), \
+                    )
+                    
+    hdr = []
+    text = []
+    
+    for tup in keysForExport:
+        key, fmt = tup
+        hdr.append(key)
+        try:
+            text.append( fmt % (clip[key]))
+        except KeyError:
+            text.append(badValue)
+            
+    text = delimiter.join(text)
+    hdr = delimiter.join(hdr)
+    return text, hdr
