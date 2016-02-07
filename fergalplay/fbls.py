@@ -16,6 +16,9 @@ o Add option of a condensed output to save memory, that gives an array
   of period, max(bls amplitude), epoch at max, duration at max
 x Profile code
 x Compute epoch of event from output array
+o Adjust min points per transit duration
+
+
 
 To profile code:
 Add @profile decorator to functions you want to profile. From
@@ -35,22 +38,6 @@ import numpy as np
 import dave.fileio.kplrfits as kplrfits
 
 
-import dave.trapezoidFit.trapfit as dtf
-def makeTestData():
-    t = np.linspace(0, 60, 60*48)
-    period = 15
-    epoch = 12
-    y = dtf.trapezoid_model_onemodel(t, period, epoch, 100, 6, 1, 15).modellc
-    return t,y
-
-
-def test_fold(t, y):
-
-    for period in [14,15,66,17,18]:
-        binned = kplrfits.foldAndBinData(t, y, period, 0, 1, 100)
-
-        mp.plot(binned[:,0], binned[:,1], 'o-')
-        mp.pause(1)
 
 def meanZero(y):
     return y/np.mean(y) - 1
@@ -82,7 +69,7 @@ def fBls(time, flux, periodRange, durations):
 
     Notes:
     ----------
-    Some notes on computation complexity.
+    See bls.tex for notes on computationaly complexity.
 
     """
 
@@ -96,10 +83,7 @@ def fBls(time, flux, periodRange, durations):
     assert(len(durations) > 0)
 
     lwr, upr = periodRange
-    print "Cp"
-    print lwr, upr
     periods = computePeriodList(lwr, upr, time, min(durations))
-    print periods[0], periods[-1]
 
     bls = computeBlsForManyPeriods(time, flux, durations, periods)
     return bls, periods
@@ -115,7 +99,8 @@ def computePeriodList(Plwr, Pupr, time, duration, overres=2):
     Plwr, Pupr
         (floats) Minimum and maximum periods to search
 
-    time (list or array) times at which data is sampled. May be an array
+    time
+        (list or array) times at which data is sampled. May be an array
         of all time values, or just a list of the first and last points.
     duration
         (float) Assumed transit duration in units of **time**
@@ -144,12 +129,14 @@ def computePeriodList(Plwr, Pupr, time, duration, overres=2):
 
 #@profile
 def computeBlsForManyPeriods(t, y, durationList, periodList):
-    """
-    tDur and period in same units
+    """Worker function for fbls
 
-    Todot:
-    Replace periodSet with periodRange
-    Allow passing in weights
+    See fbls() for a description of inputs. Values for durationList
+    and periodList should be given in the same units as t (usually days)
+
+    Todo:
+    Allow passing in weights on each data point to better account for
+    varying noise.
     """
     assert(np.all(np.isfinite(t)))
     assert(np.all(np.isfinite(y)))
@@ -164,10 +151,9 @@ def computeBlsForManyPeriods(t, y, durationList, periodList):
 
     minNumBinsPerTransit = 10  #Kovacs sugggest 15
 
-    y = meanZero(y)
-
     maxNumBins = minNumBinsPerTransit * max(periodList) / min(durationList)
     out = np.zeros((len(periodList), len(durationList), maxNumBins))
+    dt = t - np.min(t)
 
     for i,period in enumerate(periodList):
         #Technically, the lightcurve should be refolded for each duration
@@ -176,19 +162,16 @@ def computeBlsForManyPeriods(t, y, durationList, periodList):
         #folding once per period
         nBins = int(minNumBinsPerTransit * period / min(durationList))
 
-#        expTime = np.median(np.diff(t))
-#        binned2 = kplrfits.foldAndBinData(t, y, period, 0, expTime, nBins)
-        binned = fastFoldAndBin(t, y, period, nBins)
-
-#        mp.clf()
-#        phi = np.fmod(t, period)
-#        mp.plot(phi, y, 'k.')
-#        mp.plot(binned2[:,0], binned2[:,1], 'ro-')
-#        mp.plot(binned2[:,0], binned, 'go')
-#        mp.pause(1)
+        if False:
+            #Useful for debugging. This folder is much slower,
+            #but well tested.
+            expTime = np.median(np.diff(t))
+            binned = kplrfits.foldAndBinData(dt, y, period, 0, expTime, nBins)
+            binned = binned[:,1]
+        else:
+            binned = fastFoldAndBin(dt, y, period, nBins)
 
 
-#        binned = binned[:,1]
         for j,duration in enumerate(durationList):
             transitWidth = int(np.round(duration/period * nBins))  #nBins Wrong?
 
@@ -200,12 +183,43 @@ def computeBlsForManyPeriods(t, y, durationList, periodList):
 
 #@profile
 def fastFoldAndBin(t, y, period, nBins):
+    """Fold and bin a (possibly unevenly spaced) lightcurve.
+
+    Most of the time required to compute a BLS spectrum is spent
+    folding and refolding the data at different periods. Time spent
+    optimsing this action is time well spent. This is the fastest
+    function I could think of. If you can think of away to do
+    the same with one call to histogram you will halve the time spent
+    on the entire BLS.
+
+    Inputs:
+    -----------
+    t, y
+        (1d arrays) Input time and flux. Time need not be evenly spaced.
+    period
+        (float) Period to fold at. Units the same as **t** (usually days)
+    nBins
+        (int) Number of bins to fold at.
+
+    Returns:
+    -----------
+    1d array. The lightcurve is folded at the input period, then binned
+    into nBin points. The epoch is chosen so that time==0 is mapped to
+    phi==0.
+
+    Note:
+    ---------
+    When using this function in a BLS code, you'd be wise to
+    choose a time offset such that time==0 happens within the dataset. Otherwise
+    the phase numbers might be unreliable..
+    """
     phi = np.fmod(t, period)
 
     eps = 1e-10  #To prevent division by zero
     weights = np.histogram(phi, nBins, normed=False)[0] + eps
     binned = np.histogram(phi, nBins, weights=y, normed=False)[0]
     return binned/weights
+
 
 #@profile
 def computeBlsForOnePeriod(y, transitWidth):
@@ -217,16 +231,15 @@ def computeBlsForOnePeriod(y, transitWidth):
         raise ValueError("Transit width must be shorter than length of binned lightcurve")
 
     #If y has weights, s[], r = \Sigma s_i
-#    r = float(transitWidth)
+    r = float(transitWidth)
 
     #if y has weights, s is the convolution of y*s by signal
     signal = np.ones(transitWidth)
     s = np.convolve(y, signal, mode='same')
     assert(len(s) == len(y))
-    bls = s/np.sqrt(float(transitWidth))
+    bls = s/np.sqrt(r)
     assert(len(bls) == len(y))
 
-#    mp.plot(bls, '-', label="%i"% transitWidth)
     return bls
 
 
@@ -249,7 +262,7 @@ def computeBlsForOnePeriod(y, transitWidth):
 
 #@TODO, implement local copy of median detrend
 import dave.fileio.kplrfits as kf
-def findBestPeak(blsArray, nPointsForSmooth=100):
+def findBestPeak(blsArray, nPointsForSmooth=100, offset=0):
     """Find the index of the best peak in the bls spectrum.
 
     The best peak is not usually the strongest one. The noise floor
@@ -267,6 +280,10 @@ def findBestPeak(blsArray, nPointsForSmooth=100):
         (int) Tuning parameter. This is the number of points near a given
         period used to determine what the typical background BLS value is.
 
+    offset
+        (int) Debugging option. Change the chosen period by this number
+        of indices.
+
     Returns:
     ------------
     A three element tuple of indices into blsArray giving the best
@@ -280,6 +297,7 @@ def findBestPeak(blsArray, nPointsForSmooth=100):
     # is the best choice
     filt = kf.medianSubtract1d(bbb, nPointsForSmooth)
     iPer = np.argmax(filt)
+    iPer += offset
     subArray = blsArray[iPer,:,:]
     iDur, iPhase = np.unravel_index(np.argmax(subArray), subArray.shape)
 

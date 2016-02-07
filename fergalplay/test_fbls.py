@@ -31,6 +31,8 @@ def loadData():
     time = time[~flags]
     flux = flux[~flags]\
 
+    flux /= np.mean(flux)
+    flux -= 1
     return time, flux
 
 
@@ -110,17 +112,19 @@ def test_fbls2(plot=False):
 
 def test_fbls3(plot=False):
     time,flux = loadData()
+#    time = time[:100]
+#    flux = flux[:100]
 
     duration_daysList = np.array([4,6,8]).astype(float) / 24.
-    blsArray, periods = fbls.fBls(time, flux, [1,40], duration_daysList)
+    blsArray, periods = fbls.fBls(time, flux, [1,5], duration_daysList)
 
-    print periods[0], periods[-1]
-    index = fbls.findBestPeak(blsArray)
+#    print periods[0], periods[-1]
+    index = list(fbls.findBestPeak(blsArray))
     per, epc, dur=  fbls.getParamsOfIndex(blsArray, index,\
         duration_daysList, periods)
 
     if plot:
-        print np.unravel_index(np.argmax(blsArray), blsArray.shape)
+        print index
         print per, epc+time[0], dur*24
         makePlots(time, flux, periods, blsArray, per, epc)
 
@@ -129,33 +133,27 @@ def test_fbls3(plot=False):
 #    print epc
 #    assert(epc >1.6 and epc < 1.7)
 
-    return blsArray
+    return blsArray, periods, duration_daysList
 
 
 import dave.fileio.kplrfits as kf
 
-def play():
-    t, f = loadData()
-    period = 4.159
-    nBins = 400
-
-    phi = np.fmod(t, period)
-    mp.clf()
-    mp.plot(phi, f, 'k.')
-
-    binned = kf.foldAndBinData(t, f, period, 0, 1/48., nBins)
-    mp.plot(binned[:,0], binned[:,1], 'ro-')
-
-    fast = fbls.fastFoldAndBin(t, f, period, nBins)
-    mp.plot(binned[:,0], fast, 'go-')
 
 
 def makePlots(time, flux, periods, blsArray, per, epc):
         mp.figure(1)
         mp.clf()
         mp.plot(time, flux, 'bo', mec="none")
-        for i in range(10):
-            mp.axvline(epc+np.min(time)+ i*per, color='r')
+
+        colour = 'rgbcmk'
+        duration = [4,6,8]
+        for c,offset in enumerate(np.arange(0,1)):
+            index = list(fbls.findBestPeak(blsArray, offset=offset))
+            per, epc, dur=  fbls.getParamsOfIndex(blsArray, index,\
+                duration, periods)
+
+            for i in range(17):
+                mp.axvline(epc+np.min(time)+ i*per, color=colour[c])
 
         mp.figure(2)
         mp.clf();

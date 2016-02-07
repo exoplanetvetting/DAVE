@@ -83,4 +83,16 @@ So how many steps, $N$, do we need to get from some \Plwr\ to some other \Pupr?
 \end{eqnarray*}
 
 
+\section{Computational Cost}
+The computational cost is driven by the number of periods searched, $N$, and time taken to bin the data. The binning time is O(n), i.e it scales linearly with the number of input points. The number of periods searched depends on the ratio of the longest and shortest period, and the assumed fractional transit duration, $q$ (i.e transit duration divided by orbital period). $N$ doubles for each factor of $e$ the period span increases. It also scales as $10^{1/q}$. For example, if $q= 0.01$, $100 \times \ln(\Pupr/\Plwr)$ periods are searched. For coding simplicity, $q$ is computed once for the shortest duration and longest period and used for all other periods. This is computationally quite inefficient, but it makes the meaning of the output much simpler. If a faster algorithm is needed, $N$ can be recomputed for each transit duration.
+
+
+\begin{figure}[bht]
+     \begin{center}
+    \includegraphics[angle=0, scale=.4]{qplot}
+    \caption{Number density of periods searched as a function of assumed fractional transit duration. The actual number of periods searched depends on the ratio between the longest and shortest periods searched.}
+     \end{center}
+ \end{figure}
+
+
 \end{document}
