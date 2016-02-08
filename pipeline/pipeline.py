@@ -86,8 +86,11 @@ def loadDefaultConfig():
     #space where the transits cluster.
     path = lpp.getLppDir()
     cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
-    cfg['modshiftBasename'] = os.path.join(os.environ['HOME'],"daveOutput","")  # Jeff removed modshift from the start of the basename, since the modshift code appends "modshift" at the end of the filename
-    cfg['onepageBasename']  = os.path.join(os.environ['HOME'],"daveOutput","") # Jeff added this.
+
+    davePath = os.path.join(os.environ['HOME'],"daveOutput","")
+    cfg['modshiftBasename'] =  davePath
+    cfg['onepageBasename']  = davePath
+    cfg['clipSavePath'] = davePath
     #Location of the place all the light curves and TPF files are stored
     cfg['dataStorePath'] = os.path.join(os.environ['HOME'],".mastio/k2")
 
@@ -104,7 +107,6 @@ def loadDefaultConfig():
     measureDiffImgCentroidsTask dispositionTask""".split()
     cfg['searchTaskList'] = searchTaskList
 
-    cfg['clipSavePath'] = "./clips"
     cfg['keysToIgnoreWhenSaving'] = ["serve"]
     return cfg
 
