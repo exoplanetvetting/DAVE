@@ -32,7 +32,7 @@ def loadMyConfiguration():
 
     tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
         dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-        dpp.detrendDataTask dpp.blsTask dpp.trapezoidFitTask dpp.dispostionTask
+        dpp.detrendDataTask dpp.blsTask dpp.trapezoidFitTask dpp.dispositionTask
         dpp.plotTask dpp.saveOnError""".split()   # Jeff added
     cfg['taskList'] = tasks
 
