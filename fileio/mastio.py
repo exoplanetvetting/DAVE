@@ -8,21 +8,6 @@ __version__ = "$Id: mastio.py 1780 2014-08-27 16:36:11Z fmullall $"
 __URL__ = "$URL: svn+ssh://flux/home/fmullall/svn/kepler/py/mastio.py $"
 
 
-def createKeplerArchiveForLios():
-    """Create an archive on my work machine, lios, caching data in the correct place"""
-    localPath="/disk2/data"
-    return KeplerArchive(localPath)
-
-def createKeplerArchiveForUllord():
-    localPath="/Users/fergal/data/kepler"
-    return KeplerArchive(localPath)
-
-
-def createKeplerArchiveForDunalmu():
-    localPath="/home/fergal/data/fits/kepler"
-    return KeplerArchive(localPath)
-
-
 class MastArchive():
     """Base class for queries of the MAST Kepler and K2 archives.
     Handles submitting the URL, receiving and caching the results
