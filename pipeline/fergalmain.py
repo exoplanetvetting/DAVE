@@ -30,10 +30,13 @@ def loadMyConfiguration():
     #Edit the default configuration to your taste.
     #Change anything else you don't like about the default config here.
     cfg['debug'] = True
+    cfg['timeout_sec'] = 0
 
     tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
         dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-        dpp.detrendDataTask dpp.singleEventSearchTask dpp.saveOnError""".split()
+        dpp.detrendDataTask dpp.blsTask dpp.trapezoidFitTask dpp.modshiftTask
+        dpp.measureDiffImgCentroidsTask dpp.dispositionTask
+        dpp.saveOnError""".split()
 
     cfg['taskList'] = tasks
 

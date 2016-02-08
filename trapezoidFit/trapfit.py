@@ -4,6 +4,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.optimize as opt
+import sys
 
 def phaseData(t, per, to):
     """Phase the data at period per and centered at to
@@ -363,6 +364,9 @@ def trp_setup(ioblk):
     ioblk.fixed = np.array([0, 0, 0, 0])
     ioblk.physvals = np.array([0.0, depth, durday, 0.2])
     ioblk.nparm = np.size(ioblk.fixed)
+    
+    # Validate trapezoid fit inputs look reasonable
+    trp_validate(ioblk)
 
     ioblk.modellc = np.full_like(ioblk.normlc, 1.0)
     ioblk.chi2min = ioblk.normlc.size * 2000.0
@@ -380,6 +384,28 @@ def trp_setup(ioblk):
     ioblk.minimized = False
     return ioblk
 
+def trp_validate(ioblk):
+    # Check that physvals are within limits
+    if (np.any(np.greater_equal(ioblk.physvals, ioblk.physval_maxs))):
+        print 'physvals: {} is greater than physval_maxs: {}'.format( \
+                ioblk.physvals,ioblk.physval_maxs)
+        raise ValueError("TrapFit: physvals has value greater than physval_maxs")
+    if (np.any(np.less_equal(ioblk.physvals, ioblk.physval_mins))):
+        print 'physvals: {} is less than physval_mins: {}'.format( \
+                ioblk.physvals,ioblk.physval_mins)
+        raise ValueError("TrapFit: physvals has value less than physval_mins")
+    # Check for NaNs in input data series
+    if (np.any(np.isnan(ioblk.normlc))):
+        raise ValueError("TrapFit: Input light curve contains NaN")
+    if (np.any(np.isnan(ioblk.normes))):
+        raise ValueError("TrapFit: Input uncertainty estimate contains NaN")
+    if (np.any(np.isnan(ioblk.normots))):
+        raise ValueError("TrapFit: Input time data contains NaN")
+    # Check for input data series that has negative flux data should be 
+    #  normalized to 1.0
+    if (np.any(np.less(ioblk.normlc,0.0))):
+        raise ValueError("TrapFit: Negative Flux in light curve")
+    
 def trp_likehood(pars,ioblk):
     """Return a residual time series of data minus model
        trp_setup(ioblk) should be called before this function is called
@@ -581,6 +607,16 @@ def trapezoid_fit(timeSeries, dataSeries, errorSeries, \
     ioblk = trp_iterate_solution(ioblk,fitTrialN)
     # Convert the trapezoid fit solution into a pseudo planet model parameters
     ioblk = trp_estimate_planet(ioblk)
+    
+    # Raise an exception if final model is consistent with flat
+    if (np.all(np.abs(ioblk.modellc - ioblk.modellc[0]) \
+                < (10.0 * sys.float_info.epsilon))):
+        raise ValueError("TrapFit: Model light curve is flat!")
+    # Check for NaNs in output model
+    if (np.any(np.isnan(ioblk.modellc))):
+        raise ValueError("TrapFit: Output Model light curve contains NaN")
+   
+
     return ioblk
 
 # Run the test of a trapezoid model fit in gaussian noise

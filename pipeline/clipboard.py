@@ -15,7 +15,12 @@ def loadClipboard(filename):
         if not os.path.exists(filename+".dat"):
             raise IOError("File not found: %s" %(filename))
 
-    clip = Clipboard(sh['clip'])
+
+    clip = Clipboard()
+    for k in sh.keys():
+        clip[k] = sh[k]
+
+    sh.close()
     return clip
 
 

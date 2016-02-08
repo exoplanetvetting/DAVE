@@ -70,11 +70,65 @@ def plotWrapper(clip):
 
     f2 = mp.figure(2)
     mp.clf()
-    titleStr = plotCentroidOffsets(centroids)
-    titleStr = "EPIC: %i  %s" %(epic, titleStr)
+    try:
+        titleStr = plotCentroidOffsets(centroids)
+        titleStr = "EPIC: %i  %s" %(epic, titleStr)
+    except ValueError, e:
+        titleStr = "Error: %s" %(e)
+        mp.axis([-1,1,-1,1])
     mp.title(titleStr)
 
+#    f3 = mp.figure(3)
+#    mp.clf()
+#    plotInTransitAndDiffCentroids(centroids)
+#    plotCentroidTimeseries(centroids)
     return f1, f2
+
+
+def plotInTransitAndDiffCentroids(centroids):
+    """Plot the row and column of the intranst centroids and the difference
+    image centroids"""
+
+    idx = centroids[:,1] > 0
+    diffCol = centroids[idx, 'diff_col']
+    diffRow = centroids[idx, 'diff_row']
+
+    #itr => in transit
+    itrCol = centroids[idx, 'intr_col']
+    itrRow = centroids[idx, 'intr_row']
+
+    mp.plot(diffCol, diffRow, 'bo', label="Diff Img Cent")
+    mp.plot(itrCol, itrRow, 'rs', label="In-Transit Cent")
+
+    for i in range(len(diffCol)):
+        a1 = [diffCol[i], itrCol[i]]
+        a2 = [diffRow[i], itrRow[i]]
+        mp.plot(a1, a2, '-', color='#AAAAAA', lw=.5)
+
+    mp.legend(loc=0, fancybox=True, shadow=True)
+    mp.xlabel(r"Column")
+    mp.ylabel(r"Row")
+
+
+def plotCentroidTimeseries(centroids):
+    idx = centroids[:,1] > 0
+    rin = centroids[idx, 0]
+    diffCol = centroids[idx, 'diff_col']
+    diffRow = centroids[idx, 'diff_row']
+
+    #itr => in transit
+    itrCol = centroids[idx, 'intr_col']
+    itrRow = centroids[idx, 'intr_row']
+
+    itrCol = itrCol/np.mean(itrCol) - 1
+    itrRow = itrRow/np.mean(itrRow) - 1
+
+#    mp.plot(rin, diffCol, diffRow, 'bo', label="Diff Img Cent")
+    mp.plot(rin, itrCol,  'rs', label="In-Transit Col")
+    mp.plot(rin, itrRow,  'cs', label="In-Transit Cow")
+    mp.legend(loc=0)
+    mp.xlabel(r"Cadence Number")
+    mp.ylabel(r"Deviation from Mean Value")
 
 
 def plotCentroidOffsets(centroids):
