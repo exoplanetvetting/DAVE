@@ -47,10 +47,10 @@ def makeTestData():
 
 
 def test_longDurations():
+    """Test that bls is not computed if transit duration is too long"""
     time,flux = loadData()
 
     periodList = [10.]
-#    duration_daysList = [1/200., 1/400., 1/800., 1e-4]
     duration_daysList = [11]
 
     blsArray = fbls.computeBlsForManyPeriods(time, flux, duration_daysList, periodList)
@@ -63,7 +63,8 @@ def test_longDurations():
 def test_periodGeneration():
     periods = fbls.computePeriodList(1,5, [2220, 2140], 2)
 
-    print periods[0], periods[-3:-1]
+    assert(periods[0] < 1.01)
+    assert(periods[-1] >= 5)
 
 def test_fbls1(plot=False):
     time, flux = makeTestData()
@@ -72,7 +73,8 @@ def test_fbls1(plot=False):
     periodList = [2., 2.3, 2.4, 2.41, 2.42, 2.5, 3.0]
     blsArray = fbls.computeBlsForManyPeriods(time, flux, duration_daysList, periodList)
 
-    per, epc, dur=  fbls.getParamsOfDetection(blsArray, np.argmax(blsArray),\
+    index = np.argmax(blsArray)
+    per, epc, dur=  fbls.getParamsOfIndex(blsArray, index,\
         duration_daysList, periodList)
 
     if plot:
@@ -80,42 +82,19 @@ def test_fbls1(plot=False):
         makePlots(time, flux, blsArray, per, epc)
 
     assert(per> 2.3 and per < 2.42)
-#    assert(int(dur*24) == 6)
+    assert(int(dur*24) == 8)
 #    assert(epc >1.1 and epc < 1.2)
 
     return blsArray
 
 
+
 def test_fbls2(plot=False):
-    time,flux = loadData()
-
-    duration_daysList = np.array([1, 2,4,8]).astype(float) / 24.
-#    periodList = [2., 2.3, 2.4, 2.41, 2.42, 2.5, 3.0]
-    periodList = np.linspace(3.5, 4.5, 20)
-    blsArray = fbls.computeBlsForManyPeriods(time, flux, duration_daysList, periodList)
-
-    per, epc, dur=  fbls.getParamsOfDetection(blsArray, np.argmax(blsArray),\
-        duration_daysList, periodList)
-
-    if plot:
-        print np.unravel_index(np.argmax(blsArray), blsArray.shape)
-        print per, epc+time[0], dur*24
-        makePlots(time, flux, blsArray, per, epc)
-
-    assert(per> 4.1 and per < 4.2)
-    assert(int(dur*24) == 4)
-    print epc
-    assert(epc >1.6 and epc < 1.7)
-
-    return blsArray
-
-
-def test_fbls3(plot=False):
     time,flux = loadData()
 #    time = time[:100]
 #    flux = flux[:100]
 
-    duration_daysList = np.array([4,6,8]).astype(float) / 24.
+    duration_daysList = np.array([2,4,6,8]).astype(float) / 24.
     blsArray, periods = fbls.fBls(time, flux, [1,5], duration_daysList)
 
 #    print periods[0], periods[-1]
@@ -128,15 +107,14 @@ def test_fbls3(plot=False):
         print per, epc+time[0], dur*24
         makePlots(time, flux, periods, blsArray, per, epc)
 
-#    assert(per> 4.1 and per < 4.2)
-#    assert(int(dur*24) == 4)
+    assert(per> 4.1 and per < 4.2)
+    assert(int(dur*24) == 4)
 #    print epc
-#    assert(epc >1.6 and epc < 1.7)
+    assert(epc >1.6 and epc < 1.7)
 
     return blsArray, periods, duration_daysList
 
 
-import dave.fileio.kplrfits as kf
 
 
 
@@ -165,13 +143,11 @@ def makePlots(time, flux, periods, blsArray, per, epc):
         mp.figure(3)
         mp.clf()
         bbb = bb.max(axis=1)
-#        mp.plot(periods, bbb, 'b-')
+        mp.plot(periods, bbb, 'b-')
         mp.xlabel("Period")
 
-        filt = kf.medianSubtract1d(bbb, 50)
-        mp.plot(periods, filt, 'r-')
 
 
 
 if __name__ == "__main__":
-    test_fbls3()
+    test_fbls2()

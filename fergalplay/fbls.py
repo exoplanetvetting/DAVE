@@ -36,12 +36,72 @@ import matplotlib.pyplot as mp
 import numpy as np
 
 import dave.fileio.kplrfits as kplrfits
-
+import datetime
 
 
 def meanZero(y):
     return y/np.mean(y) - 1
 
+
+class BlsSearch(object):
+    def __init__(self, time, flux, periodRange, durations_days, debug=False):
+        self.time = time
+        self.flux = flux
+        self.periodRange = periodRange
+
+        lwr, upr = periodRange
+        self.periods = computePeriodList(lwr, upr, time, min(durations_days))
+
+        #Allow durations to be a single value
+        if not hasattr(durations_days, "__len__"):
+            durations_days = [durations_days]
+        assert(len(durations_days) > 0)
+        self.durations = np.array(durations_days)
+
+        if np.min(self.durations) > 1:
+            print "WARN: All durations longer than 1 day. Did you input hours?"
+
+        if not debug:
+            self.run()
+
+
+    def run(self):
+        t0 = datetime.datetime.now()
+        self.blsArray = computeBlsForManyPeriods(self.time, self.flux, \
+            self.durations, self.periods)
+        self.elapsedTime = datetime.datetime.now() - t0
+
+    def getEvent(self):
+        index = findBestPeak(self.blsArray)
+        period, epoch, dur = getParamsOfIndex(self.blsArray, index, \
+            self.durations, self.periods)
+
+        epoch += np.min(self.time)
+
+        depth = 0 #Not computed yet
+        return period, epoch, depth, dur
+
+
+    def compute1dBls(self):
+        bb = self.blsArray.max(axis=1)
+        bbb = bb.max(axis=1)
+
+        out = np.empty( (len(bbb), 2))
+        out[:,0] = self.periods
+        out[:,1] = bbb
+
+        return out
+
+    def getRuntime(self):
+        return self.elapsedTime
+
+
+    def plot(self):
+        bb = self.blsArray.max(axis=1)
+#        bb = self.blsArray[:,0,:]
+        mp.imshow(bb, cmap=mp.cm.YlGnBu_r, interpolation="nearest",\
+            origin="bottom", aspect="auto")
+        mp.colorbar()
 
 
 def fBls(time, flux, periodRange, durations):
@@ -121,7 +181,7 @@ def computePeriodList(Plwr, Pupr, time, duration, overres=2):
     timespan = np.max(time) - np.min(time)
     q = duration/timespan/float(overres)
 
-    nStep = int(np.round(np.log(Pupr/Plwr) / np.log(1+q)))
+    nStep = int(np.ceil(np.log(Pupr/Plwr) / np.log(1+q)))+2
     n = np.arange(nStep)
 
     return Plwr*(1+q)**n
@@ -137,6 +197,8 @@ def computeBlsForManyPeriods(t, y, durationList, periodList):
     Todo:
     Allow passing in weights on each data point to better account for
     varying noise.
+
+    Do some experiments to fnd the best value for minBinsPerTransit
     """
     assert(np.all(np.isfinite(t)))
     assert(np.all(np.isfinite(y)))
@@ -237,7 +299,7 @@ def computeBlsForOnePeriod(y, transitWidth):
     signal = np.ones(transitWidth)
     s = np.convolve(y, signal, mode='same')
     assert(len(s) == len(y))
-    bls = s/np.sqrt(r)
+    bls = -s/np.sqrt(r)
     assert(len(bls) == len(y))
 
     return bls
@@ -305,6 +367,27 @@ def findBestPeak(blsArray, nPointsForSmooth=100, offset=0):
 
 
 def getParamsOfIndex(blsArray, indices, duration_daysList, periodList):
+    """Compute period, epoch, duration and depth corresponding to a given index
+
+    Inputs:
+    blsArray
+        (3d np array)  Returned by fbls()
+    indices
+        (tuple/list of length 3) Index into blsArray to compute
+    duraiton_daysList
+        (list) List of durations corresponding to the last dimension of blsArray
+    periodList
+        (list/array) List of periods corresponding to zeroth dimension of
+        blsArray
+
+    Returns:
+    -----------
+    A tuple of period, epoch, and duration
+
+    TODO:
+    ----------
+    Compute depth from blsArray
+    """
     assert(blsArray.ndim == 3)
 
     if hasattr(indices, '__len__'):
