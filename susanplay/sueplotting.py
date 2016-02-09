@@ -58,14 +58,14 @@ def indivPlot(clip,ndur):
     epoch = clip['trapFit.epoch_bkjd'] - tminus
     period = clip['trapFit.period_days']
     dur = clip['trapFit.duration_hrs']
-    depth=np.abs(clip['bls.depth'])*factor;
+    depth=np.abs(clip['trapFit.depth_frac'])*factor;
     flags=clip['detrend.flags'];
     trapfit=clip['trapFit.bestFitModel']*factor;
     epic = str(clip['value'])
     
     time=time_days[~flags]
     flux=flux_zero[~flags]
-    model=trapfit
+    #model=trapfit
     
     #Find number of transits available in the light curve.    
     ntransit = (time[len(time)-1]-time[0])/period;

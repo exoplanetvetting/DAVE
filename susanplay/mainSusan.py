@@ -83,7 +83,7 @@ def runOne(k2id, config):
 
 
 
-def runOneEphem(k2id,period,epoch,duration, depth, config):
+def runOneEphem(k2id,period,epoch,config,duration=2,depth=.0001):
     """
     Run just the vetting and return an output.
     Inputs:
@@ -106,7 +106,7 @@ def runOneEphem(k2id,period,epoch,duration, depth, config):
         dpp.plotTask dpp.saveOnError""".split()  
     
     
-    taskList = config['taskList']
+    taskList = tasks;
 
     clip = clipboard.Clipboard()
     clip['config'] = config
