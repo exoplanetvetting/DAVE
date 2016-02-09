@@ -29,10 +29,8 @@ def loadData():
     flags = clip['detrend.flags']
 
     time = time[~flags]
-    flux = flux[~flags]\
+    flux = flux[~flags]
 
-    flux /= np.mean(flux)
-    flux -= 1
     return time, flux
 
 
@@ -42,6 +40,9 @@ def makeTestData():
     period = 2.41
     epoch = 1.1
     y = dtf.trapezoid_model_onemodel(t, period, epoch, 100, 6, 1, 15).modellc
+
+    y /= np.mean(y)
+    y-=1
     return t,y
 
 
@@ -66,6 +67,7 @@ def test_periodGeneration():
     assert(periods[0] < 1.01)
     assert(periods[-1] >= 5)
 
+
 def test_fbls1(plot=False):
     time, flux = makeTestData()
 
@@ -79,11 +81,11 @@ def test_fbls1(plot=False):
 
     if plot:
         print per, epc+time[0], dur*24
-        makePlots(time, flux, blsArray, per, epc)
+        makePlots(time, flux, periodList, blsArray, per, epc)
 
     assert(per> 2.3 and per < 2.42)
-    assert(int(dur*24) == 8)
-#    assert(epc >1.1 and epc < 1.2)
+    assert(int(dur*24) == 6)
+    assert(epc >1.09 and epc < 1.11)
 
     return blsArray
 
@@ -91,8 +93,6 @@ def test_fbls1(plot=False):
 
 def test_fbls2(plot=False):
     time,flux = loadData()
-#    time = time[:100]
-#    flux = flux[:100]
 
     duration_daysList = np.array([2,4,6,8]).astype(float) / 24.
     blsArray, periods = fbls.fBls(time, flux, [1,5], duration_daysList)
@@ -123,15 +123,8 @@ def makePlots(time, flux, periods, blsArray, per, epc):
         mp.clf()
         mp.plot(time, flux, 'bo', mec="none")
 
-        colour = 'rgbcmk'
-        duration = [4,6,8]
-        for c,offset in enumerate(np.arange(0,1)):
-            index = list(fbls.findBestPeak(blsArray, offset=offset))
-            per, epc, dur=  fbls.getParamsOfIndex(blsArray, index,\
-                duration, periods)
-
-            for i in range(17):
-                mp.axvline(epc+np.min(time)+ i*per, color=colour[c])
+        for i in range(17):
+            mp.axvline(epc+np.min(time)+ i*per, color='r')
 
         mp.figure(2)
         mp.clf();
