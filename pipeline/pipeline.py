@@ -76,7 +76,7 @@ def loadDefaultConfig():
 
     #Vetting parameters
     cfg['minSnrForDetection'] = 10.
-    cfg['maxLppForTransit'] = 0.03
+    cfg['maxLppForTransit'] = 0.0105
     #How significant must centroid offset be to claim a false positive.
     #This value is between 0 and 1. Higher values mean fewer false positives
     cfg['minProbDiffImgCentroidForFail'] = 0.99
@@ -445,7 +445,7 @@ def trapezoidFitTask(clip):
     period_days = clip['bls.period']
     duration_hrs = clip['bls.duration_hrs']
     phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
-    depth_frac = clip['bls.depth']
+    depth_frac = np.abs(clip['bls.depth'])
 
     #We don't know these values.
     unc = np.ones_like(flux_norm)
