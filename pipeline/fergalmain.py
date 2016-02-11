@@ -38,6 +38,10 @@ def loadMyConfiguration():
         dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveOnError""".split()
 
+#    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
+#        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
+#        newDetrendDataTask dpp.saveClip""".split()
+
     cfg['taskList'] = tasks
 
 
@@ -92,3 +96,72 @@ def runOne(k2id, config):
     return clip
 
 
+import multiprocessing
+import contextlib
+import parmap
+from multiprocessing import pool
+def runAll(func, iterable, config):
+    """Run func over every element on iterable in parallel.
+
+    Not yet run or tested.
+
+    Inputs:
+    ----------
+    func
+	(A function) The top level function, e.g runOne(), below
+
+    iterable
+	(list, array, etc.) A list of values to operate on.
+
+    config
+	(Clipboard) A configuration clipboard.
+    """
+
+    count = multiprocessing.cpu_count()-1
+    p = pool.Pool(count)
+
+
+    parallel = config.get('debug', False)
+
+    with contextlib.closing(pool.Pool(count)) as p:
+        out = parmap.map(runOne, iterable, config, pool=p, parallel=parallel)
+
+    return out
+
+
+
+import dave.misc.noise as noise
+import dave.fileio.kplrfits as kplrfits
+import task
+@task.task
+def newDetrendDataTask(clip):
+    flux = clip['cotrend.flux_frac']
+    flags = clip['cotrend.flags']
+
+    nPoints = clip['config.nPointsForMedianSmooth']
+
+    #When you detrend, you must do something about the gaps and bad values.
+    #This is the simplest possible thing. Replace all bad/missing data with
+    #zeros. This is a placehold. Bad data inside a transit is replaced with
+    #a zero, which is not what you want.
+    flux[flags] = 0
+
+    #Do a simple detrend.
+    detrend = kplrfits.medianSubtract1d(flux, nPoints)
+    clip['detrend'] = dict()
+    clip['detrend.flux_frac'] = detrend
+    clip['detrend.flags'] = flags
+    clip['detrend.source'] = "Simple Median detrend"
+
+    rollTweakAmp = noise.computeRollTweakAmplitude(detrend[~flags])
+    clip['detrend.rollTweakAmp'] = rollTweakAmp
+
+    cdpp6 = noise.computeSgCdpp_ppm(detrend[~flags])
+    clip['detrend.cdpp6_ppm'] = cdpp6
+
+    perPointScatter = noise.estimateScatterWithMarshallMethod(detrend[~flags])
+    clip['detrend.perPointScatter_ppm'] = 1e6*perPointScatter
+
+
+    assert(detrend is not None)
+    return clip
