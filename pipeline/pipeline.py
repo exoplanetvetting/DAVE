@@ -378,7 +378,7 @@ def blsTask(clip):
 
     idx = flags == 0
     period, epoch, duration, depth, bls_search_periods, convolved_bls = \
-        bls.doSearch(time_days[idx], flux_norm[idx], minPeriod, maxPeriod)
+        bls.doSearch(time_days[idx], 1+flux_norm[idx], minPeriod, maxPeriod)
 
     out = clipboard.Clipboard()
     out['period'] = period
@@ -634,8 +634,6 @@ def dispositionTask(clip):
     snrThreshold = clip['config.minSnrForDetection']
     lppThreshold = clip['config.maxLppForTransit']
     minProbForFail = clip['config.minProbDiffImgCentroidForFail']
-
-    #Data on which to make a decision
     snr = clip['trapFit.snr']
     modshiftDict = clip['modshift']
     centroidArray = clip['diffImg.centroid_timeseries']
@@ -643,29 +641,6 @@ def dispositionTask(clip):
     out = clipboard.Clipboard(isSignificantEvent=True, isCandidate=True, \
         reasonForFail="None")
 
-    #Check SNR
-    if snr < snrThreshold:
-        out['isSignificantEvent'] = False
-        out['isCandidate'] = False
-        out['reasonForFail'] = "SNR (%.1f) below threshold %.1f" \
-            %(snr, snrThreshold)
-
-    #Check LPP, if it's available
-    Tlpp_linear = clip.get('lpp.TLpp', 0)
-    if Tlpp_linear > lppThreshold:
-        out['isCandidate'] = False
-        out['reasonForFail'] = "TLpp (%.1f) above threshold %.1f" \
-            %(Tlpp_linear, lppThreshold)
-
-
-    #Parse modshift results
-    fluxVetDict = RoboVet.roboVet(modshiftDict)
-    out['fluxVet'] = fluxVetDict
-    assert(fluxVetDict['disp'] in ["candidate", "false positive"])
-
-    if fluxVetDict['disp'] == "false positive":
-        out['isCandidate'] = False
-        out['reasonForFail'] = fluxVetDict['comments']
 
     #Compute centroid offset and significance
     centVet = {'Warning':"None"}
@@ -691,6 +666,35 @@ def dispositionTask(clip):
         centVet['Warning'] = "Probability is Nan"
 
     out['centroidVet'] = centVet
+
+
+    ####################################################
+
+    #Parse modshift results
+    fluxVetDict = RoboVet.roboVet(modshiftDict)
+    out['fluxVet'] = fluxVetDict
+    assert(fluxVetDict['disp'] in ["candidate", "false positive"])
+
+    if fluxVetDict['disp'] == "false positive":
+        out['isCandidate'] = False
+        out['reasonForFail'] = fluxVetDict['comments']
+
+
+
+    #Check LPP, if it's available
+    Tlpp_linear = clip.get('lpp.TLpp', 0)
+    if Tlpp_linear > lppThreshold:
+        out['isCandidate'] = False
+        out['reasonForFail'] = "TLpp (%.1f) above threshold %.1f" \
+            %(Tlpp_linear, lppThreshold)
+
+
+    #Check SNR
+    if snr < snrThreshold:
+        out['isSignificantEvent'] = False
+        out['isCandidate'] = False
+        out['reasonForFail'] = "SNR (%.1f) below threshold %.1f" \
+            %(snr, snrThreshold)
 
     clip['disposition'] = out
 
@@ -759,7 +763,7 @@ def saveClip(clip):
         #when I restore?
         keysToSkip = clip.get('config.keysToIgnoreWhenSaving', [])
 
-        fn = "clip-%09i-%02i.shelf" %(value, campaign)
+        fn = "c%09i-%02i.clip" %(value, campaign)
         fn = os.path.join(path, fn)
 
         if os.path.exists(fn):
