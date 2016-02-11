@@ -1,7 +1,7 @@
 #Tools for manipulating target pixel files
 #Tom Barclay
 #Fergal Mullally
-#Knicole Colon 
+#Knicole Colon
 
 
 #Light Curve Extraction from TPFs (Optimal Apertures)
@@ -31,7 +31,7 @@ def getTargetPixelArrayFromFits(fits, hdr, column='FLUX'):
 
     for i, cadence in enumerate(fits[column]):
         tpfArray[i,:,:] = cadence.reshape(shape)
-        
+
     return tpfArray
 
 
@@ -85,14 +85,14 @@ def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=Fa
     """
     This routine determines an optimal apertures and outputs the flux (i.e. a light curve) from a TPF.
 
-    
+
     Inputs:
     ------------
     t_time = 1D array of 'TIME' from TPF
     t_fluxarr = 1D array of 'FLUX' from TPF
     t_quality = 1D array of 'QUALITY' from TPF
     qual_cut = exclude cadences with a non-zero quality flag; this is False by default
-    return_qual = if True then nothing is returned; this is True by default 
+    return_qual = if True then nothing is returned; this is True by default
     toss_resat = exclude cadences where there is a wheel resaturation event; this is True by default
     bg_cut = threshold to find pixels that are bg_cut * MAD above the median
     skip = index of first cadence that should be used in the time series
@@ -103,17 +103,17 @@ def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=Fa
     lc = 1D array of flux measured in optimal aperture
     xbar = 1D array of x-coordinate of target centroid
     ybar = 1D array of y-coordinate of target centroid
-    regnum = integer value of brightest pixel  
+    regnum = integer value of brightest pixel
     lab = 2D array identifying pixels used in aperture
-    
+
     Usage:
-    ------------    
+    ------------
     tpf,tpf_hdr = ar.getLongTpf(k2id, campaign, header=True)
 
     tpf_time = tpf['TIME']
     tpf_flux = tpf['FLUX']
     tpf_quality = tpf['QUALITY']
-        
+
     time,lc,xbar,ybar,regnum,lab = optimalAperture(tpf_time, tpf_flux, tpf_quality, qual_cut=False, return_qual=False, toss_resat=True, bg_cut=5, skip=0)
     """
 
@@ -187,5 +187,6 @@ def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=Fa
         return None
     else:
         return (time,lc, xbar / np.nanmean(xbar), ybar / np.nanmean(xbar), regnum, lab)
-       
+
 if __name__=="__main__":
+    pass
