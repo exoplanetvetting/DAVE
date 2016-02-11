@@ -2,35 +2,39 @@
 
 from __future__ import division
 """
-Created on Thu Feb  4 11:04:41 2016
 
-@author: fergal
+A pure Python implementation of the BLS search. Not as fast as the
+Fortran version, but no dependencies or compile problems.
 
-$Id$
-$URL$
+Usage:
+------------
+Create a BlsSearch object
+> pRange = [1,30]
+> durList_days = np.array([1,2,4,8])/24.
+> blsObj = BlsSearch(time, flux, pRange_days, durList_days)
+
+The period range and durations are in the same units as the time array
+(for K2, this is days)
+
+Next get the properties of the strongest signal:
+period, epoch, depth, duration = blsObj.getEvent()
+
 
 Todo:
-x Figure out a period list from a period range
-x Check that wasp47 is found. Write as a test
+------------
 o Add option of a condensed output to save memory, that gives an array
   of period, max(bls amplitude), epoch at max, duration at max
-x Profile code
-x Compute epoch of event from output array
-o Adjust min points per transit duration
+o Optimise min points per transit duration
 
 
-
+Notes:
+-------------
 To profile code:
 Add @profile decorator to functions you want to profile. From
 command line run
 > date; ~/bin/python ~/.local/lib/python2.7/site-packages/kernprof.py -l -v test_fbls.py > fbls.prof; date
 Then edit the file fbls.prof
 """
-
-__version__ = "$Id$"
-__URL__ = "$URL$"
-
-
 
 import matplotlib.pyplot as mp
 import numpy as np
@@ -39,12 +43,38 @@ import dave.fileio.kplrfits as kplrfits
 import datetime
 
 
-def meanZero(y):
-    return y/np.mean(y) - 1
 
 
 class BlsSearch(object):
+    """A thin wrapper class around fbls and associated functions.
+    Basically, this class stores the multitude of variables you need
+    to carry around. If you don't like object orientation, call fbls()
+    yourself directly"""
+
     def __init__(self, time, flux, periodRange, durations_days, debug=False):
+        """
+        Inputs:
+        ------------
+        time, flux
+            (1d np arrays) Times and fluxes of data. flux should have a mean
+            of approximately zero.
+
+        periodRange
+            (2 element list) Minimum and maximum periods to search. Units
+            the same as the time array
+
+        durations
+            (list) List of transit durations to search for. Units the same
+            as the time array.
+
+        Notes:
+        ---------
+        This class intended for use with K2, so durations should be given
+        in days. The class warns you if you seem to be input durations in hours
+
+        """
+
+        self.minBinsPerTransit = 10
         self.time = time
         self.flux = flux
         self.periodRange = periodRange
@@ -68,18 +98,37 @@ class BlsSearch(object):
     def run(self):
         t0 = datetime.datetime.now()
         self.blsArray = computeBlsForManyPeriods(self.time, self.flux, \
-            self.durations, self.periods)
+            self.durations, self.periods, self.minBinsPerTransit)
+
         self.elapsedTime = datetime.datetime.now() - t0
 
     def getEvent(self):
-        index = findBestPeak(self.blsArray)
+        index = self.getIndexOfBestPeak()
         period, epoch, dur = getParamsOfIndex(self.blsArray, index, \
             self.durations, self.periods)
 
         epoch += np.min(self.time)
 
-        depth = 0 #Not computed yet
+        depth = self.getTransitDepth(index)
         return period, epoch, depth, dur
+
+
+    def getIndexOfBestPeak(self):
+        return findBestPeak(self.blsArray)
+
+
+    def getTransitDepth(self, index):
+        """If computeBlsForOnePeriod() changes this code will be wrong"""
+        blsVal = self.blsArray[index]
+        minDur = np.min(self.durations)
+
+        period = self.periods[index[0]]
+        duration = self.durations[index[1]]
+
+        nBins = self.minBinsPerTransit * period/minDur
+        transitWidth = int(np.round(duration/period*nBins))
+
+        return blsVal/np.sqrt(transitWidth)
 
 
     def compute1dBls(self):
@@ -92,8 +141,8 @@ class BlsSearch(object):
 
         return out
 
-    def getRuntime(self):
-        return self.elapsedTime
+    def getRuntime_sec(self):
+        return self.elapsedTime.total_seconds()
 
 
     def plot(self):
@@ -188,7 +237,7 @@ def computePeriodList(Plwr, Pupr, time, duration, overres=2):
 
 
 #@profile
-def computeBlsForManyPeriods(t, y, durationList, periodList):
+def computeBlsForManyPeriods(t, y, durationList, periodList, minNumBinsPerTransit=10):
     """Worker function for fbls
 
     See fbls() for a description of inputs. Values for durationList
@@ -198,7 +247,8 @@ def computeBlsForManyPeriods(t, y, durationList, periodList):
     Allow passing in weights on each data point to better account for
     varying noise.
 
-    Do some experiments to fnd the best value for minBinsPerTransit
+    Do some experiments to fnd the best value for minBinsPerTransit.
+    Kovacs suggests 15, I find 10 works well, I haven't tried other numbers
     """
     assert(np.all(np.isfinite(t)))
     assert(np.all(np.isfinite(y)))
@@ -210,8 +260,6 @@ def computeBlsForManyPeriods(t, y, durationList, periodList):
 
     if np.any(periodList <= 0):
         raise ValueError("Periods must be > 0")
-
-    minNumBinsPerTransit = 10  #Kovacs sugggest 15
 
     maxNumBins = minNumBinsPerTransit * max(periodList) / min(durationList)
     out = np.zeros((len(periodList), len(durationList), maxNumBins))
@@ -235,12 +283,20 @@ def computeBlsForManyPeriods(t, y, durationList, periodList):
 
 
         for j,duration in enumerate(durationList):
-            transitWidth = int(np.round(duration/period * nBins))  #nBins Wrong?
+            transitWidth = int(np.round(duration/period * nBins))
 
             if transitWidth > 0 and transitWidth < len(binned):
                 bls = computeBlsForOnePeriod(binned, transitWidth)
                 out[i,j, :nBins] = bls
     return out
+
+
+#def computeTransitWidth(duration, period, nBins):
+#    return int(np.round(duration/period * nBins))
+
+#def computeNumberOfInTransitBins(minNumBinsPerTransit, period, duration):
+#    tmp = minNumBinsPerTransit * period / duration
+#    return int(np.round(tmp))
 
 
 #@profile
