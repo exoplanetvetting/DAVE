@@ -34,9 +34,9 @@ def loadMyConfiguration():
 
     tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
         dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-        dpp.detrendDataTask dpp.blsTask dpp.trapezoidFitTask dpp.modshiftTask
+        dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask dpp.modshiftTask
         dpp.measureDiffImgCentroidsTask dpp.dispositionTask
-        dpp.saveOnError""".split()
+        dpp.saveClip""".split()
 
 #    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
 #        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
@@ -73,11 +73,15 @@ def runAll(func, iterable, config):
 	(Clipboard) A configuration clipboard.
     """
 
+    #Turn off parallel when debugging.
+    parallel = True
+    if config.get('debug', False):
+        parallel = False
+
     count = multiprocessing.cpu_count()-1
-    parallel = config.get('debug', False)
 
     with contextlib.closing(pool.Pool(count)) as p:
-        out = parmap.map(runOne, iterable, config, pool=p, parallel=parallel)
+        out = parmap.map(func, iterable, config, pool=p, parallel=parallel)
 
     return out
 
