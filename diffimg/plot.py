@@ -18,6 +18,7 @@ import numpy as np
 
 import dave.fileio.kplrfits as kplrfits
 import dave.misc.covar as covar
+import diffimg
 
 
 def plotWrapper(clip):
@@ -78,10 +79,10 @@ def plotWrapper(clip):
         mp.axis([-1,1,-1,1])
     mp.title(titleStr)
 
-#    f3 = mp.figure(3)
-#    mp.clf()
+    f3 = mp.figure(3)
+    mp.clf()
 #    plotInTransitAndDiffCentroids(centroids)
-#    plotCentroidTimeseries(centroids)
+    plotCentroidTimeseries(centroids)
     return f1, f2
 
 
@@ -120,15 +121,25 @@ def plotCentroidTimeseries(centroids):
     itrCol = centroids[idx, 'intr_col']
     itrRow = centroids[idx, 'intr_row']
 
-    itrCol = itrCol/np.mean(itrCol) - 1
-    itrRow = itrRow/np.mean(itrRow) - 1
+    diffCol = diffCol - np.mean(diffCol)
+    diffRow = diffRow - np.mean(diffRow)
+
+    itrCol = itrCol - np.mean(itrCol)
+    itrRow = itrRow - np.mean(itrRow)
 
 #    mp.plot(rin, diffCol, diffRow, 'bo', label="Diff Img Cent")
+    ax = mp.subplot(211)
     mp.plot(rin, itrCol,  'rs', label="In-Transit Col")
-    mp.plot(rin, itrRow,  'cs', label="In-Transit Cow")
+    mp.plot(rin, diffCol,  'co', label="Diff Img Col")
+    mp.ylabel("Deviation from mean Col")
+
+    mp.subplot(212, sharex=ax)
+    mp.plot(rin, itrRow,  'rs', label="In-Transit Row")
+    mp.plot(rin, diffRow,  'co', label="Diff Img Row")
+    mp.ylabel("Deviation from mean Row")
+
     mp.legend(loc=0)
     mp.xlabel(r"Cadence Number")
-    mp.ylabel(r"Deviation from Mean Value")
 
 
 def plotCentroidOffsets(centroids):
@@ -150,6 +161,7 @@ def plotCentroidOffsets(centroids):
     A plot is added to the current figure.
     """
     idx =centroids[:,1] > 0
+    cin = centroids[idx, 0]
     ootCol = centroids[idx, 'diff_col']
     ootRow = centroids[idx, 'diff_row']
 
@@ -160,18 +172,21 @@ def plotCentroidOffsets(centroids):
     diffC = ootCol - itrCol
     diffR = ootRow - itrRow
 
-    mp.plot(diffC, diffR, 'bo', mec="none")
+    mp.scatter(diffC, diffR, marker='o', c=cin, s=64, linewidths=0, \
+        cmap=mp.cm.RdYlBu)
     mp.plot(0,0, 'ko', ms=12)
     mp.axhline(0, color='k', lw=.5)
     mp.axvline(0, color='k', lw=.5)
 
-    covar.plotErrorEllipse(diffC, diffR)
+    covar.plotErrorEllipse(diffC, diffR, color='#888888')
 
-    mp.xlabel(r"$\Delta$ Column")
-    mp.ylabel(r"$\Delta$ Row")
+    mp.xlabel(r"$\Delta$ Column (pixels)")
+    mp.ylabel(r"$\Delta$ Row (pixels)")
 
     probOffset, chiSq = covar.computeProbabilityOfObservedOffset(diffC, diffR)
     titleStr = "Prob. On Target: %.1e: $\chi^2$: %.3f" %(1-probOffset, chiSq)
+    cb = mp.colorbar()
+    cb.set_label("Time (BKJD)")
     return titleStr
 
 
@@ -220,6 +235,8 @@ def multiPanelPlotDiffImgCentroidsDiagnostic(time, flux, flags, rollPhase, \
     """
     fig = mp.gcf()
     fig.set_size_inches(11, 8.5)
+
+    time = np.arange(len(time))
 
     nPanel = 3
     start = np.min(time[~flags])
@@ -320,3 +337,47 @@ def plotThrusterFirings(qualityFlags, xval=None, **kwargs):
 
     for w in wh:
         mp.axvline(xval[w], **kwargs)
+
+
+
+def plotDiffImg(cube, indexOfCadence, rollPhase, quality):
+
+    if quality.dtype == np.bool:
+        raise TypeError("quality should not be a boolean array")
+
+    mp.clf()
+    orig = cube[indexOfCadence]
+    diff, oot, diag = diffimg.constructK2DifferenceImage(cube, \
+        indexOfCadence, \
+        rollPhase, quality)
+
+    disp = lambda x: mp.imshow(x, cmap=mp.cm.YlGnBu_r, origin="bottom",
+           interpolation="nearest")
+
+    mp.subplot(221)
+    disp(cube[indexOfCadence])
+    mp.colorbar()
+    mp.title("Cadence")
+
+    mp.subplot(222)
+    disp(oot)
+    mp.colorbar()
+    mp.title("Out of Transit")
+
+    #Quite now if no diff img created
+    if np.all(oot == 0):
+        return
+
+    mp.subplot(223)
+    disp(diff)
+    mp.colorbar()
+    mp.title("Difference Image")
+
+    mp.subplot(224)
+    idx = np.isfinite(diff)
+    snr = np.empty_like(diff)
+    snr[idx] = diff[idx]/np.sqrt(orig[idx])
+    disp(snr)
+    mp.colorbar()
+    mp.title("Difference SNR")
+

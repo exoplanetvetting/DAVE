@@ -229,43 +229,6 @@ def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
     return out, diagnostics, log
 
 
-def getIndicesInTransit(period_days, epoch_bkjd, duration_hrs, time_bkjd):
-    """
-    Find the cadences affected by a transit.
-
-    Inputs::
-    --------
-    period_days, epoch_bkjd, duration_hrs
-        (floats) Properties of transit
-
-    time_bkjd
-        Array of times per cadence for the given campaign
-
-
-    Returns:
-    ------------
-    An array of booleans of length equal to length of time_bkjd.
-    Cadences in transit are set to true, all other cadences to false
-    """
-
-    raise DeprecatedWarning("use fileio.kplrfits.markTransitCadences")
-
-    time = time_bkjd #Mneumonic
-    n1 = int(np.floor((time[0] - epoch_bkjd)/period_days))
-    n2 = int(np.ceil((time[-1] - epoch_bkjd)/period_days))
-    dur_days = duration_hrs/24.
-
-    inTransit = np.zeros_like(time, dtype=bool)
-    for n in range(n1, n2+1):
-        t0 = epoch_bkjd + n*period_days - .5*dur_days
-        t1 = epoch_bkjd + n*period_days + .5*dur_days
-
-        idx = (time >= t0) & (time <= t1)
-#        import pdb; pdb.set_trace()
-        inTransit |= idx
-
-    return inTransit
-
 
 def measureInTransitAndDiffCentroidForOneImg(prfObj, ccdMod, ccdOut, cube, rin, bbox, rollPhase, flags, hdr=None, plot=False):
     """Measure image centroid of in-transit and difference images
@@ -327,27 +290,22 @@ def measureInTransitAndDiffCentroidForOneImg(prfObj, ccdMod, ccdOut, cube, rin, 
     A dictionary containing some diagnostics describing the cadences used
     then creating the difference image.
     """
-    inTrans = cube[rin]
     diff, oot, diagnostics = diffimg.constructK2DifferenceImage(cube, rin, \
         rollPhase, flags)
 
     if np.max(np.fabs(oot)) == 0:
         return np.array([-1,-1,-1,-1]), diagnostics
 
+
     ootRes = fitPrfCentroidForImage(oot, ccdMod, ccdOut, bbox, prfObj)
     diffRes = fitPrfCentroidForImage(diff, ccdMod, ccdOut, bbox, prfObj)
 
-    if plot:
-        mp.subplot(121)
-        plotTpf.plotCadence(inTrans, hdr)
-        mp.colorbar()
-        mp.subplot(122)
-        plotTpf.plotCadence(diff, hdr)
-        mp.colorbar()
+    #Fit the difference image. I don't think this is the right thing to do
+#    snr = diff / np.sqrt(cube[rin])
+#    snr[ np.isnan(snr) ] = 0
+#    diffRes = fitPrfCentroidForImage(snr, ccdMod, ccdOut, bbox, prfObj)
 
-        mp.plot(ootRes.x[0], ootRes.x[1], 'ro', ms=12, alpha=.4)
-        mp.plot(diffRes.x[0], diffRes.x[1], 'r^', ms=12, alpha=.4)
-
+#    print rin, diffRes.x
     return np.array([ootRes.x[0], ootRes.x[1], diffRes.x[0], diffRes.x[1]]), diagnostics
 
 
@@ -526,8 +484,6 @@ def costFunc(x, module, output, bbox, img, prfObj):
 
     cost = img-model
     cost = np.sum(cost**2)
-#    print "%.3e" %(cost)
-#    cost = np.log10(cost)
     return cost
 
 

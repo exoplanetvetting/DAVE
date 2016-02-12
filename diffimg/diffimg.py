@@ -16,7 +16,7 @@ import numpy as np
 import dave.fileio.kplrfits as kplrfits
 
 
-def constructK2DifferenceImage(cube, indexOfCadenceInTransit, rollPhase, flags, plot=False):
+def constructK2DifferenceImage(cube, indexOfCadenceInTransit, rollPhase, flags):
     """Construct a difference image for a single K2 cadence
 
     K2's roll motion makes constructing difference images harder
@@ -47,20 +47,17 @@ def constructK2DifferenceImage(cube, indexOfCadenceInTransit, rollPhase, flags, 
         cadence.
 
 
-    Optional Inputs:
-    -----------------
-    plot
-        (boolean) If true, create diagnostic plots
-
     Returns:
     ------------
-    A 2 element list, [diff, oot]
+    A 3 element list, [diff, oot, diagnostics]
     diff is a 2d np array corresponding to the difference image
     oot is a 2d np array corresponds to the reconstructed image
     subtracted from cube[indexOfCadence] in transit.
 
     diff = cube[indexOfCadenceInTransit] - oot
 
+    diagnostics is a dictionary of details of how the image was
+    constructed.
 
     Notes:
     ---------
