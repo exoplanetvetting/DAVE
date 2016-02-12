@@ -105,7 +105,7 @@ def loadDefaultConfig():
     #My front end
     tasks = """checkDirExistTask serveTask extractLightcurveTask
         computeCentroidsTask rollPhaseTask cotrendDataTask detrendDataTask
-        blsTask trapezoidFitTask vetTask plotTask""".split()   # Jeff added plotTask
+        fblsTask trapezoidFitTask vetTask plotTask saveClip""".split()   # Jeff added plotTask
     cfg['taskList'] = tasks
 
     searchTaskList = """blsTask trapezoidFitTask modshiftTask
@@ -777,7 +777,8 @@ def plotTask(clip):
         ingress_hrs, subSampleN)
     model = ioBlock.modellc -1   #Want mean of zero
 
-    out = daveplot.onepage(basename,epic,time[~fl],raw[~fl],flux[~fl],model,period_days,epoch_bkjd,dur_hrs/24.0)
+    out = daveplot.onepage(basename, epic, time[~fl], raw[~fl], flux[~fl], \
+        model, period_days, epoch_bkjd, dur_hrs/24.0)
 
     clip['plot'] = out
 

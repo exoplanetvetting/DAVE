@@ -14,20 +14,16 @@ __URL__ = "$URL$"
 
 import dave.pipeline.clipboard as dpc
 import dave.pipeline.fergalmain as dpf
-import matplotlib.pyplot as mp
 import numpy as np
 
 from glob import glob
-import comparebls as cb
 
 
 def loadKeesConfig():
     cfg = dpf.loadMyConfiguration()
-    cfg = dpf.loadMyConfiguration()
     cfg['debug'] = False
     cfg['campaign'] = 5
     cfg['taskList'][-1] = "dpp.saveClip"  #Save all clips
-    cfg['taskList'][7] = "cb.fblsTask"
 
     cfg['minSnrForDetection'] = 3
     return cfg
@@ -35,35 +31,16 @@ def loadKeesConfig():
 
 def main():
     epicList = np.loadtxt("kees-c5.txt", usecols=(0,), delimiter=",")
-    epicList = epicList[:100]
+    epicList = epicList[:10]
 
 
-    cfg = dpf.loadMyConfiguration()
-    cfg['debug'] = False
-    cfg['campaign'] = 5
-    cfg['taskList'][-1] = "dpp.saveClip"  #Save all clips
-    cfg['searchTaskList'][0] = "cb.fblsTask"
+    cfg = loadKeesConfig()
 
-    dpf.cb = cb
     for epic in epicList[:]:
-        print "Running %s" %(epic)
+        print "Running %s" %(epic),
         clip = dpf.runOne( int(epic), cfg)
-
-#        try:
-#            time = clip['serve.time']
-#            flux = clip['detrend.flux_frac']
-#            flags = clip['detrend.flags']
-#
-#            tce = clip['eventList'][0]
-#            isReal = tce['disposition.isSignificantEvent']
-#            mp.clf()
-#            mp.plot(time[~flags], flux[~flags], 'ko')
-#            mp.title("%s: %i" %(epic, isReal))
-#            mp.pause(.01)
-#            mp.savefig("wd%s.png" %(epic))
-#        except Exception, e:
-#            print "Exception raised: %s %s" %(epic, e)
-
+        time_sec = np.sum(clip.__meta__.store.values())
+        print "... took %.1f sec" %(time_sec)
 
 
 
