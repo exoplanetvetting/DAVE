@@ -79,10 +79,10 @@ def plotWrapper(clip):
         mp.axis([-1,1,-1,1])
     mp.title(titleStr)
 
-    f3 = mp.figure(3)
-    mp.clf()
+#    f3 = mp.figure(3)
+#    mp.clf()
 #    plotInTransitAndDiffCentroids(centroids)
-    plotCentroidTimeseries(centroids)
+#    plotCentroidTimeseries(centroids)
     return f1, f2
 
 
