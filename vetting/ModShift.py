@@ -70,7 +70,9 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
 
 
     timeout_sec = 10
-    # Write data to a file so it can be read by model-shift compiled C code
+    # Write data to a tempoary file so it can be read by model-shift
+    # compiled C code. mkstemp ensures the file is written to a random
+    # location so the code can be run in parallel.
     tmpFilename = tempfile.mkstemp(prefix="modshift-%s" %(objectname))[1]
     numpy.savetxt(tmpFilename, numpy.c_[time,flux,model])
 
@@ -82,9 +84,7 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
     path = getModShiftDir()
     cmd = ["timeout", "%i" %(timeout_sec),  "%s/modshift" %(path), \
        tmpFilename, plotname, objectname, str(period), str(epoch)]
-    print cmd
 
-    return
     try:
         modshiftcmdout = check_output(cmd)
     except CalledProcessError, e:
