@@ -20,6 +20,8 @@ Next get the properties of the strongest signal:
 period, epoch, depth, duration = blsObj.getEvent()
 
 
+Alternatively, you can call fbls() for an Object-Orientation-free approach.
+
 Todo:
 ------------
 o Add option of a condensed output to save memory, that gives an array
@@ -53,6 +55,9 @@ class BlsSearch(object):
 
     def __init__(self, time, flux, periodRange, durations_days, debug=False):
         """
+
+        Initialise variables and run the bls search
+
         Inputs:
         ------------
         time, flux
@@ -66,6 +71,15 @@ class BlsSearch(object):
         durations
             (list) List of transit durations to search for. Units the same
             as the time array.
+
+
+        Optional Inputs:
+        -----------------
+        debug
+            (bool) If True, the class is initialised, but the search is
+            not run. This allows you to inspect the class before it is run.
+            However, the other methods do NOT check if the bls ran, so the
+            they will raise exceptions if called.
 
         Notes:
         ---------
@@ -96,6 +110,7 @@ class BlsSearch(object):
 
 
     def run(self):
+        """Private method. Run the bls"""
         t0 = datetime.datetime.now()
         self.blsArray = computeBlsForManyPeriods(self.time, self.flux, \
             self.durations, self.periods, self.minBinsPerTransit)
@@ -103,6 +118,17 @@ class BlsSearch(object):
         self.elapsedTime = datetime.datetime.now() - t0
 
     def getEvent(self):
+        """Return properites of best peak in BLS spectrum.
+
+        This is a wrapper for  :func:`~fbls.getParamsOfIndex`
+        which returns the "best", not necessarily the strongest peak
+        in the BLS spectrum.
+
+        Returns:
+        A for element tuple of
+        [period, epoch, depth, duration]
+
+        """
         index = self.getIndexOfBestPeak()
         period, epoch, dur = getParamsOfIndex(self.blsArray, index, \
             self.durations, self.periods)
@@ -114,11 +140,36 @@ class BlsSearch(object):
 
 
     def getIndexOfBestPeak(self):
+        """Thin wrapper for :func:`~findBestPeak`"""
         return findBestPeak(self.blsArray)
 
 
     def getTransitDepth(self, index):
-        """If computeBlsForOnePeriod() changes this code will be wrong"""
+        """Estimate transit depth based on strength of BLS spectrum
+        at a given index
+
+        Transit depth is bls strength/ sqrt(trial transit width in cadences)
+
+        For a given location in the BLS array, this function computes the
+        transit width used to compute the BLS strength at that array location,
+        and then uses that to compute the depth.
+
+        Inputs:
+        ----------
+        index
+            (3-tuple) Location in BLS spectrum to compute depth for.
+            Elements are the index of (period, duration, epoch)
+
+        Returns:
+        -----------
+        Depth in fractional amplitude
+
+
+        Notes:
+        ------------
+        There is a potential for maintenance problems here. This method assumes
+        it that :func:`computeBlsForOnePeriod` is using the same algorithm.
+        If that function changes, this code will be wrong"""
         blsVal = self.blsArray[index]
         minDur = np.min(self.durations)
 
@@ -132,6 +183,13 @@ class BlsSearch(object):
 
 
     def compute1dBls(self):
+        """Compute 1d bls spectrum
+
+        Returns:
+        ------------
+        A 2d array with columns of period and strongest amplitude at
+        that period.
+        """
         bb = self.blsArray.max(axis=1)
         bbb = bb.max(axis=1)
 
@@ -142,10 +200,15 @@ class BlsSearch(object):
         return out
 
     def getRuntime_sec(self):
+        """Return the time taken to run the BLS"""
         return self.elapsedTime.total_seconds()
 
 
     def plot(self):
+        """Plot the 2d BLS spectrum, showing the strongest peak
+        across all duratons for each period/epoch pair
+        """
+
         bb = self.blsArray.max(axis=1)
 #        bb = self.blsArray[:,0,:]
         mp.imshow(bb, cmap=mp.cm.YlGnBu_r, interpolation="nearest",\
@@ -250,8 +313,8 @@ def computeBlsForManyPeriods(t, y, durationList, periodList, minNumBinsPerTransi
     Do some experiments to fnd the best value for minBinsPerTransit.
     Kovacs suggests 15, I find 10 works well, I haven't tried other numbers
     """
-    assert(np.all(np.isfinite(t)))
-    assert(np.all(np.isfinite(y)))
+    assert np.all(np.isfinite(t)), "Non-finite time value found"
+    assert np.all(np.isfinite(y)), "Non-finite flux value found"
 
     durationList = np.array(durationList)
     periodList = np.array(periodList)
