@@ -26,6 +26,7 @@ import dave.misc.noise as noise
 
 import plotting
 
+fblsTask = pl.fblsTask
 
 def main():
 
@@ -117,42 +118,6 @@ def estSnrForK2(flux_norm, depth_frac, duration_days):
     noi_frac = noise.computeSgCdpp_ppm(flux_norm, duration_cadences)*1e-6
     return depth_frac/noi_frac * np.sqrt(duration_cadences)
 
-import fbls
-@task.task
-def fblsTask(clip):
-    time_days = clip['serve.time']
-    flux_norm = clip['detrend.flux_frac']
-    flags = clip['detrend.flags']
-    minPeriod = clip['config.blsMinPeriod']
-    maxPeriod = clip['config.blsMaxPeriod']
-
-    durations = np.array([ 2,4,6,8, 10, 12])/24.
-    idx = flags == 0
-    blsObj = fbls.BlsSearch(time_days[idx], flux_norm[idx], \
-        [minPeriod, maxPeriod], durations)
-
-    period, epoch, depth, duration = blsObj.getEvent()
-    spectrum = blsObj.compute1dBls()
-
-    duration_cadences = int(np.round(duration*48)) #Correct for K2
-    noi = noise.computeSgCdpp_ppm(flux_norm[idx], duration_cadences)*1e-6
-
-    out = dict()
-    out['period'] = period
-    out['epoch'] = epoch
-    out['duration_hrs'] = duration * 24
-    out['depth'] = depth
-    out['snr'] = depth/noi
-    out['bls_search_periods'] = spectrum[:,0]
-    out['convolved_bls'] = spectrum[:,1]
-#    out['bls'] = bls  #bls array is extremely big
-    clip['bls'] = out
-
-    #Enforce contract
-    clip['bls.period']
-    clip['bls.epoch']
-    clip['bls.duration_hrs']
-    return clip
 
 
 def runFblsOnClip(clip):
