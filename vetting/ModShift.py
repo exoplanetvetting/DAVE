@@ -1,5 +1,5 @@
 from subprocess import check_output, CalledProcessError
-import signal
+import tempfile
 import numpy
 import os
 
@@ -71,7 +71,7 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
 
     timeout_sec = 10
     # Write data to a file so it can be read by model-shift compiled C code
-    tmpFilename = 'model-shift-in.txt'
+    tmpFilename = tempfile.mkstemp(prefix="modshift-%s" %(objectname))[1]
     numpy.savetxt(tmpFilename, numpy.c_[time,flux,model])
 
     # Run modshift, and return the output
@@ -81,8 +81,10 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
     #the complicated module that was supposed to communication better.
     path = getModShiftDir()
     cmd = ["timeout", "%i" %(timeout_sec),  "%s/modshift" %(path), \
-        'model-shift-in.txt', plotname, objectname, str(period), str(epoch)]
+       tmpFilename, plotname, objectname, str(period), str(epoch)]
+    print cmd
 
+    return
     try:
         modshiftcmdout = check_output(cmd)
     except CalledProcessError, e:
