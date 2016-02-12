@@ -54,6 +54,33 @@ def loadMyConfiguration():
     return cfg
 
 
+import multiprocessing
+import contextlib
+import parmap
+from multiprocessing import pool
+def runAll(func, iterable, config):
+    """Run func over every element on iterable in parallel.
+
+    Inputs:
+    ----------
+    func
+	(A function) The top level function, e.g runOne(), below
+
+    iterable
+	(list, array, etc.) A list of values to operate on.
+
+    config
+	(Clipboard) A configuration clipboard.
+    """
+
+    count = multiprocessing.cpu_count()-1
+    parallel = config.get('debug', False)
+
+    with contextlib.closing(pool.Pool(count)) as p:
+        out = parmap.map(runOne, iterable, config, pool=p, parallel=parallel)
+
+    return out
+
 
 def runOne(k2id, config):
     """Run the pipeline on a single target.
@@ -96,37 +123,6 @@ def runOne(k2id, config):
     return clip
 
 
-import multiprocessing
-import contextlib
-import parmap
-from multiprocessing import pool
-def runAll(func, iterable, config):
-    """Run func over every element on iterable in parallel.
-
-    Not yet run or tested.
-
-    Inputs:
-    ----------
-    func
-	(A function) The top level function, e.g runOne(), below
-
-    iterable
-	(list, array, etc.) A list of values to operate on.
-
-    config
-	(Clipboard) A configuration clipboard.
-    """
-
-    count = multiprocessing.cpu_count()-1
-    p = pool.Pool(count)
-
-
-    parallel = config.get('debug', False)
-
-    with contextlib.closing(pool.Pool(count)) as p:
-        out = parmap.map(runOne, iterable, config, pool=p, parallel=parallel)
-
-    return out
 
 
 

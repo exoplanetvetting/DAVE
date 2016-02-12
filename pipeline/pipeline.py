@@ -231,6 +231,7 @@ def cotrendDataTask(clip):
     clip['cotrend'] = {'flux_frac': flux}
     clip['cotrend.dcOffset'] = dcOffset
     clip['cotrend.flags'] = flags
+    clip['cotrend.dcOffset'] = dcOffset
     clip['cotrend.source'] = "SOC PDC Pipeline"
 
     #Enforce contract
@@ -378,7 +379,7 @@ def blsTask(clip):
 
     idx = flags == 0
     period, epoch, duration, depth, bls_search_periods, convolved_bls = \
-        bls.doSearch(time_days[idx], 1+flux_norm[idx], minPeriod, maxPeriod)
+        bls.doSearch(time_days[idx], flux_norm[idx], minPeriod, maxPeriod)
 
     out = clipboard.Clipboard()
     out['period'] = period
