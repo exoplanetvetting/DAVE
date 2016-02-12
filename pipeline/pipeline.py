@@ -74,6 +74,11 @@ def loadDefaultConfig():
     cfg['blsMinPeriod'] = 0.5
     cfg['blsMaxPeriod'] = 30
 
+
+    #Thermal resettling tends to bugger up the first day or so of K2 data
+    #It seems best to just cut out a chunk.
+    cfg['numInitialCadencesToIgnore'] = 50
+
     #Vetting parameters
     cfg['minSnrForDetection'] = 10.
     cfg['maxLppForTransit'] = 0.0105
@@ -188,18 +193,19 @@ def serveTask(clip):
 
 @task.task
 def extractLightcurveTask(clip):
+    time = clip['serve.time']
     data = clip['serve.socData']
-
+    numInitialCadencesToIgnore = clip['config.numInitialCadencesToIgnore']
     flagValues = clip.get('serve.flags', data[:, 'SAP_QUALITY'])
     flux = data[:, 'SAP_FLUX']
 
-    #Convert flags to a boolean.
+    #Convert flags to a boolean, and flag other bad data
     mask = kplrfits.getMaskForBadK2Data()
     flags = (flagValues & mask).astype(bool)
-
-    #Flag bad values
-    flags[~np.isfinite(flux)] = True
+    flags |= ~np.isfinite(time)
+    flags |= ~np.isfinite(flux)
     flags[flux<1] = True
+    flags[:numInitialCadencesToIgnore] = True
 
     #Placeholder. Use the SOC PA data for the lightcurve
     out = dict()
@@ -219,10 +225,9 @@ def cotrendDataTask(clip):
 
     data = clip['serve.socData']
     flags = clip['extract.flags']
-    time = data[:, 'TIME']
     flux = data[:, 'PDCSAP_FLUX']
 
-    flags |= ~np.isfinite(time)
+    #Cotrending may also produce Nans
     flags |= ~np.isfinite(flux)
 
     #Remove dc offset

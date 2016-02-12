@@ -60,9 +60,11 @@ def plotData(clip, nPanel=3):
             plotTransitRegions(time[~fl], per, epc, dur_days)
 
         plt.subplot(2*nPanel, 1, 2*i+2, sharex=ax, axisbg=colour[i])
+        #Plotting bad data cadences turned off
+#        plt.plot(time[fl], 0*time[fl], 'mo', ms=8, mec="none")
         plt.plot(time[~fl], flux[~fl], 'ko', ms=2, alpha=.8)
-#        plt.ylim(fluxRange)
         plt.ylabel("Detrended")
+
 
         if markTransits:
             plotTransitRegions(time[~fl], per, epc, dur_days)
