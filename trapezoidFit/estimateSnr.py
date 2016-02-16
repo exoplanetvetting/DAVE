@@ -93,6 +93,7 @@ data = dave.fileio.kplrfits.getNumpyArrayFromFitsRec(fits)
     dur_days = duration_hrs / 24.
     idx = kplrfits.markTransitCadences(time, period_days, epoch_bkjd, \
         dur_days, nDurForClip, flags=flags)
+    nTransit = np.sum(idx)
 
     if np.all(idx):
         msg = "All cadences seem to be in or near transit: "
@@ -110,7 +111,9 @@ data = dave.fileio.kplrfits.getNumpyArrayFromFitsRec(fits)
 
     assert( np.all(np.isfinite(flux[~idx])))
     rms = estimateScatterWithMarshallMethod(flux[~idx])
-    return depth_frac/rms
+
+
+    return depth_frac/rms * np.sqrt(nTransit)
 
 
 def estimateScatterWithMarshallMethod(flux):
