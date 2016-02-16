@@ -395,7 +395,7 @@ def fblsTask(clip):
     out['epoch'] = epoch
     out['duration_hrs'] = duration * 24
     out['depth'] = depth
-    out['snr'] = depth/noi
+    out['snr'] = depth/noi  #SNR per point in transit.
     out['bls_search_periods'] = spectrum[:,0]
     out['convolved_bls'] = spectrum[:,1]
 #    out['bls'] = bls  #bls array is extremely big
@@ -465,9 +465,11 @@ def lppMetricTask(clip):
     phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
     mapFile = clip['config.lppMapFilePath']
 
+    print "Cp1"
     #Place holder, use Susan's version when it shows up.
     TLpp, Y, binnedFlux = lpp.fergalVersion(time_days, flux_unitmean, mapFile,\
         period_days, duration_hrs, phase_bkjd)
+    print "Cp2"
 
     out = dict()
     out['TLpp'] = TLpp

@@ -138,10 +138,11 @@ class Clipboard(object):
 
         return out
 
-    def save(self, filename):
-        sh = shelve.open(filename)
-        sh['clip'] = self
-        sh.close()
+#    def save(self, filename):
+#        """Not compatible with saveClip task
+#        sh = shelve.open(filename)
+#        sh['clip'] = self
+#        sh.close()
 
 
     def getFullKeyList(self, arg=None, prefix=None):
