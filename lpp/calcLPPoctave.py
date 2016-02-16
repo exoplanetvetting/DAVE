@@ -7,7 +7,7 @@ Created on Mon Oct  5 21:03:09 2015
 
 import numpy as np
 import matplotlib.pyplot as plt
-from oct2py import octave
+from oct2py import Oct2Py
 import os
 #import time as timer
 
@@ -37,12 +37,14 @@ def calcLPPone(time,flux,mapFile,period,duration,phase):
 
     binnedFlux :  The sorted, folded, binned flux values input to LPP
     """
+
+    octave = Oct2Py()
     octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/transitLike')
     octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/createLightCurves/')
     octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/drtoolbox/')
     octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/drtoolbox/techniques/')
     #octave.addpath('/home/sthomp/DAVE/dave/lpp/octave/drtoolbox')
-    
+
     Tlpp, Y, binnedFlux = octave.calcLPPMetricLCarray(time,flux,period,duration,phase,mapFile)
 
 
@@ -53,6 +55,11 @@ def calcLPPone(time,flux,mapFile,period,duration,phase):
 def fergalVersion(time, flux, mapFile, period, duration, phase):
     path = getLppDir()
 
+    #Create a new instance for each time we run LPP. The
+    #oct2py.octave is not threadsafe and will crash when run in
+    #parallel. Oct2Py() won't
+
+    octave = Oct2Py()
     octave.addpath(path)
     octave.addpath(path + "/octave/transitLike")
     octave.addpath(path + "/octave/createLightCurves/")
