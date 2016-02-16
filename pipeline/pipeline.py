@@ -465,11 +465,8 @@ def lppMetricTask(clip):
     phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
     mapFile = clip['config.lppMapFilePath']
 
-    print "Cp1"
-    #Place holder, use Susan's version when it shows up.
     TLpp, Y, binnedFlux = lpp.fergalVersion(time_days, flux_unitmean, mapFile,\
         period_days, duration_hrs, phase_bkjd)
-    print "Cp2"
 
     out = dict()
     out['TLpp'] = TLpp
