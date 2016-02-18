@@ -723,11 +723,15 @@ def dispositionTask(clip):
         out['isCandidate'] = False
         out['reasonForFail'] = fluxVetDict['comments']
 
+        if fluxVetDict['not_trans_like_flag'] > 0:
+            out['isSignificantEvent'] = False
+
 
 
     #Check LPP, if it's available
     Tlpp_linear = clip.get('lpp.TLpp', 0)
     if Tlpp_linear > lppThreshold:
+        out['isSignificantEvent'] = False
         out['isCandidate'] = False
         out['reasonForFail'] = "TLpp (%.1f) above threshold %.1f" \
             %(Tlpp_linear, lppThreshold)
