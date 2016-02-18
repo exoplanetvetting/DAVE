@@ -42,20 +42,21 @@ class TestClipboard(unittest.TestCase):
     def testGetAttributes(self):
         """Doesn't work yet"""
         c = self.clip
-
         self.assertEqual(c.c2.a, 1)
         self.assertEqual(c.c3.y, 2)
 
 
-#    def testSetAttributes(self):
-#        """Doesn't work yet"""
-#        c = self.clip
-#        c.array = np.zeros((10))
-#        c.group = dict()
-##        c.group.x = 1
-#
-#        self.assertEqual(len(c.array), 10)
-##        self.assertEqual(c.group.x, 1)
+    def testSetAttributes(self):
+        """Doesn't work yet. Group is assigned an attribute of the
+        class, instead of being cast as a clipboard and stored in
+        object.store['group']. This gives very confusing results"""
+        c = self.clip
+        c.array = np.zeros((10))
+        c.group = dict()
+        c.group.x = 1
+
+        self.assertEqual(len(c.array), 10)
+        self.assertEqual(c.group.x, 1)
 
     def test_Unset(self):
         self.clip['exception'] = True
@@ -84,12 +85,13 @@ class TestClipboard(unittest.TestCase):
         x = self.clip.get('c2.NotAKey', 5)
         self.assertEquals(x, 5)
 
-    def test_save(self):
-        self.clip.save('tmp.shelf')
-        c2 = loadClipboard("tmp.shelf")
-
-        self.assertEqual(c2['c2.a'], 1)
-        self.assertEqual(c2['c3.x'], 1)
+#Saveing from clipboard turned off right now
+#    def test_save(self):
+#        self.clip.save('tmp.shelf')
+#        c2 = loadClipboard("tmp.shelf")
+#
+#        self.assertEqual(c2['c2.a'], 1)
+#        self.assertEqual(c2['c3.x'], 1)
 
     def testInit(self):
         c = Clipboard(a=1, b=2, c={'x':1, 'y':2})

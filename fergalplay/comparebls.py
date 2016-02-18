@@ -60,8 +60,9 @@ def loadConfigForTest():
 
 
 from glob import glob
-def compareResults():
-    clipList = glob('clips/c*.clip')
+def collectResults(clipList=None):
+    if clipList is None:
+        clipList = glob('clips/c*.clip')
 
     data = map(lambda x: getData(x), clipList)
     data = np.array(data)
@@ -75,18 +76,17 @@ def getData(fn):
     out = [clip['value']]
     for k in "period epoch depth duration_hrs".split():
         key1 = "bls.%s" %(k)
-        key2 = "fbls.%s" %(k)
-        out.extend( [clip[key1], clip[key2]])
+        out.extend( [clip[key1]])
 
     #Recompute SNR
     time = clip['serve.time']
     flux = clip['detrend.flux_frac']
     flag = clip['detrend.flags']
 
-    per = clip['fbls.period']
-    epc = clip['fbls.epoch']
-    depth_frac = clip['fbls.depth']
-    dur_days = clip['fbls.duration_hrs']/24.
+    per = clip['bls.period']
+    epc = clip['bls.epoch']
+    depth_frac = clip['bls.depth']
+    dur_days = clip['bls.duration_hrs']/24.
 
     #Try mesauring SNR assuming there is a transit and a secondary
     #we want to cut out.
@@ -141,9 +141,9 @@ def plotResults(data):
     mp.figure(1)
     mp.clf()
 #    pObj = plotting.InteractivePlot(data, 1, 2, compPeriods, loadClipAndCompFits)
-    idx = data[:, -2] < 6.1
+#    idx = data[:, -2] < 6.1
 
-    pObj = plotting.InteractivePlot(data[idx], 2, 9, pVDepth, loadClipAndCompFits)
+    pObj = plotting.InteractivePlot(data, 1, 5, pVSnr, loadClipAndCompFits)
     return pObj
 
 def compPeriods(data, xCol, yCol):
@@ -161,10 +161,10 @@ def compPeriods(data, xCol, yCol):
     mp.ylim(x)
 
 
-def pVDepth(data, xCol, yCol):
-    sVal = 10*data[:,8]
+def pVSnr(data, xCol, yCol):
+    sVal = 10*data[:,-1]
 
-    mp.scatter(data[:,2], data[:, 9], s=sVal, c=data[:,8], lw=0,\
+    mp.scatter(data[:,1], data[:, -1], s=sVal, c=data[:,-2], lw=0,\
         cmap=mp.cm.rainbow)
 #    mp.colorbar()
 #    mp.ylim(0, .005)
@@ -191,13 +191,10 @@ def loadClipAndCompFits(data, row):
     print "**************"
     print row, epic
     print clip.bls
-    print clip.fbls
     flux = clip.detrend.flux_frac
     flags = clip.detrend.flags
     noi = noise.computeSgCdpp_ppm(flux[~flags]) * 1e-6
     print "BLS SNR= %.2f" %(clip.bls.depth/noi)
-    print "fBLS SNR= %.2f" %(clip.fbls.depth/noi)
-
 
 def compareFits(clip):
     time = clip.serve.time
@@ -205,35 +202,20 @@ def compareFits(clip):
     flags = clip.detrend.flags
 
     p1 = clip.bls.period
-    p2 = clip.fbls.period
     e1 = clip.bls.epoch - p1
-    e2 =  clip.fbls.epoch - p2
-
-    if e2 > 4000:
-        e2 -= np.min(time[~flags])
-
     depth1 = clip.bls.depth
-    depth2 = clip.fbls.depth
-
     dur1 = clip.bls.duration_hrs/24.
-    dur2 = clip.fbls.duration_hrs/24.
 
     off1 = .25*p1
-    off2 = .25*p2
     phi1 = np.fmod(time - e1+off1, clip.bls.period)
-    phi2 = np.fmod(time - e2+off2, clip.fbls.period)
 
     mp.clf()
     mp.plot(phi1[~flags]*24, flux[~flags], 'k.')
-    mp.plot(phi2[~flags]*24, .01+ flux[~flags], 'r.')
 
     lwr = 24*(off1-dur1)
     upr = 24*(off1+dur1)
     mp.plot([lwr, upr], [-depth1, -depth1], 'c-', lw=4)
 
-    lwr = 24*(off2-dur2)
-    upr = 24*(off2+dur2)
-    mp.plot([lwr,upr], [.01-depth2, .01-depth2], 'c-', lw=4)
     mp.xlabel("Time from mid transit (hrs)")
 
 if __name__ == "__main__":

@@ -395,7 +395,7 @@ def fblsTask(clip):
     out['epoch'] = epoch
     out['duration_hrs'] = duration * 24
     out['depth'] = depth
-    out['snr'] = depth/noi
+    out['snr'] = depth/noi  #SNR per point in transit.
     out['bls_search_periods'] = spectrum[:,0]
     out['convolved_bls'] = spectrum[:,1]
 #    out['bls'] = bls  #bls array is extremely big
@@ -465,7 +465,6 @@ def lppMetricTask(clip):
     phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
     mapFile = clip['config.lppMapFilePath']
 
-    #Place holder, use Susan's version when it shows up.
     TLpp, Y, binnedFlux = lpp.fergalVersion(time_days, flux_unitmean, mapFile,\
         period_days, duration_hrs, phase_bkjd)
 
@@ -724,11 +723,15 @@ def dispositionTask(clip):
         out['isCandidate'] = False
         out['reasonForFail'] = fluxVetDict['comments']
 
+        if fluxVetDict['not_trans_like_flag'] > 0:
+            out['isSignificantEvent'] = False
+
 
 
     #Check LPP, if it's available
     Tlpp_linear = clip.get('lpp.TLpp', 0)
     if Tlpp_linear > lppThreshold:
+        out['isSignificantEvent'] = False
         out['isCandidate'] = False
         out['reasonForFail'] = "TLpp (%.1f) above threshold %.1f" \
             %(Tlpp_linear, lppThreshold)
