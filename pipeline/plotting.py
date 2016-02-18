@@ -111,21 +111,20 @@ def plotFolded(clip, doublePeriod = False):
         print "Reducing epoch"
         print
 
-    plt.clf()
-    print epoch, time[0]
+    plt.cla()
     phi = np.fmod(time-epoch + .25*period, period)
 #    phi = np.fmod(time, period)
     plt.plot(phi[~fl], 1e6*flux[~fl], 'ko', ms=4)
     plt.plot(period+ phi[~fl], 1e6*flux[~fl], 'o', color='#888888', ms=4, mec="none")
 
-#    x = phi[~fl]
-#    y = 1e6*model[~fl]
-#    idx = np.argsort(x)
-#
-#    plt.plot(x[idx], y[idx], 'r-')
-#    plt.plot(period+x[idx], y[idx], 'r-')
-#    plt.ylabel("Fractional Amplitude (ppm)")
-#    plt.xlabel("Phase (days)")
+    x = phi[~fl]
+    y = 1e6*model[~fl]
+    idx = np.argsort(x)
+
+    plt.plot(x[idx], y[idx], 'r-')
+    plt.plot(period+x[idx], y[idx], 'r-')
+    plt.ylabel("Fractional Amplitude (ppm)")
+    plt.xlabel("Phase (days)")
 
 def summaryPlot1(output):
     """
@@ -138,7 +137,7 @@ def summaryPlot1(output):
     trapper=output['trapFit.period_days']
     trapdur=output['trapFit.period_days']
     logTlpp = np.log10(output['lpp.TLpp'])
-    
+
     plt.clf()
     plt.subplot(2,2,(1,2))
     pp.plotData(output)
@@ -149,7 +148,7 @@ def summaryPlot1(output):
     titlewords="P=%.2f d dur=%.2f h SNR=%.1f " % (trapper, trapdur,trapsnr)
     plt.title(titlewords)
     plt.xlim((0,trapper))
-    
+
     plt.subplot(224)
     plt.cla()
     try:
@@ -159,7 +158,7 @@ def summaryPlot1(output):
         plt.title(lab)
     except:
         pass
-    
+
     try:
         plt.figtext(.15,.96,output['disposition.fluxVet.disp'],color='r',fontsize=14)
         plt.figtext(.12,.93,output['disposition.reasonForFail'],color='r',fontsize=10)
@@ -185,26 +184,26 @@ def indivTransitPlot(clip,ndur):
     flags=clip['detrend.flags'];
     trapfit=clip['trapFit.bestFitModel']*factor;
     epic = str(clip['value'])
-    
+
     time=time_days[~flags]
     flux=flux_zero[~flags]
     #model=trapfit
-    
-    #Find number of transits available in the light curve.    
+
+    #Find number of transits available in the light curve.
     ntransit = (time[len(time)-1]-time[0])/period;
     print np.floor(ntransit)
     ind=np.arange(-1*nt,nt)
-    
+
     #Get time of first transit
-    posBegEpochs = np.arange(-1*nt,nt) * period + (epoch - (ndur/2)*dur/24) 
+    posBegEpochs = np.arange(-1*nt,nt) * period + (epoch - (ndur/2)*dur/24)
     posEndEpochs = np.arange(-1*nt,nt) * period + (epoch + (ndur/2)*dur/24)
-    
+
     #Which beginging epochs occur before the last time?
     #And which ending epochs occur after the first time?
     #I want those for which both are true.
     want = (posBegEpochs < time[len(time)-1]) & (posEndEpochs > time[0]);
     #print want
-    
+
     plt.clf()
     #Plot first four
     c=1;
@@ -221,22 +220,22 @@ def indivTransitPlot(clip,ndur):
     #Plot odd and even light curves
     plt.subplot(3,3,7)
     #plt.plot(time_days,trapfit,'r--')
-    
-    mid=  posBegEpochs[nt]+(posEndEpochs[nt] - posBegEpochs[nt])/2 
+
+    mid=  posBegEpochs[nt]+(posEndEpochs[nt] - posBegEpochs[nt])/2
     print mid
-    
+
     for i in ind[want]:
         if np.mod(i,2)==1:
             plt.plot(time-i*period,flux,'k.')
-    
+
     plt.xlim(posBegEpochs[nt],posEndEpochs[nt])
     plt.ylim(-2*depth,0.9*depth)
-    plt.plot((mid-0.5*dur/24,mid+0.5*dur/24),(-1*depth,-1*depth),'c-',linewidth=3) 
+    plt.plot((mid-0.5*dur/24,mid+0.5*dur/24),(-1*depth,-1*depth),'c-',linewidth=3)
     ax=plt.gca()
     plt.text(.1,.1, 'Odd',transform=ax.transAxes,color='m',fontsize=13)
-    
+
     plt.subplot(3,3,8)
-    
+
     for i in ind[want]:
         if np.mod(i,2)==0:
             plt.plot(time-i*period,flux,'k.')
@@ -247,7 +246,7 @@ def indivTransitPlot(clip,ndur):
     plt.text(.1,.1, 'Even',transform=ax.transAxes,color='m',fontsize=13)
 
 
-    plt.subplot(3,3,9) 
+    plt.subplot(3,3,9)
     for i in ind[want]:
         if np.mod(i,1)==0:
             plt.plot(time-i*period/2,flux,'k.')
@@ -256,10 +255,10 @@ def indivTransitPlot(clip,ndur):
     plt.plot((mid-0.5*dur/24,mid+0.5*dur/24),(-1*depth,-1*depth),'c-',linewidth=3)
     ax=plt.gca()
     plt.text(.1,.1, 'half Period',transform=ax.transAxes,color='m',fontsize=13)
-        
-    
+
+
     plt.figtext(.48,.95,epic,size=14)
-    
+
     try:
         plt.figtext(.11,.98,'Individual Transits',color='k',fontsize=12)
         plt.figtext(.11,.96,clip['disposition.fluxVet.disp'],color='r',fontsize=13)
@@ -268,25 +267,25 @@ def indivTransitPlot(clip,ndur):
     #Plot the even and odd ones
     except:
         pass
-    
+
 def blsPlot(clip):
     """Plot the bls spectrum and info about the BLS search"""
-    
-    
+
+
     periods=clip.bls.bls_search_periods;
     bls=1e6*clip.bls.convolved_bls;
     highper=clip.bls.period;
-    highdur=clip.bls.duration_hrs    
-    
-    
+    highdur=clip.bls.duration_hrs
+
+
     plt.subplot(211)
     plt.plot(periods,bls,'k')
     plt.plot(highper,max(bls),'rv',ms=9,alpha=.6)
     plt.xscale('log')
     plt.xlim(min(periods),1.05)
     plt.title(('%u' %(clip.value)))
-    plt.ylabel('bls (ppm)')    
-    
+    plt.ylabel('bls (ppm)')
+
     plt.subplot(212)
     plt.plot(periods,bls,'k')
     plt.plot(highper,max(bls),'rv',ms=9,alpha=.6)
@@ -294,7 +293,7 @@ def blsPlot(clip):
     plt.xlim(.95,max(periods))
     plt.xlabel('log10 (Period-days)')
     plt.ylabel('bls (ppm)')
-    
+
 
     plt.figtext(.11,.97,'BLS Spectrum',color='k',fontsize=12)
     plt.figtext(.11,.94,clip['disposition.fluxVet.disp'],color='r',fontsize=12)
