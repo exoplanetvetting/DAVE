@@ -1,7 +1,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-
+import dave.diffimg.plot as dip 
 import dave.fileio.kplrfits as kplrfits
 
 def plotDiagnosticLightcurves(time, rawLc, cotrendLc, detrendLc, path="."):
@@ -100,7 +100,7 @@ def plotFolded(clip, doublePeriod = False):
     flux = clip['detrend.flux_frac']
     period = tce['trapFit.period_days']
     epoch = tce['trapFit.epoch_bkjd']
-#    model = tce['trapFit.bestFitModel']
+    model = tce['trapFit.bestFitModel']
 
     if doublePeriod:
         period *= 2
@@ -111,21 +111,21 @@ def plotFolded(clip, doublePeriod = False):
         print "Reducing epoch"
         print
 
-    plt.clf()
+    plt.cla()
     print epoch, time[0]
     phi = np.fmod(time-epoch + .25*period, period)
 #    phi = np.fmod(time, period)
     plt.plot(phi[~fl], 1e6*flux[~fl], 'ko', ms=4)
     plt.plot(period+ phi[~fl], 1e6*flux[~fl], 'o', color='#888888', ms=4, mec="none")
 
-#    x = phi[~fl]
-#    y = 1e6*model[~fl]
-#    idx = np.argsort(x)
+    x = phi[~fl]
+    y = 1e6*model[~fl]
+    idx = np.argsort(x)
 #
-#    plt.plot(x[idx], y[idx], 'r-')
-#    plt.plot(period+x[idx], y[idx], 'r-')
-#    plt.ylabel("Fractional Amplitude (ppm)")
-#    plt.xlabel("Phase (days)")
+    plt.plot(x[idx], y[idx], 'r-')
+    plt.plot(period+x[idx], y[idx], 'r-')
+    plt.ylabel("Fractional Amplitude (ppm)")
+    plt.xlabel("Phase (days)")
 
 def summaryPlot1(output):
     """
@@ -133,38 +133,53 @@ def summaryPlot1(output):
     output is a clipboard.
     """
     epicid=str(output['value'])
-    blsper=output['bls.period']
     trapsnr=output['trapFit.snr']
     trapper=output['trapFit.period_days']
     trapdur=output['trapFit.period_days']
-    logTlpp = np.log10(output['lpp.TLpp'])
-    
+    trapdepth=output['trapFit.depth_frac']*1.0e6;
+    centroids =output['diffImg.centroid_timeseries']
+    try:
+        logTlpp = np.log10(output['lpp.TLpp'])
+    except KeyError:
+        logTlpp = 0
+        
     plt.clf()
+#    plt.subplot(2,2,(1,2))
+#    plotData(output, nPanel=1)
+
     plt.subplot(2,2,(1,2))
-    pp.plotData(output)
-    titlewords="%s P=%.2f"  %(epicid,blsper)
-    plt.title(titlewords)
-    plt.subplot(223)
-    pp.plotFolded(output)
-    titlewords="P=%.2f d dur=%.2f h SNR=%.1f " % (trapper, trapdur,trapsnr)
+    plotFolded(output)
+    titlewords="EPIC=%s P=%.2f d Dur=%.2f h dep=%.1f ppm (snr=%.1f) " % (epicid, trapper, trapdur,trapsnr,trapdepth)
     plt.title(titlewords)
     plt.xlim((0,trapper))
     
+    plt.subplot(223)
+    try:
+        titleStr = dip.plotCentroidOffsets(centroids)
+        titleStr = "%s" %(titleStr)
+        plt.title(titleStr)
+    except ValueError, e:
+        titleStr = "Error: %s" %(e)
+        plt.axis([-1,1,-1,1])
+        plt.title(titleStr,fontsize=9)    
+    
     plt.subplot(224)
-    plt.cla()
     try:
         plt.plot(np.arange(1,142),output['lpp.binnedFlux'],'bo')
         lab="logLPP=%.2f" % (logTlpp)
         plt.xlim((-.9,141.9))
         plt.title(lab)
     except:
-        pass
+        plt.title('LPP not run')
+        plt.axis([-1,1,-1,1])
     
     try:
         plt.figtext(.15,.96,output['disposition.fluxVet.disp'],color='r',fontsize=14)
         plt.figtext(.12,.93,output['disposition.reasonForFail'],color='r',fontsize=10)
     except:
         pass
+
+
 
 def indivTransitPlot(clip,ndur):
     """
