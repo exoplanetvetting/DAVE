@@ -10,9 +10,10 @@ import dave.pipeline.plotting as pp
 import numpy as np
 
 
-def summaryPlot(output):
+def summaryPlot1(output):
     """
     Plot the data and some info from the clipboard
+    output is a clipboard.
     """
     epicid=str(output['value'])
     blsper=output['bls.period']
@@ -34,16 +35,20 @@ def summaryPlot(output):
     
     plt.subplot(224)
     plt.cla()
-    plt.plot(np.arange(1,142),output['lpp.binnedFlux'],'bo')
-    lab="logLPP=%.2f" % (logTlpp)
-    plt.xlim((-.9,141.9))
-    plt.title(lab)
+    try:
+        plt.plot(np.arange(1,142),output['lpp.binnedFlux'],'bo')
+        lab="logLPP=%.2f" % (logTlpp)
+        plt.xlim((-.9,141.9))
+        plt.title(lab)
+    except:
+        pass
     
     try:
         plt.figtext(.15,.96,output['disposition.fluxVet.disp'],color='r',fontsize=14)
         plt.figtext(.12,.93,output['disposition.reasonForFail'],color='r',fontsize=10)
     except:
         pass
+
 def indivPlot(clip,ndur):
     """Plot individual transits
     only plot the first six if that many exist.

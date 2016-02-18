@@ -89,9 +89,12 @@ def loadDefaultConfig():
 
     #The LPP mapping file is used by LPP to define the regions of param
     #space where the transits cluster.
-    path = lpp.getLppDir()
-    cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
-
+    try:
+        path = lpp.getLppDir()
+        cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
+    except NameError:
+        pass
+    
     davePath = os.path.join(os.environ['HOME'],"daveOutput","")
     cfg['modshiftBasename'] =  davePath
     cfg['onepageBasename']  = davePath
