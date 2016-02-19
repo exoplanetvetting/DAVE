@@ -31,23 +31,18 @@ def plot_multipages(outfile,clip,intext):
     specifieed by outfile
     """
     
-    dotperinch=300    
-    figuresize=(10,8)
+    dotperinch=150    
+    figuresize=(11,8)
     # The PDF document
     pdf_pages = PdfPages(outfile)
       # Create a figure instance (ie. a new page) 
     #pdf_pages.attach_note(('KIC %u   [%u]' % (clip.value, clip.disposition.isCandidate)),positionRect=[100,200,10,400])
     fig =  plt.figure(figsize=figuresize, dpi=dotperinch)  
-    plt.figtext(0.5,0.5,intext,color='r',fontsize=15)
+    plt.figtext(0.2,0.85,intext,color='r',fontsize=15)
+    plt.figtext(0.15,0.2,clip.disposition,color='b',fontsize=14)
+    plt.title('Disposition Information for EPIC %u' % clip['value'])
     pdf_pages.savefig(fig)
     plt.close()
-    
-    fig = plt.figure(figsize=figuresize, dpi=dotperinch)
-    # Plot whatever you wish to plot
-    pp.plotData(clip, nPanel=3)
-    pdf_pages.savefig(fig)
-    plt.close()
-    
     
     fig = plt.figure(figsize=figuresize, dpi=dotperinch)
     # Plot whatever you wish to plot
@@ -55,6 +50,13 @@ def plot_multipages(outfile,clip,intext):
     # Done with the page
     pdf_pages.savefig(fig)
     plt.close()
+
+    fig = plt.figure(figsize=figuresize, dpi=dotperinch)
+    # Plot whatever you wish to plot
+    pp.plotData(clip, nPanel=3)
+    pdf_pages.savefig(fig)
+    plt.close()
+
  
     fig = plt.figure(figsize=figuresize, dpi=dotperinch)
     pp.indivTransitPlot(clip,6)    
@@ -70,25 +72,24 @@ def plot_multipages(outfile,clip,intext):
         pass
 
     try:    
-        fig =  plt.figure(figsize=figuresize, dpi=dotperinch)
-        plt.figtext(0.2,0.35,clip.disposition,color='b',fontsize=14)
-        plt.title('Disposition Information in Clipboard')
-        pdf_pages.savefig(fig)
-        plt.close()
-    except:
-        pass
-    try:    
         #Plot centroid plots
         (fig1,fig2)=dip.plotWrapper(clip)
     except:
         fig1=plt.plot()
         fig2=plt.plot()
-        
-    pdf_pages.savefig(fig2)
-    pdf_pages.savefig(fig1)
+
+    fig1.set_size_inches(figuresize)
+    fig2.set_size_inches(figuresize)        
+    pdf_pages.savefig(fig2, dpi=dotperinch)
+    pdf_pages.savefig(fig1, dpi=dotperinch)
     plt.close()
     plt.close()
 
+    fig=plt.figure(figsize=figuresize,dpi=dotperinch)
+    pp.lppDiagnostic(clip)
+    pdf_pages.savefig(fig)
+    plt.close()    
+        
     
     # Write the PDF document to the disk
     pdf_pages.close()
