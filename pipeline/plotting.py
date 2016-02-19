@@ -74,6 +74,7 @@ def plotData(clip, nPanel=3):
 
     plt.suptitle("EPIC %i    Campaign %i" %(epic, campaign))
 
+
 def plotTransitRegions(time, period_days, epoch_bkjd, duration_days, **kwargs):
     tmin = np.min(time)
     tmax = np.max(time)
@@ -88,6 +89,7 @@ def plotTransitRegions(time, period_days, epoch_bkjd, duration_days, **kwargs):
         lwr = t0 - .5*duration_days
         upr = t0 + .5*duration_days
         plt.axvspan(lwr, upr, color=color, alpha=alpha)
+
 
 def plotFolded(clip, doublePeriod = False):
     fl = clip['detrend.flags']
