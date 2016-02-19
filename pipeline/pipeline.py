@@ -94,7 +94,7 @@ def loadDefaultConfig():
         cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
     except NameError:
         cfg['lppMapFilePath'] = "NotNeeded"
-    
+
     davePath = os.path.join(os.environ['HOME'],"daveOutput","")
     cfg['modshiftBasename'] =  davePath
     cfg['onepageBasename']  = davePath
@@ -519,6 +519,7 @@ def trapezoidFitTask(clip):
     return clip
 
 
+
 import dave.trapezoidFit.trapfit as trapFit
 import dave.vetting.ModShift as ModShift
 @task.task
@@ -527,32 +528,40 @@ def modshiftTask(clip):
     time = clip['serve.time']
     flux = clip['detrend.flux_frac']
     fl = clip['detrend.flags']
-
-    epic = clip['value']
-    basename = clip['config.modshiftBasename'] #  Jeff edited to remove ->  + "%010i" %(epic)   since modshift cpp code already appends basename
-    basename = "%s%010i" %(basename, epic)  # Jeff modified
-
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
     dur_hrs =  clip['trapFit.duration_hrs']
     ingress_hrs = clip['trapFit.ingress_hrs']
     depth_ppm = 1e6*clip['trapFit.depth_frac']
-    objectname = "EPIC " + str(epic)  # Name that will go in title of modshift plot
 
-    subSampleN= 15
-    ioBlock = trapFit.trapezoid_model_onemodel(time[~fl], period_days, \
-        epoch_bkjd, depth_ppm, dur_hrs, \
-        ingress_hrs, subSampleN)
-    model = ioBlock.modellc -1   #Want mean of zero
-    #model *= -1  #Invert for testing
+    epic = clip['value']
+    basePath = clip['config.modshiftBasename']
+    epicStr = "%09i" %(epic)
+    basename = getOutputBasename(basePath, epicStr)
+    print basename
 
-    out = ModShift.runModShift(time[~fl], flux[~fl], model, basename, \
-        objectname, period_days, epoch_bkjd)
+    # Name that will go in title of modshift plot
+    objectname = "EPIC %09i" %(epic)
+#
+#    subSampleN= 15
+#    ioBlock = trapFit.trapezoid_model_onemodel(time[~fl], period_days, \
+#        epoch_bkjd, depth_ppm, dur_hrs, \
+#        ingress_hrs, subSampleN)
+#    model = ioBlock.modellc -1   #Want mean of zero
+#    #model *= -1  #Invert for testing
+    model = clip['trapFit.bestFitModel']
+    out = ModShift.runModShift(time[~fl], flux[~fl], model[~fl], \
+        basename, objectname, period_days, epoch_bkjd)
 
     clip['modshift'] = out
 
-    #I don't know which values are important, so I can't enfornce contract yet
+    #Enforce contract
+    clip['modshift.mod_Fred']
+    clip['modshift.mod_ph_pri']
+    clip['modshift.mod_secdepth']
+    clip['modshift.mod_sig_pri']
     return clip
+
 
 import dave.diffimg.centroid as cent
 import dave.diffimg.prf as prf
@@ -766,27 +775,19 @@ def plotTask(clip):
     raw  = clip['extract.rawLightcurve']
     flux = clip['detrend.flux_frac']
     fl = clip['detrend.flags']
+    model = clip['trapFit.bestFitModel']
 
     epic = clip['value']
-    basename = clip['config.onepageBasename'] #  Jeff removed end so it isn't redudant with plotting module epic adding + "%010i" %(epic)
+    basePath = clip['config.onepageBasename']
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
     dur_hrs =  clip['trapFit.duration_hrs']
-    ingress_hrs = clip['trapFit.ingress_hrs']
-    depth_ppm = 1e6*clip['trapFit.depth_frac']
 
-    basename = "%s%010i" %(basename, epic)
+    basename = getOutputBasename(basePath, epic)
+    errorCode = daveplot.onepage(basename, epic, time[~fl], raw[~fl],\
+        flux[~fl], model[~fl], period_days, epoch_bkjd, dur_hrs/24.0)
 
-    subSampleN= 15
-    ioBlock = trapFit.trapezoid_model_onemodel(time[~fl], period_days, \
-        epoch_bkjd, depth_ppm, dur_hrs, \
-        ingress_hrs, subSampleN)
-    model = ioBlock.modellc -1   #Want mean of zero
-
-    out = daveplot.onepage(basename, epic, time[~fl], raw[~fl], flux[~fl], \
-        model, period_days, epoch_bkjd, dur_hrs/24.0)
-
-    clip['plot'] = out
+    clip['plot'] = errorCode
 
     return clip
 
@@ -864,3 +865,42 @@ def loadTpfAndLc(k2id, campaign, storeDir):
 
 
 
+def getOutputBasename(basePath, epic):
+    """Get the output basename for any files a task creates
+
+    Inputs:
+    ----------
+    basePath
+        (string) Path where all files should be output
+    epic
+        (int or string) Epic number of star
+
+
+    Returns:
+    -----------
+    (string) a basename for files.
+
+
+    Outputs:
+    ----------
+    Function attempts to create output directory if it doesn't exist.
+
+    Example:
+    -------------
+    >>> getOutputBasename("/home/dave/c6", 123456789)
+    "/home/dave/c6/123456789/123456789"
+
+    The calling task can then create a bunch files like
+    "/home/dave/c6/123456789/123456789-file1.txt"
+    "/home/dave/c6/123456789/123456789-image1.png" etc.
+    """
+
+    epicStr = str(int(epic))
+    path = os.path.join(basePath, epicStr)
+
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if not (os.access(path, os.W_OK)):
+        raise IOError("Can't write to output directory %s" %path)
+
+    return os.path.join(path, epicStr)
