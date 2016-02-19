@@ -6,7 +6,8 @@ Created on Thu Nov 19 16:20:23 2015
 """
 
 import dave.susanplay.mainSusan as mS
-#import dave.pipeline.pipeline as pipe
+import dave.pipeline.pipeline as pipe
+import dave.pipeline.main as main
 import numpy as np
 #import dave.pipeline.plotting as pp
 import matplotlib.pyplot as plt
@@ -146,3 +147,18 @@ for i,v in enumerate(ids[span[0]:span[1]]):
             pass
     
 fid.close()
+#%%
+#For running on sthompson at work.
+
+cfg=main.loadMyConfiguration()
+cfg['modshiftBasename']='/home/smullall/Science/DAVE/working/daveOutput'
+cfg['prfPath']='/external_disk/K2/prf'
+cfg['clipSavePath']='/home/smullall/Science/DAVE/working/clips'
+cfg['dataStorePath']='/external_disk/K2/data'
+cfg['debug']=True
+clip=main.runOne(205996447,cfg)
+
+import dave.pipeline.multiPagePlot as mp
+
+mp.plot_multipages('testoutput.pdf',clip,'TESTING')
+

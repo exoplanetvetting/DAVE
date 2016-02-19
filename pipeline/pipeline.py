@@ -93,7 +93,7 @@ def loadDefaultConfig():
         path = lpp.getLppDir()
         cfg['lppMapFilePath'] = os.path.join(path, "octave/maps/mapQ1Q17DR24-DVMed6084.mat")
     except NameError:
-        pass
+        cfg['lppMapFilePath'] = "NotNeeded"
 
     davePath = os.path.join(os.environ['HOME'],"daveOutput","")
     cfg['modshiftBasename'] =  davePath
@@ -735,7 +735,7 @@ def dispositionTask(clip):
         out['isCandidate'] = False
         out['reasonForFail'] = fluxVetDict['comments']
 
-        if fluxVetDict['not_trans_like_flag'] > 0:
+        if fluxVetDict['not_trans_like'] > 0:
             out['isSignificantEvent'] = False
 
 

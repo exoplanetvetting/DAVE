@@ -30,7 +30,7 @@ def loadMyConfiguration():
     #Change anything else you don't like about the default config here.
     cfg['debug'] = True
 
-    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
+    tasks = """dpp.serveTask dpp.extractLightcurveTask
         dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
         dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask
         dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
