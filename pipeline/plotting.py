@@ -80,7 +80,6 @@ def plotTransitRegions(time, period_days, epoch_bkjd, duration_days, **kwargs):
 
     n1 = int(np.floor( (tmin-epoch_bkjd)/period_days) )
     n2 = int(np.ceil(  (tmax-epoch_bkjd)/period_days) )
-    print n1, n2
     color = kwargs.pop('color','#888888')
     alpha = kwargs.pop('alpha', 1)
 
@@ -88,7 +87,6 @@ def plotTransitRegions(time, period_days, epoch_bkjd, duration_days, **kwargs):
         t0 = epoch_bkjd + n*period_days
         lwr = t0 - .5*duration_days
         upr = t0 + .5*duration_days
-#        print lwr, upr
         plt.axvspan(lwr, upr, color=color, alpha=alpha)
 
 def plotFolded(clip, doublePeriod = False):
@@ -100,7 +98,7 @@ def plotFolded(clip, doublePeriod = False):
     flux = clip['detrend.flux_frac']
     period = tce['trapFit.period_days']
     epoch = tce['trapFit.epoch_bkjd']
-#    model = tce['trapFit.bestFitModel']
+    model = tce['trapFit.bestFitModel']
 
     if doublePeriod:
         period *= 2
@@ -109,7 +107,6 @@ def plotFolded(clip, doublePeriod = False):
         diff = epoch-time[0]
         epoch -= period*np.ceil(diff/period)
         print "Reducing epoch"
-        print
 
     plt.cla()
     phi = np.fmod(time-epoch + .25*period, period)
@@ -191,7 +188,6 @@ def indivTransitPlot(clip,ndur):
 
     #Find number of transits available in the light curve.
     ntransit = (time[len(time)-1]-time[0])/period;
-    print np.floor(ntransit)
     ind=np.arange(-1*nt,nt)
 
     #Get time of first transit
@@ -202,7 +198,6 @@ def indivTransitPlot(clip,ndur):
     #And which ending epochs occur after the first time?
     #I want those for which both are true.
     want = (posBegEpochs < time[len(time)-1]) & (posEndEpochs > time[0]);
-    #print want
 
     plt.clf()
     #Plot first four
@@ -222,7 +217,6 @@ def indivTransitPlot(clip,ndur):
     #plt.plot(time_days,trapfit,'r--')
 
     mid=  posBegEpochs[nt]+(posEndEpochs[nt] - posBegEpochs[nt])/2
-    print mid
 
     for i in ind[want]:
         if np.mod(i,2)==1:
