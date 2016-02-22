@@ -56,3 +56,50 @@ def addStellarToClip(stellarFile,infoList,clip):
     
     return clip
     
+def estimatePlanetProp(clip):
+    """
+    Given the information in the clip, depth adn stellar info
+    Return a planet dictionary with useful information
+    like planet radii and insolation flux.
+    Must run addStellarToClip with the following added
+    Mass
+    Rad
+    Teff
+    """
+    
+    srad=clip.stellar.Rad
+    stemp=clip.stellar.Teff
+    smass=clip.stellar.Mass
+    depth=clip.trapFit.depth_frac
+    period_sec=clip.trapFit.period_days*24*3600;
+    G_si=6.67408e-11
+    AU=1.4960e11
+    solarR_km=6.957e5
+    solarM_kg=1.98855e30
+    earthR_km=6371
+    solarR_earth=solarR_km/earthR_km
+
+    new=dict()
+    
+    prad_km=solarR_km*srad*(depth**(1/2))
+
+    new['rad_earth']=prad_km/earthR_km;
+    
+    #Calculate semi-major axis
+    acubed=G_si*(period_sec**(2))*solarM_kg*smass/(4*(np.pi)**2)
+    a=acubed**(0.33333)
+
+    new['sma_m']=a
+    new['sma_au']=a/AU
+    
+    clip['planet']=new
+    
+    return clip
+    
+    
+    
+    
+    
+    
+    
+    

@@ -25,7 +25,7 @@ fid=open(outfile,'a')
 
 cfg = mS.loadMyConfiguration()
 cfg['debug'] = False
-cfg['modshiftBasename']='/home/sthomp/DAVE/playK2/Kees/k';
+cfg['modshiftBasename']='/home/sthomp/DAVE/playK2/k';
 #cfg['prfPath']='morejunk/junk';
 
 indata=np.loadtxt(infile,dtype='float',delimiter=None,comments='#',usecols=[0,5])
@@ -155,10 +155,12 @@ cfg['modshiftBasename']='/home/smullall/Science/DAVE/working/daveOutput'
 cfg['prfPath']='/external_disk/K2/prf'
 cfg['clipSavePath']='/home/smullall/Science/DAVE/working/clips'
 cfg['dataStorePath']='/external_disk/K2/data'
-cfg['debug']=True
-clip=main.runOne(205996447,cfg)
+#%%
+cfg['debug']=False
+cfg['campaign']=5
+clip=main.runOne(211923431,cfg)
 
 import dave.pipeline.multiPagePlot as mp
 
-mp.plot_multipages('testoutput.pdf',clip,'TESTING')
+mp.plot_multipages('test211923431.pdf',clip,'C5  TESTING')
 

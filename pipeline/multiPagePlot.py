@@ -12,6 +12,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import dave.pipeline.plotting as pp
 import dave.diffimg.plot as dip 
+import dave.stellar.readStellarTable as stel
  
 def plot_multipages(outfile,clip,intext):
     """Create a line of text for the exporter
@@ -41,6 +42,13 @@ def plot_multipages(outfile,clip,intext):
     plt.figtext(0.2,0.85,intext,color='r',fontsize=15)
     plt.figtext(0.15,0.2,clip.disposition,color='b',fontsize=14)
     plt.title('Disposition Information for EPIC %u' % clip['value'])
+    
+    if clip.disposition.isSignificantEvent:   
+         steltxt=clip.get('stellar',defaultValue='No Stellar Available')
+         plt.figtext(0.7,0.3,steltxt)
+         plantxt=clip.get('planet',defaultValue='No Planet Param. Avail.')
+         plt.figtext(0.7,0.2,plantxt)
+    
     pdf_pages.savefig(fig)
     plt.close()
     
