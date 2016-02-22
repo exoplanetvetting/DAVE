@@ -50,3 +50,4 @@ def createExportString(clip, delimiter=" ", badValue="nan"):
     text = delimiter.join(text)
     hdr = delimiter.join(hdr)
     return text, hdr
+

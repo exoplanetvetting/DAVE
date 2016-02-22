@@ -30,7 +30,12 @@ You will almost certainly need to install @dfm's [python-bls](https://github.com
 
 
 ## Example use
+from dave.pipeline import main
+cfg=main.loadMyConfiguration()
+clip = main.runOne(206103150,cfg)
 
+
+# Deprecated use w
 ```
 from dave.pipeline import pipeline
 cfg = pipeline.loadDefaultConfig()

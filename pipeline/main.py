@@ -32,9 +32,9 @@ def loadMyConfiguration():
 
     tasks = """dpp.serveTask dpp.extractLightcurveTask
         dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-        dpp.detrendDataTask dpp.blsTask dpp.trapezoidFitTask 
+        dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask
         dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
-        dpp.plotTask dpp.saveOnError""".split() 
+        dpp.plotTask dpp.saveOnError""".split()
 
 #    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
 #        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask

@@ -234,7 +234,7 @@ def multiPanelPlotDiffImgCentroidsDiagnostic(time, flux, flags, rollPhase, \
     A plot is added to the current figure.
     """
     fig = mp.gcf()
-    fig.set_size_inches(11, 8.5)
+    #fig.set_size_inches(11, 8.5)
 
     time = np.arange(len(time))
 
