@@ -5,6 +5,8 @@ Created on Thu Feb 18 10:48:23 2016
 @author: smullall
 """
 
+import dave.pipeline.multiPagePlot as mpp
+
 #%%
 def createExportString(clip, delimiter=" ", badValue="nan"):
     """Create a line of text for the exporter
@@ -51,3 +53,19 @@ def createExportString(clip, delimiter=" ", badValue="nan"):
     hdr = delimiter.join(hdr)
     return text, hdr
 
+#%%
+def createOutputs(clip,logTableFile):
+    """
+    Read in a clip and create outputs.
+    and appends results to a table (logTableFile)
+    """
+    
+    intext=logTableFile
+    outfile="%s/%s.pdf" % (clip.config['modshiftBasename'],clip.value)
+    
+    mpp.plot_multipages(outfile,clip,intext)
+    
+    
+    
+    
+    
