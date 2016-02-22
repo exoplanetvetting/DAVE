@@ -81,7 +81,7 @@ def loadDefaultConfig():
 
     #Vetting parameters
     cfg['minSnrForDetection'] = 10.
-    cfg['maxLppForTransit'] = 0.0105
+    cfg['maxLppForTransit'] = 10**-2.1
     #How significant must centroid offset be to claim a false positive.
     #This value is between 0 and 1. Higher values mean fewer false positives
     cfg['minProbDiffImgCentroidForFail'] = 0.99
@@ -391,14 +391,18 @@ def fblsTask(clip):
     spectrum = blsObj.compute1dBls()
 
     duration_cadences = int(np.round(duration*48)) #Correct for K2
-    noi = noise.computeSgCdpp_ppm(flux_norm[idx], duration_cadences)*1e-6
+    rms = noise.computeSgCdpp_ppm(flux_norm[idx], duration_cadences)*1e-6
+    idx = kplrfits.markTransitCadences(time_days, period, epoch, \
+        duration, flags=flags)
+    snr = (depth/rms)*np.sqrt(np.sum(idx))
+    print depth, rms, np.sum(idx)
 
     out = dict()
     out['period'] = period
     out['epoch'] = epoch
     out['duration_hrs'] = duration * 24
     out['depth'] = depth
-    out['snr'] = depth/noi  #SNR per point in transit.
+    out['snr'] = snr
     out['bls_search_periods'] = spectrum[:,0]
     out['convolved_bls'] = spectrum[:,1]
 #    out['bls'] = bls  #bls array is extremely big
@@ -811,6 +815,10 @@ def saveClip(clip):
         value = clip['value']
         campaign = clip['config.campaign']
         path = clip.get('config.clipSavePath', ".")
+        path = os.path.join(path, "%09i" %value)
+
+        if not os.path.exists(path):
+            os.mkdir(path)
 
         #The problem with this is how do I which tasks to run
         #when I restore?
