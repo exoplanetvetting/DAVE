@@ -76,7 +76,7 @@ def createOutputs(clip,logTableFileName):
         file2="%s/%s/%s-modshift.pdf" % (clip.config.modshiftBasename,clip.value,clip.value)
         file3="%s/%s/%s-onepage.pdf" % (clip.config.onepageBasename,clip.value,clip.value)
     
-        cmd="pdftk %s %s %s output %s/gather/%s-all.pdf" % (outfile,file2,file3,clip.config['modshiftBasename'],clip.value,clip.value)
+        cmd="pdftk %s %s %s output %s/%s/%s-all.pdf" % (outfile,file2,file3,clip.config['modshiftBasename'],clip.value,clip.value)
         os.system(cmd)     
     
     

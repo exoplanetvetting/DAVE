@@ -25,8 +25,8 @@ outfile='/home/sthomp/daveOutput/c6/%s.txt' %(vers)
 
 cfg = mS.loadMyConfiguration()
 cfg['minSnrForDetection'] = 5
-cfg['blsMinPeriod'] = 1
-cfg['blsMaxPeriod'] = 3
+cfg['blsMinPeriod'] = 10
+cfg['blsMaxPeriod'] = 15
 davePath = os.path.join(os.environ['HOME'],"daveOutput","c6")
 cfg['modshiftBasename'] =  davePath
 cfg['onepageBasename']  = davePath
@@ -41,7 +41,7 @@ cfg['stellarFile']='/home/sthomp/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt'
 indata=np.loadtxt(infile,dtype='float',delimiter=',',comments='#',usecols=[0,3])
 data=indata
 #%%
-span=[0,2]
+span=[0,1]
 for i,v in enumerate(data[span[0]:span[1],0]):    
     epicid=np.int(v)
     acti=i+span[0]
