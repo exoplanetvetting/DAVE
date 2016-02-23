@@ -8,7 +8,7 @@ Created on Thu Feb 18 10:48:23 2016
 import dave.pipeline.multiPagePlot as mpp
 import dave.pipeline.pipeline as dpp
 import dave.stellar.readStellarTable as stel
-
+import os
 #%%
 def createExportString(clip, delimiter=" ", badValue="nan"):
     """Create a line of text for the exporter
