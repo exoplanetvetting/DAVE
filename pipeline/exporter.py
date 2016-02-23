@@ -6,6 +6,8 @@ Created on Thu Feb 18 10:48:23 2016
 """
 
 import dave.pipeline.multiPagePlot as mpp
+import dave.pipeline.pipeline as dpp
+import dave.stellar.readStellarTable as stel
 
 #%%
 def createExportString(clip, delimiter=" ", badValue="nan"):
@@ -54,17 +56,40 @@ def createExportString(clip, delimiter=" ", badValue="nan"):
     return text, hdr
 
 #%%
-def createOutputs(clip,logTableFile):
+def createOutputs(clip,logTableFileName):
     """
     Read in a clip and create outputs.
     and appends results to a table (logTableFile)
     """
+  
+    intext=logTableFileName
+    outfile="%s/%s/epic%s-mp.pdf" % (clip.config['modshiftBasename'],clip.value,clip.value)
     
-    intext=logTableFile
-    outfile="%s/%s.pdf" % (clip.config['modshiftBasename'],clip.value)
+    dpp.plotTask(clip)    
     
-    mpp.plot_multipages(outfile,clip,intext)
+    if clip.disposition.isSignificantEvent:
+        clip=stel.addStellarToClip(clip)
+        clip=stel.estimatePlanetProp(clip)
+        
+        mpp.plot_multipages(outfile,clip,intext)
+        
+        file2="%s/%s/%s-modshift.pdf" % (clip.config.modshiftBasename,clip.value,clip.value)
+        file3="%s/%s/%s-onepage.pdf" % (clip.config.onepageBasename,clip.value,clip.value)
     
+        cmd="pdftk %s %s %s output %s/gather/%s-all.pdf" % (outfile,file2,file3,clip.config['modshiftBasename'],clip.value,clip.value)
+        os.system(cmd)     
+    
+    
+    (outtxt,hdr)=createExportString(clip, delimiter=" ", badValue="nan")
+    
+    fid=open(logTableFileName,'a')
+    fid.write("%s\n" % outtxt)
+    fid.close()
+    
+    
+
+    
+   
     
     
     

@@ -38,13 +38,16 @@ def createStellarPanda(stellarFile):
 
     return data
 
-def addStellarToClip(stellarFile,infoList,clip):
+def addStellarToClip(clip):
     """
     Load the stellar panda File
     Add a stellar key to the clip and include all the fields in infoList.
     InfoList should have the names as used by the stellar table.
     """
     
+    infoList=clip.config.stellarPar
+    stellarFile=clip.config.stellarFile
+
     data=pd.read_csv(stellarFile,sep='|',header=3,index_col='#EPIC')
     epic=clip['value']
     new=dict()
