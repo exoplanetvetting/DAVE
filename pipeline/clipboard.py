@@ -334,7 +334,7 @@ class Clipboard(object):
             elif isinstance(v, float):
                 out.append("%s %g" %(label, v))
             elif isinstance(v, tuple):
-                out.append("%s %g" %(label, str(v)))
+                out.append("%s %s" %(label, str(v)))
             elif isinstance(v, list):
                 mx = min(10, len(v))
                 out.append("%s %s" %(label, v[:mx]))
