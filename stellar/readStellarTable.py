@@ -49,7 +49,7 @@ def addStellarToClip(clip):
     stellarFile=clip.config.stellarFile
 
     data=pd.read_csv(stellarFile,sep='|',header=3,index_col='#EPIC')
-    epic=clip['value']
+    epic=int(clip['value'])
     new=dict()
     
     for v in infoList:

@@ -35,9 +35,14 @@ def createExportString(clip, delimiter=" ", badValue="nan"):
                         ('trapFit.epoch_bkjd', '%12.6f'), \
                         ('trapFit.duration_hrs', '%7.3f'), \
                         ('trapFit.snr', '%6.2f'), \
-                        ('disposition.isSignificantEvent', '%1i'), \
-                        ('disposition.isCandidate', '%i'), \
-                        ('disposition.reasonForFail', '%s'), \
+                        ('stellar.Teff', '%4.1f'),\
+                        ('stellar.Rad', '%5.3f'),\
+                        ('stellar.dis', '%5.1f'),\
+                        ('planet.rad_earth', '%5.2f'),\
+                        ('planet.sma_au','%6.4f'),\
+                        ('disposition.isSignificantEvent', ' %1i'), \
+                        ('disposition.isCandidate', ' %i'), \
+                        ('disposition.reasonForFail', ' %s'), \
                     )
                     
     hdr = []
@@ -56,41 +61,80 @@ def createExportString(clip, delimiter=" ", badValue="nan"):
     return text, hdr
 
 #%%
-def createOutputs(clip,logTableFileName):
+def createOutputs(clip):
     """
     Read in a clip and create outputs.
     and appends results to a table (logTableFile)
     """
-  
-    intext=logTableFileName
-    outfile="%s/%s/epic%s-mp.pdf" % (clip.config['modshiftBasename'],clip.value,clip.value)
+    #Some of this needs to not be hardwired here.  This is ugly.
+    clip['config']['exportLoc']='/soc/nfs/so-nfs/dave/c6'
+    clip['config']['onepageBasename']=clip['config']['exportLoc']
+    clip['config']['dataStorePath']='/external_disk/K2/data'
+    epic=str(int(clip.value))
     
-    dpp.plotTask(clip)    
-    
-    if clip.disposition.isSignificantEvent:
-        clip=stel.addStellarToClip(clip)
-        clip=stel.estimatePlanetProp(clip)
-        
-        mpp.plot_multipages(outfile,clip,intext)
-        
-        file2="%s/%s/%s-modshift.pdf" % (clip.config.modshiftBasename,clip.value,clip.value)
-        file3="%s/%s/%s-onepage.pdf" % (clip.config.onepageBasename,clip.value,clip.value)
-    
-        cmd="pdftk %s %s %s output %s/%s/%s-all.pdf" % (outfile,file2,file3,clip.config['modshiftBasename'],clip.value,clip.value)
-        os.system(cmd)     
+    clip=dpp.serveTask(clip)    
     
     
-    (outtxt,hdr)=createExportString(clip, delimiter=" ", badValue="nan")
+    dpp.plotTask(clip)  
     
-    fid=open(logTableFileName,'a')
-    fid.write("%s\n" % outtxt)
-    fid.close()
+    cmd=""
     
-    
+    try:
+        if clip.disposition.isSignificantEvent:
+            clip['config']['stellarPar']=['Mass','Rad','Teff','dis','rho','prov','logg'] 
+            clip['config']['stellarFile']='/home/smullall/Science/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt' 
 
+            clip=stel.addStellarToClip(clip)
+            clip=stel.estimatePlanetProp(clip)
+            
+            outfile="%s/%s/epic%s-mp.pdf" % (clip.config['exportLoc'],epic,epic)
+            mpp.plot_multipages(outfile,clip,clip.config.clipSavePath)
+            
+            file2="%s/%s/%s-modshift.pdf" % (clip.config.exportLoc,epic,epic)
+            file3="%s/%s/%s-onepage.pdf" % (clip.config.onepageBasename,epic,epic)
+        
+            cmd="gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s/%s/%s-all.pdf %s  %s" % (clip.config.exportLoc,epic,epic, outfile,file2)
+            #cmd="pdftk %s %s %s output %s/%s/%s-all.pdf" % (outfile,file2,file3,clip.config['exportLoc'],epic,epic)
+            os.system(cmd)     
+            
+    except (KeyError,AttributeError),e:
+        cmd="None"
+        print epic, e
+    
+    return cmd
+    
+def writeTableLine(clip):
+    
+    clip['config']['stellarPar']=['Mass','Rad','Teff','dis','rho','prov','logg'] 
+    clip['config']['stellarFile']='/home/smullall/Science/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt' 
+    try:
+        if clip.disposition.isSignificantEvent:
+            clip=stel.addStellarToClip(clip)
+            clip=stel.estimatePlanetProp(clip)
+    except (KeyError,AttributeError):
+        pass
+    
+    outtxt,hdr = createExportString(clip, delimiter=" ", badValue="nan")
+
+    return outtxt
     
    
     
+def writeCandidates(clip):
+    
+    clip['config']['stellarPar']=['Mass','Rad','Teff','dis','rho','prov','logg'] 
+    clip['config']['stellarFile']='/home/smullall/Science/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt' 
+    try:
+        if clip.disposition.isSignificantEvent:
+            clip=stel.addStellarToClip(clip)
+            clip=stel.estimatePlanetProp(clip)
+            outtxt,hdr = createExportString(clip, delimiter=" ", badValue="nan")
+        else:
+            outtxt=""
+    except (KeyError,AttributeError):
+        outtxt=""
+    
+    return outtxt
     
     
     
