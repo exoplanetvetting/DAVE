@@ -162,12 +162,17 @@ def plotCentroidOffsets(centroids):
     """
     idx =centroids[:,1] > 0
     cin = centroids[idx, 0]
-    ootCol = centroids[idx, 'diff_col']
-    ootRow = centroids[idx, 'diff_row']
+#    ootCol = centroids[idx, 'diff_col']
+#    ootRow = centroids[idx, 'diff_row']  
+    #Susan changed Nca names to column numbers because clipboards were not saving that information
+    ootCol = centroids[idx, 3]
+    ootRow = centroids[idx, 4]
 
     #itr => in transit
-    itrCol = centroids[idx, 'intr_col']
-    itrRow = centroids[idx, 'intr_row']
+#    itrCol = centroids[idx, 'intr_col']
+#    itrRow = centroids[idx, 'intr_row']
+    itrCol = centroids[idx, 1]
+    itrRow = centroids[idx, 2]
 
     diffC = ootCol - itrCol
     diffR = ootRow - itrRow
@@ -234,7 +239,7 @@ def multiPanelPlotDiffImgCentroidsDiagnostic(time, flux, flags, rollPhase, \
     A plot is added to the current figure.
     """
     fig = mp.gcf()
-    fig.set_size_inches(11, 8.5)
+    #fig.set_size_inches(11, 8.5)
 
     time = np.arange(len(time))
 

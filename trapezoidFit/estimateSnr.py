@@ -17,7 +17,7 @@ import dave.trapezoidFit.trapfit as tf
 import dave.misc.outliers as outliers
 import numpy as np
 import dave.fileio.kplrfits as kplrfits
-
+import dave.misc.noise as noise
 
 def getSnrOfTransit(time_days, flux_frac, unc, flags, period_days, phase_bkjd, \
     duration_hrs, depth_frac):
@@ -93,7 +93,7 @@ data = dave.fileio.kplrfits.getNumpyArrayFromFitsRec(fits)
     dur_days = duration_hrs / 24.
     idx = kplrfits.markTransitCadences(time, period_days, epoch_bkjd, \
         dur_days, nDurForClip, flags=flags)
-    nTransit = np.sum(idx)
+
 
     if np.all(idx):
         msg = "All cadences seem to be in or near transit: "
@@ -110,10 +110,17 @@ data = dave.fileio.kplrfits.getNumpyArrayFromFitsRec(fits)
         raise ValueError("No good cadences found for noise estimate. Check transit duration")
 
     assert( np.all(np.isfinite(flux[~idx])))
-    rms = estimateScatterWithMarshallMethod(flux[~idx])
 
+    expTime_days = np.median(np.diff(time[~idx]))
+    duration_cadences = dur_days/expTime_days
+    rms = noise.computeSgCdpp_ppm(flux[~idx], duration_cadences)*1e-6
 
-    return depth_frac/rms * np.sqrt(nTransit)
+    idx = kplrfits.markTransitCadences(time, period_days, epoch_bkjd, \
+        dur_days, 1, flags=flags)
+    nCadenceInTransit = np.sum(idx)
+
+    print depth_frac, rms, nCadenceInTransit
+    return depth_frac/rms * np.sqrt(nCadenceInTransit)
 
 
 def estimateScatterWithMarshallMethod(flux):

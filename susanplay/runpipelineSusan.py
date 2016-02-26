@@ -17,15 +17,16 @@ import dave.plot.multipage as mp
     
 #%%   
 #infile='/home/sthomp/DAVE/playK2/k2_go3049.txt'
-vers="20150128";
-infile='/home/sthomp/DAVE/playK2/KEES_2016_01_13.txt'
-outfile='/home/sthomp/DAVE/playK2/KEES_2016_01_13_out%s.txt' %(vers)
+vers="c6v1";
+infile='/home/sthomp/DAVE/dave/fergalplay/c6/GO6086.txt'
+outfile='/home/sthomp/daveOutput/c6/%s.txt' %(vers)
 #outcand='/home/sthomp/DAVE/playK2/k2_list_cand.txt'
-fid=open(outfile,'a')
+#fid=open(outfile,'a')
 
 cfg = mS.loadMyConfiguration()
 cfg['debug'] = False
-cfg['modshiftBasename']='/home/sthomp/DAVE/playK2/Kees/k';
+cfg['taskList'][-1] = "dpp.saveClip" 
+#cfg['modshiftBasename']='/home/stho
 #cfg['prfPath']='morejunk/junk';
 
 indata=np.loadtxt(infile,dtype='float',delimiter=None,comments='#',usecols=[0,5])
@@ -155,10 +156,12 @@ cfg['modshiftBasename']='/home/smullall/Science/DAVE/working/daveOutput'
 cfg['prfPath']='/external_disk/K2/prf'
 cfg['clipSavePath']='/home/smullall/Science/DAVE/working/clips'
 cfg['dataStorePath']='/external_disk/K2/data'
-cfg['debug']=True
-clip=main.runOne(205996447,cfg)
+#%%
+cfg['debug']=False
+cfg['campaign']=5
+clip=main.runOne(211923431,cfg)
 
 import dave.pipeline.multiPagePlot as mp
 
-mp.plot_multipages('testoutput.pdf',clip,'TESTING')
+mp.plot_multipages('test211923431.pdf',clip,'C5  TESTING')
 
