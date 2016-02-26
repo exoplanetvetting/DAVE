@@ -280,12 +280,15 @@ def detrendDataTask(clip):
 
     for cad in singleOutlierIndices:
         fillval = detrendedFlux[cad-2:cad+2]
-        detrendedFlux[cad] = flux[cad] - fillval[fillval =! 0]
+        detrendedFlux[cad] = flux[cad] - fillval[fillval != 0]
 
+
+    outlierflag = np.zeros_like(flux,dtype=bool)
+    outlierflag[singleOutlierIndices] = 1
 
     clip['detrend'] = dict()
     clip['detrend.flux_frac'] = detrendedFlux
-    clip['detrend.flags'] = flags | singleOutlierIndices
+    clip['detrend.flags'] = flags | outlierflag
     clip['detrend.source'] = "Simple Median detrend"
 
     assert(detrend is not None)
