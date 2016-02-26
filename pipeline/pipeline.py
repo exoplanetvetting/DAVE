@@ -291,7 +291,7 @@ def detrendDataTask(clip):
     clip['detrend.flags'] = flags | outlierflag
     clip['detrend.source'] = "Simple Median detrend"
 
-    assert(detrend is not None)
+    assert(detrendedFlux is not None)
     return clip
 
 
