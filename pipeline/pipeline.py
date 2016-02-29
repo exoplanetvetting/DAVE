@@ -268,7 +268,7 @@ def detrendDataTask(clip):
     #When you detrend, you must do something about the gaps and bad values.
     #This is the simplest possible thing. Replace all bad/missing data with
     #zeros. This is a placehold. Bad data inside a transit is replaced with
-    #a zero, which is not what you want.
+    #a zero.
     flux[flags] = 0
 
     #Flag the outliers in the data
@@ -296,7 +296,7 @@ def detrendDataTask(clip):
 
     clip['detrend'] = dict()
     clip['detrend.flux_frac'] = detrendedFlux
-    clip['detrend.flags'] = flags | singleOutlierIndices
+    clip['detrend.flags'] = flags | outlierflag
     clip['detrend.source'] = "Simple Median detrend"
 
     assert(detrendedFlux is not None)
