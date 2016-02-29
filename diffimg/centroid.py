@@ -139,6 +139,9 @@ def measureOffsetProbabilityInTimeseries(offsets, minNumPoints=2):
     diffC = offsets[idx, 'diff_col'] - offsets[idx, 'intr_col']
     diffR = offsets[idx, 'diff_row'] - offsets[idx, 'intr_row']
 
+    if len(diffC) < minNumPoints:
+        return 0, 0
+
     prob, chi2 = covar.computeProbabilityOfObservedOffset(diffC, diffR)
     return prob, chi2
 
