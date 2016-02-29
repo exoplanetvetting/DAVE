@@ -101,7 +101,7 @@ def exampleFitting():
     return res
 
 
-def measureOffsetProbabilityInTimeseries(offsets):
+def measureOffsetProbabilityInTimeseries(offsets, minNumPoints=2):
     """
     Vet the centroid time series produced by measureDiffOffset()
 
@@ -113,6 +113,11 @@ def measureOffsetProbabilityInTimeseries(offsets):
     offsets
         (Nca) The return value from measureDiffOffset
 
+    Optional Inputs:
+    ------------------
+    minNumPoints
+        (int) Minimum number of points needed before computing result.
+        Currently set to the minimum needed by covar (==2)
 
     Returns:
     -----------
@@ -131,13 +136,8 @@ def measureOffsetProbabilityInTimeseries(offsets):
     """
 
     idx = offsets[:, 'intr_col'] > 0
-    tmp = offsets[idx]
-    tmp.lookup = offsets.lookup
-
-
-    #Compute per cadence offset
-    diffC = tmp[:, 'diff_col'] - tmp[:, 'intr_col']
-    diffR = tmp[:, 'diff_row'] - tmp[:, 'intr_row']
+    diffC = offsets[idx, 'diff_col'] - offsets[idx, 'intr_col']
+    diffR = offsets[idx, 'diff_row'] - offsets[idx, 'intr_row']
 
     prob, chi2 = covar.computeProbabilityOfObservedOffset(diffC, diffR)
     return prob, chi2
