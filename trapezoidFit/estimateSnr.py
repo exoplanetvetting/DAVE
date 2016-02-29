@@ -113,13 +113,15 @@ data = dave.fileio.kplrfits.getNumpyArrayFromFitsRec(fits)
 
     expTime_days = np.median(np.diff(time[~idx]))
     duration_cadences = dur_days/expTime_days
+
+    #Duration must be at least 4 cadences of sgCdpp will crash
+    duration_cadences = max(duration_cadences, 4)
     rms = noise.computeSgCdpp_ppm(flux[~idx], duration_cadences)*1e-6
 
     idx = kplrfits.markTransitCadences(time, period_days, epoch_bkjd, \
         dur_days, 1, flags=flags)
     nCadenceInTransit = np.sum(idx)
 
-    print depth_frac, rms, nCadenceInTransit
     return depth_frac/rms * np.sqrt(nCadenceInTransit)
 
 

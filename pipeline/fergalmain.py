@@ -35,7 +35,7 @@ def loadMyConfiguration():
     tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
         dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
         dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask dpp.modshiftTask
-        dpp.measureDiffImgCentroidsTask dpp.dispositionTask
+        dpp.lppMetricTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveClip""".split()
 
 #    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask

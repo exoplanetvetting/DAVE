@@ -847,8 +847,8 @@ def loadTpfAndLc(k2id, campaign, storeDir):
     ar = mastio.K2Archive(storeDir)
 
     out = dict()
-    fits, hdr = ar.getLongTpf(k2id, campaign, header=True)
-    hdr0 = ar.getLongTpf(k2id, campaign, ext=0)
+    fits, hdr = ar.getLongTpf(k2id, campaign, header=True, mmap=False)
+    hdr0 = ar.getLongTpf(k2id, campaign, ext=0, mmap=False)
     cube = tpf.getTargetPixelArrayFromFits(fits, hdr)
 
     out['cube'] = cube
