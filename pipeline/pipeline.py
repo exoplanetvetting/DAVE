@@ -70,7 +70,7 @@ def loadDefaultConfig():
     cfg['debug'] = True
     cfg['campaign'] = 3
     cfg['timeout_sec'] = 120
-    cfg['nPointsForMedianSmooth'] = 2*48
+    cfg['nPointsForMedianSmooth'] = 26
     cfg['blsMinPeriod'] = 0.5
     cfg['blsMaxPeriod'] = 30
 
@@ -219,6 +219,7 @@ def extractLightcurveTask(clip):
 
     #Enforce contract
     clip['extract.rawLightcurve']
+    clip['extract.flags']
     return clip
 
 
@@ -249,7 +250,10 @@ def cotrendDataTask(clip):
 
 @task.task
 def detrendDataTask(clip):
+    from dave.blsCode import outlier_detection
+
     flux = clip['cotrend.flux_frac']
+    time = clip['serve.time']
     flags = clip['cotrend.flags']
 
     nPoints = clip['config.nPointsForMedianSmooth']
@@ -260,14 +264,34 @@ def detrendDataTask(clip):
     #a zero, which is not what you want.
     flux[flags] = 0
 
-    #Do a simple detrend.
-    detrend = kplrfits.medianSubtract1d(flux, nPoints)
+    #Flag the outliers in the data
+    singleOutlierIndices = outlier_detection.outlierRemoval(time, flux)
+
+    notSingleOutlierIndices = np.delete(np.arange(len(flux)),singleOutlierIndices)
+
+    #do a simple detrend with the outliers not included
+    fluxprime = flux[notSingleOutlierIndices]
+    medianVector = outlier_detection.medianDetrend(fluxprime, nPoints)
+
+    #put everything back together 
+    #with outliers filled 
+    detrendedFlux = np.zeros_like(flux)
+    detrendedFlux[notSingleOutlierIndices] = fluxprime - medianVector
+
+    for cad in singleOutlierIndices:
+        fillval = detrendedFlux[cad-2:cad+2]
+        detrendedFlux[cad] = flux[cad] - fillval[fillval != 0]
+
+
+    outlierflag = np.zeros_like(flux,dtype=bool)
+    outlierflag[singleOutlierIndices] = 1
+
     clip['detrend'] = dict()
-    clip['detrend.flux_frac'] = detrend
-    clip['detrend.flags'] = flags
+    clip['detrend.flux_frac'] = detrendedFlux
+    clip['detrend.flags'] = flags | outlierflag
     clip['detrend.source'] = "Simple Median detrend"
 
-    assert(detrend is not None)
+    assert(detrendedFlux is not None)
     return clip
 
 

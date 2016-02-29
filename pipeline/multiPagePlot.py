@@ -32,7 +32,7 @@ def plot_multipages(outfile,clip,intext):
     specifieed by outfile
     """
     
-    dotperinch=150    
+    dotperinch=120    
     figuresize=(11,8)
     # The PDF document
     pdf_pages = PdfPages(outfile)

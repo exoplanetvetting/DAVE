@@ -17,15 +17,16 @@ import dave.plot.multipage as mp
     
 #%%   
 #infile='/home/sthomp/DAVE/playK2/k2_go3049.txt'
-vers="20150128";
-infile='/home/sthomp/DAVE/playK2/KEES_2016_01_13.txt'
-outfile='/home/sthomp/DAVE/playK2/KEES_2016_01_13_out%s.txt' %(vers)
+vers="c6v1";
+infile='/home/sthomp/DAVE/dave/fergalplay/c6/GO6086.txt'
+outfile='/home/sthomp/daveOutput/c6/%s.txt' %(vers)
 #outcand='/home/sthomp/DAVE/playK2/k2_list_cand.txt'
-fid=open(outfile,'a')
+#fid=open(outfile,'a')
 
 cfg = mS.loadMyConfiguration()
 cfg['debug'] = False
-cfg['modshiftBasename']='/home/sthomp/DAVE/playK2/k';
+cfg['taskList'][-1] = "dpp.saveClip" 
+#cfg['modshiftBasename']='/home/stho
 #cfg['prfPath']='morejunk/junk';
 
 indata=np.loadtxt(infile,dtype='float',delimiter=None,comments='#',usecols=[0,5])

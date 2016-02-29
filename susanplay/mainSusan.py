@@ -28,15 +28,20 @@ def loadMyConfiguration():
 
     #Edit the default configuration to your taste.
     #Change anything else you don't like about the default config here.
-    cfg['debug'] = True
+    cfg['debug'] = False
 
 
     tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
         dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-        dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask dpp.lppMetricTask 
-        dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
-        dpp.plotTask dpp.saveOnError""".split()   
+        dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask dpp.lppMetricTask dpp.modshiftTask
+        dpp.measureDiffImgCentroidsTask dpp.dispositionTask
+        dpp.saveClip""".split()   
     cfg['taskList'] = tasks
+    
+    searchTaskList = """blsTask trapezoidFitTask modshiftTask
+    measureDiffImgCentroidsTask dispositionTask""".split()
+
+    cfg['searchTaskList'] = searchTaskList
 
     return cfg
 
