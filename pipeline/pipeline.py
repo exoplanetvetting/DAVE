@@ -248,9 +248,16 @@ def cotrendDataTask(clip):
     return clip
 
 
+from dave.blsCode import outlier_detection
 @task.task
 def detrendDataTask(clip):
-    from dave.blsCode import outlier_detection
+    """
+
+    TODO:
+    This code could be considerably simplified if we set flux[singleOutlierIndices]
+    ==0. Would this produce the same results?
+    """
+
 
     flux = clip['cotrend.flux_frac']
     time = clip['serve.time']
@@ -267,14 +274,15 @@ def detrendDataTask(clip):
     #Flag the outliers in the data
     singleOutlierIndices = outlier_detection.outlierRemoval(time, flux)
 
+
     notSingleOutlierIndices = np.delete(np.arange(len(flux)),singleOutlierIndices)
 
     #do a simple detrend with the outliers not included
     fluxprime = flux[notSingleOutlierIndices]
     medianVector = outlier_detection.medianDetrend(fluxprime, nPoints)
 
-    #put everything back together 
-    #with outliers filled 
+    #put everything back together
+    #with outliers filled
     detrendedFlux = np.zeros_like(flux)
     detrendedFlux[notSingleOutlierIndices] = fluxprime - medianVector
 
@@ -288,7 +296,7 @@ def detrendDataTask(clip):
 
     clip['detrend'] = dict()
     clip['detrend.flux_frac'] = detrendedFlux
-    clip['detrend.flags'] = flags | outlierflag
+    clip['detrend.flags'] = flags | singleOutlierIndices
     clip['detrend.source'] = "Simple Median detrend"
 
     assert(detrendedFlux is not None)
