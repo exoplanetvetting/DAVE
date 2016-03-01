@@ -79,7 +79,7 @@ def estimatePlanetProp(clip):
     AU=1.4960e11
     solarR_km=6.957e5
     solarM_kg=1.98855e30
-    earthR_km=6371
+    earthR_km=6371.0
     solarR_earth=solarR_km/earthR_km
 
     new=dict()
