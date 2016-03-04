@@ -287,8 +287,8 @@ def detrendDataTask(clip):
     detrendedFlux[notSingleOutlierIndices] = fluxprime - medianVector
 
     for cad in singleOutlierIndices:
-        fillval = detrendedFlux[cad-2:cad+2]
-        detrendedFlux[cad] = flux[cad] - fillval[fillval != 0]
+        fillval = detrendedFlux[cad-3:cad+3]
+        detrendedFlux[cad] = flux[cad] - np.mean(fillval[fillval != 0])
 
 
     outlierflag = np.zeros_like(flux,dtype=bool)
