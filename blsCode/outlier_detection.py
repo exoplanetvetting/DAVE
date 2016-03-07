@@ -1,6 +1,18 @@
 from __future__ import division, print_function
 import numpy as np
 
+"""
+@TODO:
+We should have one, and only one, median detrend function
+Same for plateau function
+
+Add docstrings
+
+Should this belong to a general "lightcurve maniuplation module"?
+
+"""
+
+
 
 
 def medianDetrend(flux, binWidth):
@@ -17,10 +29,43 @@ def medianDetrend(flux, binWidth):
 
 
 
-def outlierRemoval(time, flux, precision=0.0205):
+def outlierRemoval(time, flux, precision_days=0.0205, threshold_sigma=5):
+    """
+    Remove single point outliers.
+
+    Preserves consecutive outliers, and those that are evenly spaced in
+    time. This protects short duration transits.
+
+    Inputs:
+    ------------
+    time, flux
+        (1d numpy array) Input data. Flux should have mean (or median) value
+        of zero
+    precision_days
+        (float) Points that are evenly spaced to within this precision
+        are considered periodic, and not marked as outliers
+
+    threshold_sigma
+        (float) Points more than this many sigma from zero are considered
+        potential outliers.
+
+    Returns:
+    ------------
+    An array of indices indicating which points are single point
+    outliers. The length of this array is equal to the number of outlier
+    points flagged
+
+    TODO:
+    ---------
+    For consistency with rest of code, this could return an array of booleans
+    """
+
+    #Remove as much signal as possible from the data
     fluxDetrended = medianDetrend(flux, 3)
-    out1 = plateau(fluxDetrended, 5 * np.std(fluxDetrended))
-    out2 = plateau(-fluxDetrended, 5 * np.std(fluxDetrended))
+
+    rms = np.std(fluxDetrended)
+    out1 = plateau(fluxDetrended, threshold_sigma * rms)
+    out2 = plateau(-fluxDetrended, threshold_sigma * rms )
     if out1 == [] and out2 == []:
         singleOutlierIndices = []
     else:
@@ -41,13 +86,14 @@ def outlierRemoval(time, flux, precision=0.0205):
             possibleTimes = np.arange(epoch, outlierTimes[-1] + 0.5*period, period)
         notOutliers = []
         for i in range(len(outlierTimes)):
-            if np.any((abs(possibleTimes - outlierTimes[i]) < precision)):
+            if np.any((abs(possibleTimes - outlierTimes[i]) < precision_days)):
                 notOutliers.append(i)
         singleOutlierIndices = np.delete(singleOutlierIndices, notOutliers)
     elif len(singleOutlierIndices) == 3:
-        if abs(diffs[0] - diffs[1]) < precision:
+        if abs(diffs[0] - diffs[1]) < precision_days:
             singleOutlierIndices = []
     return singleOutlierIndices
+
 
 def plateau(array, threshold):
     """Find plateaus in an array, i.e continuous regions that exceed threshold

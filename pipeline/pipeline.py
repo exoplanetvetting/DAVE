@@ -248,9 +248,16 @@ def cotrendDataTask(clip):
     return clip
 
 
+from dave.blsCode import outlier_detection
 @task.task
 def detrendDataTask(clip):
-    from dave.blsCode import outlier_detection
+    """
+
+    TODO:
+    This code could be considerably simplified if we set flux[singleOutlierIndices]
+    ==0. Would this produce the same results?
+    """
+
 
     flux = clip['cotrend.flux_frac']
     time = clip['serve.time']
@@ -261,11 +268,12 @@ def detrendDataTask(clip):
     #When you detrend, you must do something about the gaps and bad values.
     #This is the simplest possible thing. Replace all bad/missing data with
     #zeros. This is a placehold. Bad data inside a transit is replaced with
-    #a zero, which is not what you want.
+    #a zero.
     flux[flags] = 0
 
     #Flag the outliers in the data
     singleOutlierIndices = outlier_detection.outlierRemoval(time, flux)
+
 
     notSingleOutlierIndices = np.delete(np.arange(len(flux)),singleOutlierIndices)
 
@@ -273,14 +281,14 @@ def detrendDataTask(clip):
     fluxprime = flux[notSingleOutlierIndices]
     medianVector = outlier_detection.medianDetrend(fluxprime, nPoints)
 
-    #put everything back together 
-    #with outliers filled 
+    #put everything back together
+    #with outliers filled
     detrendedFlux = np.zeros_like(flux)
     detrendedFlux[notSingleOutlierIndices] = fluxprime - medianVector
 
     for cad in singleOutlierIndices:
-        fillval = detrendedFlux[cad-2:cad+2]
-        detrendedFlux[cad] = flux[cad] - fillval[fillval != 0]
+        fillval = detrendedFlux[cad-3:cad+3]
+        detrendedFlux[cad] = flux[cad] - np.mean(fillval[fillval != 0])
 
 
     outlierflag = np.zeros_like(flux,dtype=bool)
@@ -871,8 +879,8 @@ def loadTpfAndLc(k2id, campaign, storeDir):
     ar = mastio.K2Archive(storeDir)
 
     out = dict()
-    fits, hdr = ar.getLongTpf(k2id, campaign, header=True)
-    hdr0 = ar.getLongTpf(k2id, campaign, ext=0)
+    fits, hdr = ar.getLongTpf(k2id, campaign, header=True, mmap=False)
+    hdr0 = ar.getLongTpf(k2id, campaign, ext=0, mmap=False)
     cube = tpf.getTargetPixelArrayFromFits(fits, hdr)
 
     out['cube'] = cube

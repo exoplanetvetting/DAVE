@@ -179,11 +179,13 @@ def plotCentroidOffsets(centroids):
 
     mp.scatter(diffC, diffR, marker='o', c=cin, s=64, linewidths=0, \
         cmap=mp.cm.RdYlBu)
-    mp.plot(0,0, 'ko', ms=12)
+#    mp.plot(diffC, diffR, 'ko', ms=10)
+
     mp.axhline(0, color='k', lw=.5)
     mp.axvline(0, color='k', lw=.5)
+    mp.plot(0,0, '*', ms=40, color='yellow')
 
-    covar.plotErrorEllipse(diffC, diffR, color='#888888')
+    covar.plotErrorEllipse(diffC, diffR, color='#888888', ms=20)
 
     mp.xlabel(r"$\Delta$ Column (pixels)")
     mp.ylabel(r"$\Delta$ Row (pixels)")
@@ -192,6 +194,16 @@ def plotCentroidOffsets(centroids):
     titleStr = "Prob. On Target: %.1e: $\chi^2$: %.3f" %(1-probOffset, chiSq)
     cb = mp.colorbar()
     cb.set_label("Time (BKJD)")
+
+    #Ensure some padding around the origin so the symbol is never
+    #at edge of the plot
+    axl = list(mp.axis())
+    axl[0] = min(axl[0], -0.1)
+    axl[1] = max(axl[1], +0.1)
+    axl[2] = min(axl[2], -0.1)
+    axl[3] = max(axl[3], +0.1)
+    mp.axis(axl)
+
     return titleStr
 
 
