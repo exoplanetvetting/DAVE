@@ -11,7 +11,7 @@ import dave.stellar.readStellarTable as stel
 import os
 import dave.pipeline.plotting as pp
 import dave.diffimg.plot as dip 
-from pdb import set_trace as bp
+from pdb import set_trace as db
 #%%
 def createExportString(clip, delimiter=" ", badValue="nan"):
     """Create a line of text for the exporter
@@ -70,7 +70,7 @@ def createOutputs(clip):
     and appends results to a table (logTableFile)
     """
     #Some of this needs to not be hardwired here.  This is ugly.
-    clip['config']['exportLoc']='/soc/nfs/so-nfs/dave/c6'
+    clip['config']['exportLoc']='/soc/nfs/so-nfs/dave/c6-v2'
     clip['config']['onepageBasename']=clip['config']['exportLoc']
     clip['config']['dataStorePath']='/home/smullall/Science/datastore'
     epic=str(int(clip.value))
@@ -103,15 +103,17 @@ def createOutputs(clip):
             #pp.summaryPlot1(clip)
             
             file2="%s/%s/%s-modshift.pdf" % (clip.config.exportLoc,epic,epic)
-            file3="%s/%s/%s-onepage.pdf" % (clip.config.onepageBasename,epic,epic)
-        
+            #file3="%s/%s/%s-onepage.pdf" % (clip.config.onepageBasename,epic,epic)
+            
             cmd="gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s/%s/%s-all.pdf %s  %s" % (clip.config.exportLoc,epic,epic, outfile,file2)
             #cmd="pdftk %s %s %s output %s/%s/%s-all.pdf" % (outfile,file2,file3,clip.config['exportLoc'],epic,epic)
+            print cmd
             os.system(cmd)     
             
     except (KeyError,AttributeError,TypeError),e:
         cmd="None"
         print epic, e
+        print "No Exports"
     
     return cmd
     
@@ -137,14 +139,15 @@ def writeCandidates(clip):
     clip['config']['stellarPar']=['Mass','Rad','Teff','dis','rho','prov','logg'] 
     clip['config']['stellarFile']='/home/smullall/Science/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt' 
     try:
-        if clip.disposition.isSignificant:
+        if clip.disposition.isCandidate:
             clip=stel.addStellarToClip(clip)
             clip=stel.estimatePlanetProp(clip)
             outtxt,hdr = createExportString(clip, delimiter=" ", badValue="nan")
         else:
-            outtxt=""
-    except (KeyError,AttributeError):
-        outtxt=""
+            outtxt="none"
+    except (KeyError,AttributeError),e:
+        outtxt=e
+        print clip.value,e
     
     return outtxt
     

@@ -52,10 +52,15 @@ def addStellarToClip(clip):
     epic=int(clip['value'])
     new=dict()
     
-    for v in infoList:
-        new[v]=data.ix[epic][v]
     
-    clip['stellar']=new    
+    for v in infoList:
+        try:
+            new[v]=data.ix[epic][v]
+            
+        except KeyError,e:
+            new[v]=data.ix[0][v]
+            
+        clip['stellar']=new    
     
     return clip
     

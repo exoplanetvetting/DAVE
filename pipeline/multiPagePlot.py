@@ -24,7 +24,7 @@ def plot_multipages(outfile,clip,intext):
     clip
         A clipboard object
     intext
-        A string containing information to but put on the first page.
+        A string containing information to be put on the first page.
         
     
     Takes a clipboard, clip, and create plots
