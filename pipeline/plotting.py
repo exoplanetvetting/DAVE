@@ -138,7 +138,7 @@ def summaryPlot1(output):
     epicid=str(output['value'])
     trapsnr=output['trapFit.snr']
     trapper=output['trapFit.period_days']
-    trapdur=output['trapFit.period_days']
+    trapdur=output['trapFit.duration_hrs']
     trapdepth=output['trapFit.depth_frac']*1.0e6;
     centroids =output['diffImg.centroid_timeseries']
 
@@ -148,7 +148,7 @@ def summaryPlot1(output):
     plt.subplot(2,2,(1,2))
     plotFolded(output, modelOn=False)
     titlewords="EPIC=%s P=%.2f d Dur=%.2f h dep=%.1f ppm (snr=%.1f) " \
-        % (epicid, trapper, trapdur,trapsnr,trapdepth)
+        % (epicid, trapper, trapdur,trapdepth,trapsnr)
     plt.title(titlewords)
     plt.xlim((0,trapper))
 
