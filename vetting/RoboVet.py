@@ -76,6 +76,14 @@ def not_trans_like(modshift):
             comments += '---'
         comments += 'SIG_PRI_MINUS_SIG_POS_TOO_LOW'
         not_trans_like_flag = 1
+        
+    # Check if a single (or few) events dominates the signal. Likely SPSD if so. Using 1.5 as educated guess threshold for now.
+    if modshift['mod_sig_dmm'] > 1.5:
+        if comments != '':
+            comments += '---'
+        comments += 'INDIV_DEPTHS_NOT_CONSISTENT'
+        not_trans_like_flag = 1
+        
 
     return {'not_trans_like_flag':not_trans_like_flag,'comments':comments}
 
