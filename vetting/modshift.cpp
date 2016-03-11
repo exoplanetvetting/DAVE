@@ -26,7 +26,7 @@ const int N=100000;  // Max number of data points. Increase if needed.
 
 // Declare Functions
 void DO_SHIFT(),PLOT(),BIN_NOERR(string, double, string);
-double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),INVERFC(double),MAD(double[],int),MEAN(double[],int),MODSCALE(double[],double[],int);
+double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),MAX(double[],int),MIN(double[],int),INVERFC(double),MAD(double[],int),MEAN(double[],int),MODSCALE(double[],double[],int);
 string FORMAT(double);
 
 struct datastruct {double time; double phase; double flux; double model; double resid;};  // Time, Phase, Flux, Model, Residual
@@ -40,7 +40,9 @@ double flat[2*N]; // residual assuming flat baseline
 datastruct inpdata[N];  // Input data for binning
 datastruct bindat[N];   // Output binned data
 
-struct resultstruct {double sigpri; double sigsec; double sigter; double sigpos; double sigodd; double sigevn; double sigfa1; double sigfa2; double fred; double prilowtime; double seclowtime; double terlowtime; double sechightime; double depfacsec; double depfacter; double depfacpos; double depsig; double tdepth; double odddepth; double evndepth; double odddeptherr; double evndeptherr; double sigoe; double depthmedmeanrat;};
+double convolveddepth[N];
+
+struct resultstruct {double sigpri; double sigsec; double sigter; double sigpos; double sigodd; double sigevn; double sigfa1; double sigfa2; double fred; double prilowtime; double seclowtime; double terlowtime; double sechightime; double depfacsec; double depfacter; double depfacpos; double depsig; double tdepth; double odddepth; double evndepth; double odddeptherr; double evndeptherr; double sigoe; double depthmedmeanrat; double shape;};
 resultstruct results;
 
 int ndat,ndatorig;
@@ -294,6 +296,33 @@ epoch = epochorig;  // Load original epoch
 DO_SHIFT();  // Run shift
 
 
+
+
+/////// Test 2
+
+
+// for(i=0;i<ndat;i++)
+//   tmpdob1[i] = results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med);
+
+// Calculate shape metric
+// results.shape = (MAX(convolveddepth,ndat) - MEDIAN(convolveddepth,ndat)) / (MAX(convolveddepth,ndat) - MIN(convolveddepth,ndat));
+results.shape = MAX(convolveddepth,ndat) / (MAX(convolveddepth,ndat) - MIN(convolveddepth,ndat));   // Same as above assuming a median of 0.0
+
+
+// ofstream tmplogout;
+// tmplogout.open("jeff");
+// tmplogout << results.shape << endl;
+// // // // tmpdob2 = results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med)  and is computed in DO_SHIFT
+// // tmplogout << MEDIAN(convolveddepth,ndat) << " " << MAX(convolveddepth,ndat) << " " << MIN(convolveddepth,ndat) << endl;
+// // tmplogout << results.shape << endl;
+// // // for(i=0; i<ndat; i++)
+// // //   tmplogout << convolveddepth[i] << endl;
+// tmplogout.close();
+
+
+////////// END of Test 2
+
+
 // tmplogout << results.sigpri << " " << results.tdepth << " " << results.depsig << endl;
 // tmplogout.close();
 
@@ -302,7 +331,7 @@ DO_SHIFT();  // Run shift
 // outfile.close();
 
 // Terminal output
-cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigoe << " " << results.depthmedmeanrat << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
+cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigoe << " " << results.depthmedmeanrat << " " << results.shape << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
 // cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigodd << " " << results.sigevn << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
 //cout << fixed << setprecision(6) << basename <<  " " << results.depfacsec*results.tdepth << " " << results.depsig << endl;
 
@@ -846,7 +875,10 @@ void DO_SHIFT()
   tmpstr1 = basename + "-outfile2.dat";
   outfile.open(tmpstr1.c_str());
   for(i=0;i<ndat;i++)
-    outfile << fixed << setprecision(10) << data[midti+i].phase/period << " " << rms[i] << " " << chi2[i] << " " << results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med) << endl;
+    {
+    convolveddepth[i] = results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med);
+    outfile << fixed << setprecision(10) << data[midti+i].phase/period << " " << rms[i] << " " << chi2[i] << " " << convolveddepth[i] << endl;
+    }
   outfile.close();
   }
 
@@ -928,11 +960,12 @@ void PLOT()
 //   outfile << "set label \"{Pri}/F_{red}\" at screen (c+0*d),e center font ', 16'" << endl;
   outfile << "set label \"{Pri-Ter}\"     at screen (c+0*d),e center font ', 16'" << endl;
   outfile << "set label \"{Pri-Pos}\"     at screen (c+1*d),e center font ', 16'" << endl;
-  outfile << "set label \"{Sec}/F_{red}\" at screen (c+2*d),e center font ', 16'" << endl;
-  outfile << "set label \"{Sec-Ter}\"     at screen (c+3*d),e center font ', 16'" << endl;
-  outfile << "set label \"{Sec-Pos}\"     at screen (c+4*d),e center font ', 16'" << endl;
-  outfile << "set label \"{Odd-Evn}\"    at screen (c+5*d),e center font ', 16'" << endl;
-  outfile << "set label \"{DMM}\"    at screen (c+6*d),e center font ', 16'" << endl;
+//   outfile << "set label \"{Sec}/F_{red}\" at screen (c+2*d),e center font ', 16'" << endl;
+  outfile << "set label \"{Sec-Ter}\"     at screen (c+2*d),e center font ', 16'" << endl;
+  outfile << "set label \"{Sec-Pos}\"     at screen (c+3*d),e center font ', 16'" << endl;
+  outfile << "set label \"{Odd-Evn}\"    at screen (c+4*d),e center font ', 16'" << endl;
+  outfile << "set label \"{DMM}\"    at screen (c+5*d),e center font ', 16'" << endl;
+  outfile << "set label \"{Shape}\"    at screen (c+6*d),e center font ', 16'" << endl;
   
   outfile << "set label \"" << FORMAT(results.sigpri)                        << "\" at screen (a+0*b),(e-0.025) center font ',16'";
   if(results.sigpri/results.fred<results.sigfa1)        outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
@@ -961,22 +994,24 @@ void PLOT()
   outfile << "set label \"" <<  FORMAT(results.sigpri-results.sigpos)        << "\" at screen (c+1*d),(e-0.025) center font ',16'";
   if(results.sigpri-results.sigpos<results.sigfa2) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
   
-  outfile << "set label \"" <<  FORMAT(results.sigsec/results.fred)          << "\" at screen (c+2*d),(e-0.025) center font ',16'";
-  if(results.sigsec/results.fred>results.sigfa1)   outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
+//   outfile << "set label \"" <<  FORMAT(results.sigsec/results.fred)          << "\" at screen (c+2*d),(e-0.025) center font ',16'";
+//   if(results.sigsec/results.fred>results.sigfa1)   outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
   
-  outfile << "set label \"" <<  FORMAT(results.sigsec-results.sigter)        << "\" at screen (c+3*d),(e-0.025) center font ',16'";
+  outfile << "set label \"" <<  FORMAT(results.sigsec-results.sigter)        << "\" at screen (c+2*d),(e-0.025) center font ',16'";
   if(results.sigsec-results.sigter>results.sigfa2) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
   
-  outfile << "set label \"" <<  FORMAT(results.sigsec-results.sigpos)        << "\" at screen (c+4*d),(e-0.025) center font ',16'";
+  outfile << "set label \"" <<  FORMAT(results.sigsec-results.sigpos)        << "\" at screen (c+3*d),(e-0.025) center font ',16'";
   if(results.sigsec-results.sigpos>results.sigfa2) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
 
-  outfile << "set label \"" <<  FORMAT(results.sigoe) << "\" at screen (c+5*d),(e-0.025) center font ',16'";
+  outfile << "set label \"" <<  FORMAT(results.sigoe) << "\" at screen (c+4*d),(e-0.025) center font ',16'";
   if(results.sigoe>results.sigfa1) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
 
-  outfile << "set label \"" <<  FORMAT(results.depthmedmeanrat) << "\" at screen (c+6*d),(e-0.025) center font ',16'";
+  outfile << "set label \"" <<  FORMAT(results.depthmedmeanrat) << "\" at screen (c+5*d),(e-0.025) center font ',16'";
   if(results.depthmedmeanrat>1.5) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
   
-
+  outfile << "set label \"" <<  FORMAT(results.shape) << "\" at screen (c+6*d),(e-0.025) center font ',16'";
+  if(results.shape>0.3) outfile << " textcolor lt 1" << endl; else outfile << " textcolor lt 7" << endl;
+  
   // First plot
   outfile << "set origin 0.0,0.67" << endl;
   outfile << "set xlabel 'Phase' offset 0,0.4" << endl;
@@ -1256,7 +1291,36 @@ double MEDIAN(double x[], int n)
   else
     return w[n/2];
   }
+  
+///////////////////////////////////////////////////////////////////////////////
 
+double MAX(double x[], int n)
+  {
+  double max=-9E99;
+  int z;
+  
+  for(z=0;z<n;z++)
+    if(x[z]>max)
+      max=x[z];
+    
+  return max;
+  }
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+double MIN(double x[], int n)
+  {
+  double min=9E99;
+  int z;
+  
+  for(z=0;z<n;z++)
+    if(x[z]<min)
+      min=x[z];
+    
+  return min;
+  }
+  
 ///////////////////////////////////////////////////////////////////////////////
 
 double RMS(double y[],int a) {
