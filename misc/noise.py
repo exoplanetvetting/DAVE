@@ -120,7 +120,6 @@ def computeSgCdpp_ppm(y, transitDuration_cadences=13, plot=False):
     #Name change for consistency with original algorithm
     cadencesPerTransit = transitDuration_cadences
 
-    print cadencesPerTransit
     if cadencesPerTransit < 4:
         raise ValueError("Cadences per transit must be >= 4")
 

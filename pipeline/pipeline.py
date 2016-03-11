@@ -200,7 +200,7 @@ def extractLightcurveTask(clip):
     data = clip['serve.socData']
     numInitialCadencesToIgnore = clip['config.numInitialCadencesToIgnore']
     flagValues = clip.get('serve.flags', data[:, 'SAP_QUALITY'])
-    flux = data[:, 'SAP_FLUX']
+    flux = data[:, 'SAP_FLUX'].copy()
 
     #Convert flags to a boolean, and flag other bad data
     mask = kplrfits.getMaskForBadK2Data()
@@ -229,7 +229,7 @@ def cotrendDataTask(clip):
 
     data = clip['serve.socData']
     flags = clip['extract.flags']
-    flux = data[:, 'PDCSAP_FLUX']
+    flux = data[:, 'PDCSAP_FLUX'].copy()
 
     #Cotrending may also produce Nans
     flags |= ~np.isfinite(flux)
@@ -308,8 +308,8 @@ def computeCentroidsTask(clip):
     data = clip['serve.socData']
 
     cent_colrow = np.empty( (len(data), 2))
-    cent_colrow[:,0] = data[:, 'MOM_CENTR1']
-    cent_colrow[:,1] = data[:, 'MOM_CENTR2']
+    cent_colrow[:,0] = data[:, 'MOM_CENTR1'].copy()
+    cent_colrow[:,1] = data[:, 'MOM_CENTR2'].copy()
     clip['centroids'] = {'cent_colrow': cent_colrow}
     clip['centroids.source'] = "SOC PA Pipeline"
 
@@ -427,7 +427,6 @@ def fblsTask(clip):
     idx = kplrfits.markTransitCadences(time_days, period, epoch, \
         duration, flags=flags)
     snr = (depth/rms)*np.sqrt(np.sum(idx))
-    print depth, rms, np.sum(idx)
 
     out = dict()
     out['period'] = period
@@ -574,7 +573,6 @@ def modshiftTask(clip):
     basePath = clip['config.modshiftBasename']
     epicStr = "%09i" %(epic)
     basename = getOutputBasename(basePath, epicStr)
-    print basename
 
     # Name that will go in title of modshift plot
     objectname = "EPIC %09i" %(epic)
@@ -898,8 +896,8 @@ def loadTpfAndLc(k2id, campaign, storeDir):
     data = nca.Nca(data)
     data.setLookup(1, lookup)
     out['socData'] = data
-    out['time'] = fits['TIME']
-    out['flags'] = fits['SAP_QUALITY']
+    out['time'] = fits['TIME'].copy()
+    out['flags'] = fits['SAP_QUALITY'].copy()
     return out
 
 

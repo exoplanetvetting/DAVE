@@ -40,7 +40,6 @@ def getSnrOfTransit(time_days, flux_frac, unc, flags, period_days, phase_bkjd, \
                   sampleN=15)
 
     #Taken from trapfit.py around lines 434
-    #Check with Chris I'm doing it right
     out = dict()
     out['period_days'] = period_days
     out['epoch_bkjd'] = ioblk.timezpt + ioblk.bestphysvals[0]
@@ -50,15 +49,18 @@ def getSnrOfTransit(time_days, flux_frac, unc, flags, period_days, phase_bkjd, \
 
     #compute modelat all input time values
     subSampleN= 15
-    time_days[np.isfinite(time_days)] = 0  #Hide the Nans from one_model
+    time_days[~np.isfinite(time_days)] = 0  #Hide the Nans from one_model
     assert(np.all(np.isfinite(time_days)))
     ioBlock = tf.trapezoid_model_onemodel(time_days, period_days, \
-        out['epoch_bkjd'], 1e6*out['depth_frac'], out['duration_hrs'], \
-        out['ingress_hrs'], subSampleN)
+                out['epoch_bkjd'], 1e6*out['depth_frac'], out['duration_hrs'], \
+                out['ingress_hrs'], subSampleN)
+    
     out['bestFitModel'] = ioBlock.modellc - 1  #Want mean of zero
     out['snr'] = estimateSnr(time_days, flux_frac, flags, out['period_days'], \
-        out['epoch_bkjd'], out['duration_hrs'], out['depth_frac'])
+                    out['epoch_bkjd'], out['duration_hrs'], out['depth_frac'])
 
+    #out['bestFitModel'] = time_days*0
+    #out['snr'] = -1
     return out
 
 
@@ -75,9 +77,6 @@ def estimateSnr(time, flux, flags, period_days, epoch_bkjd, \
     time, flux, flags
         (np 1d arrays) arrays of time flux and flag values. All flag
         values > 0 are treated as though they indicate bad data.
-ar = dave.fileio.mastio.K2Archive()
-fits = ar.getLongCadence(k2id, campaign, header=True)
-data = dave.fileio.kplrfits.getNumpyArrayFromFitsRec(fits)
 
     period_days, epoch_bkjd, duration_hrs, depth_frac
         (floats) Parameters of transit

@@ -73,14 +73,14 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
     # Write data to a tempoary file so it can be read by model-shift
     # compiled C code. mkstemp ensures the file is written to a random
     # location so the code can be run in parallel.
-    tmpFilename = tempfile.mkstemp(prefix="modshift-%s" %(objectname))[1]
+    fpNum, tmpFilename = tempfile.mkstemp(prefix="modshift-%s" %(objectname))
     numpy.savetxt(tmpFilename, numpy.c_[time,flux,model])
 
     # Run modshift, and return the output
     #Python 2's subprocess module does not easily support timeouts, so
     #instead we use the shell's version
     #Insert rant here asking why subprocess doesn't have a timeout when it's
-    #the complicated module that was supposed to communication better.
+    #the complicated module that was supposed to handle communication better.
     path = getModShiftDir()
     cmd = ["timeout", "%i" %(timeout_sec),  "%s/modshift" %(path), \
        tmpFilename, plotname, objectname, str(period), str(epoch)]
@@ -88,16 +88,21 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
     try:
         modshiftcmdout = check_output(cmd)
     except CalledProcessError, e:
+        os.close(fpNum)
+        os.remove(tmpFilename)
+
         #The called process error message isn't very helpful
         msg = "FAIL: modshift returned error: %s" %(e.output)
         raise IOError(msg)
 
 
     # Delete the input text file
+    os.close(fpNum)
     os.remove(tmpFilename)
 
     # Read the modshift output back in to variables
     info = modshiftcmdout.split()
+    del(modshiftcmdout)
     mod_sig_pri = float(info[1])
     mod_sig_sec = float(info[2])
     mod_sig_ter = float(info[3])
