@@ -130,7 +130,6 @@ def plotRollPhaseDiagnosticPlot(x, rollPhase, flags, indexOfEvent):
     mp.plot(x[i1+sgn], rollPhase[i1+sgn], 'ro')
 
 
-    print(plotLwr, plotUpr)
 
 
 def getInterpolatedOotImage(cube, rollPhase, flags, i0):
