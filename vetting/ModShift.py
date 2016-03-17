@@ -38,8 +38,10 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
       The significance of the positive event assuming white noise
     mod_sig_oe
       The significance of the odd-even metric
-    mod_sig_dmm
+    mod_dmm
       The ratio of the individual depths's median and mean values.
+    mod_shape
+      The shape metric.
     mod_sig_fa1
       The False Alarm threshold assuming 20,000 objects evaluated
     mod_sig_fa2
@@ -110,19 +112,20 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
     mod_sig_ter = float(info[3])
     mod_sig_pos = float(info[4])
     mod_sig_oe = float(info[5])
-    mod_sig_dmm = float(info[6])
-    mod_sig_fa1 = float(info[7])
-    mod_sig_fa2 = float(info[8])
-    mod_Fred    = float(info[9])
-    mod_ph_pri  = float(info[10])
-    mod_ph_sec  = float(info[11])
-    mod_ph_ter  = float(info[12])
-    mod_ph_pos  = float(info[13])
-    mod_secdepth = float(info[14])
-    mod_secdeptherr = float(info[15])
+    mod_dmm = float(info[6])
+    mod_shape = float(info[7])
+    mod_sig_fa1 = float(info[8])
+    mod_sig_fa2 = float(info[9])
+    mod_Fred    = float(info[10])
+    mod_ph_pri  = float(info[11])
+    mod_ph_sec  = float(info[12])
+    mod_ph_ter  = float(info[13])
+    mod_ph_pos  = float(info[14])
+    mod_secdepth = float(info[15])
+    mod_secdeptherr = float(info[16])
 
 
-    return {'mod_sig_pri':mod_sig_pri, 'mod_sig_sec':mod_sig_sec, 'mod_sig_ter':mod_sig_ter, 'mod_sig_pos':mod_sig_pos, 'mod_sig_oe':mod_sig_oe, 'mod_sig_dmm':mod_sig_dmm, 'mod_sig_fa1':mod_sig_fa1, 'mod_sig_fa2':mod_sig_fa2, 'mod_Fred':mod_Fred, 'mod_ph_pri':mod_ph_pri, 'mod_ph_sec':mod_ph_sec, 'mod_ph_ter':mod_ph_ter, 'mod_ph_pos':mod_ph_pos, 'mod_secdepth':mod_secdepth, 'mod_secdeptherr':mod_secdeptherr}
+    return {'mod_sig_pri':mod_sig_pri, 'mod_sig_sec':mod_sig_sec, 'mod_sig_ter':mod_sig_ter, 'mod_sig_pos':mod_sig_pos, 'mod_sig_oe':mod_sig_oe, 'mod_dmm':mod_dmm, 'mod_shape':mod_shape, 'mod_sig_fa1':mod_sig_fa1, 'mod_sig_fa2':mod_sig_fa2, 'mod_Fred':mod_Fred, 'mod_ph_pri':mod_ph_pri, 'mod_ph_sec':mod_ph_sec, 'mod_ph_ter':mod_ph_ter, 'mod_ph_pos':mod_ph_pos, 'mod_secdepth':mod_secdepth, 'mod_secdeptherr':mod_secdeptherr}
 
 
 
