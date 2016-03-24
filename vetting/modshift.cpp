@@ -232,7 +232,8 @@ results.sigoe = fabs(results.odddepth - results.evndepth)/sqrt(pow(results.oddde
 // ofstream tmplogout;
 // tmplogout.open("jeff");
 
-// tmplogout << dataorig[0].time << " " << dataorig[ndatorig-1].time << endl;
+
+// tmplogout << tstart << " " << tend << " " << endl;
 
 int ninda,nindb;
 double indivdepths[1000];
@@ -245,11 +246,13 @@ epoch = epochorig;  // Load original epoch
 ninda=0; // Index to loop through all possible individual events
 nindb=0; // index to keep track of indiv measurements, for transits which actually exist in the data
 
+double dmmwidth = 1.5*(tend-tstart);  // Use data that is within 1.5 transit duration of transit, i.e., transit width either side for baseline. Units are in days.
+
 while(epoch + ninda*period <= dataorig[ndatorig-1].time)
   {
   j=0;
   for(i=0;i<ndatorig;i++)  // Load original data...
-    if(dataorig[i].time > epoch + ninda*period - 0.5*period && dataorig[i].time < epoch + ninda*period + 0.5*period)  // ...if it falls within half a period of an indidivual transit
+    if(dataorig[i].time > epoch + ninda*period - dmmwidth && dataorig[i].time < epoch + ninda*period + dmmwidth)  // ...if it falls within half a period of an indidivual transit
       {
       data[j] = dataorig[i];
       j++;

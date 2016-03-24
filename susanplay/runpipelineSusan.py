@@ -153,15 +153,16 @@ fid.close()
 
 cfg=main.loadMyConfiguration()
 cfg['modshiftBasename']='/home/smullall/Science/DAVE/working/daveOutput'
-cfg['prfPath']='/external_disk/K2/prf'
+cfg['prfPath']='/media/ba2cfab0-7e6f-4909-86fd-656231596c6f/K2/prf'
 cfg['clipSavePath']='/home/smullall/Science/DAVE/working/clips'
-cfg['dataStorePath']='/external_disk/K2/data'
+cfg['dataStorePath']='/home/smullall/Science/datastore'
+cfg['onepageBasename']='/home/smullall/Science/DAVE/working/daveOutput'
 #%%
 cfg['debug']=False
-cfg['campaign']=5
-clip=main.runOne(211923431,cfg)
+cfg['campaign']=6
+clip=main.runOne(212330040,cfg)
 
 import dave.pipeline.multiPagePlot as mp
 
-mp.plot_multipages('test211923431.pdf',clip,'C5  TESTING')
+mp.plot_multipages('test212330040.pdf',clip,'C6  TESTING')
 

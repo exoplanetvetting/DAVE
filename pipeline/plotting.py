@@ -138,7 +138,7 @@ def summaryPlot1(output):
     epicid=str(output['value'])
     trapsnr=output['trapFit.snr']
     trapper=output['trapFit.period_days']
-    trapdur=output['trapFit.period_days']
+    trapdur=output['trapFit.duration_hrs']
     trapdepth=output['trapFit.depth_frac']*1.0e6;
     centroids =output['diffImg.centroid_timeseries']
 
@@ -148,7 +148,7 @@ def summaryPlot1(output):
     plt.subplot(2,2,(1,2))
     plotFolded(output, modelOn=False)
     titlewords="EPIC=%s P=%.2f d Dur=%.2f h dep=%.1f ppm (snr=%.1f) " \
-        % (epicid, trapper, trapdur,trapsnr,trapdepth)
+        % (epicid, trapper, trapdur,trapdepth,trapsnr)
     plt.title(titlewords)
     plt.xlim((0,trapper))
 
@@ -202,7 +202,7 @@ def indivTransitPlot(clip,ndur):
     ndur = 2 is typical.
     """
     factor=1000; #multiplicative factor for flux
-    tminus=2000;
+    tminus=clip['serve.time'][0]-1;
     nt=30;
     time_days = clip['serve.time'] - tminus
     flux_zero = clip['detrend.flux_frac']*factor
@@ -211,6 +211,7 @@ def indivTransitPlot(clip,ndur):
     dur = clip['trapFit.duration_hrs']
     depth=np.abs(clip['trapFit.depth_frac'])*factor;
     flags=clip['detrend.flags'];
+    qflag=clip['serve.flags'];
     trapfit=clip['trapFit.bestFitModel']*factor;
     epic = str(clip['value'])
 
@@ -231,8 +232,14 @@ def indivTransitPlot(clip,ndur):
     #I want those for which both are true.
     want = (posBegEpochs < time[len(time)-1]) & (posEndEpochs > time[0]);
 
+    thr=2**20;
+    safe=2**1;
+    desat=2**5
+    therms=np.bitwise_and(qflag,thr+safe+desat) != 0;
+    print len(therms[therms])
+    
     plt.clf()
-    #Plot first four
+    #Plot first six
     c=1;
     for i in ind[want]:
         idx=np.where(ind==i)
@@ -241,6 +248,7 @@ def indivTransitPlot(clip,ndur):
             plt.plot(time,flux,'k.')
             plt.xlim(posBegEpochs[idx[0]],posEndEpochs[idx[0]])
             plt.ylim(-2*depth,0.9*depth)
+            plt.plot(time_days[therms],0.86*depth*np.ones((len(therms[therms]),1)),'rv',ms=13)
             ax=plt.gca()
             plt.text(.1,.1, str(i),transform=ax.transAxes,color='m',fontsize=13)
             c=c+1;
