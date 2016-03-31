@@ -52,10 +52,15 @@ def addStellarToClip(clip):
     epic=int(clip['value'])
     new=dict()
     
-    for v in infoList:
-        new[v]=data.ix[epic][v]
     
-    clip['stellar']=new    
+    for v in infoList:
+        try:
+            new[v]=data.ix[epic][v]
+            
+        except KeyError,e:
+            new[v]=data.ix[0][v]
+            
+        clip['stellar']=new    
     
     return clip
     
@@ -79,7 +84,7 @@ def estimatePlanetProp(clip):
     AU=1.4960e11
     solarR_km=6.957e5
     solarM_kg=1.98855e30
-    earthR_km=6371
+    earthR_km=6371.0
     solarR_earth=solarR_km/earthR_km
 
     new=dict()
