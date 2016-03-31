@@ -29,7 +29,7 @@ def medianDetrend(flux, binWidth):
 
 
 
-def outlierRemoval(time, flux, precision_days=0.0205, threshold_sigma=5):
+def outlierRemoval(time, flux, precision_days=0.0205, threshold_sigma=4):
     """
     Remove single point outliers.
 
