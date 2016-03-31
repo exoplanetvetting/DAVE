@@ -944,3 +944,89 @@ def getOutputBasename(basePath, epic):
         raise IOError("Can't write to output directory %s" %path)
 
     return os.path.join(path, epicStr)
+
+@task.task
+def cotrendSffDataTask(clip):
+    """Produce a cotrended lightcurve in units of fractional amplitude"""
+    from dave.detrendThis.detrendThis import detrendThat
+
+    time = clip['serve.time']
+    flags = clip['extract.flags']
+    xbar = clip['extract.centroid_col']
+    ybar = clip['extract.centroid_row'] 
+    rawflux = clip['extract.rawLightcurve']
+
+    outcorflux, outcorflatflux, outcorrection, detrendFlags = detrendThat(
+                time[~flags], rawflux[~flags], xbar[~flags], ybar[~flags],
+                ferr=None, 
+                qflags=None,
+                inpflag=None,
+                ap=4.0)
+
+    newDetrendFlags = np.zeros_like(flags)
+    newDetrendFlags[~flags] = ~detrendFlags
+    flags |= newDetrendFlags
+    flux = rawflux.copy()
+    flux[~flags] = outcorflux
+
+    newCorr = np.zeros_like(rawflux)
+    newCorr[~flags] = outcorrection
+
+    #Cotrending may also produce Nans
+    flags |= ~np.isfinite(flux)
+
+    #Remove dc offset
+    dcOffset = np.median( flux[~flags])
+    flux = (flux/ dcOffset) - 1
+    clip['cotrend'] = {'flux_frac': flux}
+    clip['cotrend.dcOffset'] = dcOffset
+    clip['cotrend.flags'] = flags
+    clip['cotrend.dcOffset'] = dcOffset
+    clip['cotrend.source'] = "SFF Cotrend"
+
+    #Enforce contract
+    clip['cotrend.flux_frac']
+    return clip
+
+@task.task
+def extractLightcurveFromTpfTask(clip):
+    from dave.tpf2lc.tpf2lc import optimalAperture
+    time = clip['serve.time']
+    fluxcube = clip['serve.cube']
+    data = clip['serve.socData']
+    socflux = data[:,'SAP_FLUX']
+    numInitialCadencesToIgnore = clip['config.numInitialCadencesToIgnore']
+    flagValues = clip.get('serve.flags', data[:, 'SAP_QUALITY'])
+
+    #Convert flags to a boolean, and flag other bad data
+    mask = kplrfits.getMaskForBadK2Data()
+    flags = (flagValues & mask).astype(bool)
+    flags |= ~np.isfinite(time)
+    flags |= ~np.isfinite(socflux)
+    flags[socflux<1] = True
+    flags[:numInitialCadencesToIgnore] = True
+
+    newtime, flux, xbar, ybar, _, _ = optimalAperture(time[~flags], fluxcube[~flags], flags[~flags], 
+        qual_cut=False,
+        bg_cut=4)
+
+    newY = socflux.copy()
+    newXbar = np.zeros_like(socflux)
+    newYbar = np.zeros_like(socflux)
+    newY[~flags] = flux
+    newXbar[~flags] = xbar
+    newYbar[~flags] = ybar
+
+    #Placeholder. Use the SOC PA data for the lightcurve
+    out = dict()
+    out['rawLightcurve'] = newY
+    clip['extract'] = out
+    clip['extract.source'] = "Labeled Extraction Pipeline"
+    clip['extract.flags'] = flags
+    clip['extract.centroid_col'] = newXbar 
+    clip['extract.centroid_row'] = newYbar 
+
+    #Enforce contract
+    clip['extract.rawLightcurve']
+    clip['extract.flags']
+    return clip
