@@ -67,9 +67,9 @@ def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None,
     outflux, correction, thr_cad = extract_lc.run_C0_detrend(
         time, flatlc, xpos, ypos, cadstep=cadstep, skip=None)
 
-    assert len(outflux) == len(correction)
-    assert len(correction) == len(time[zpt:][not_thr])
     not_thr = ~thr_cad
+    assert len(outflux) == len(correction)
+    assert len(correction[not_thr]) == len(time[zpt:][not_thr])
     corflux = (flux[zpt:][not_thr] /
                np.median(flux[zpt:][not_thr]) /
                correction[not_thr])
@@ -82,13 +82,11 @@ def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None,
 # this will never trigger
     mad_cut = 1.4826*MAD(corflatflux-1.)*4
     keep = np.abs(corflatflux-1.) < mad_cut
-
     
     newflags = np.zeros(len(flux), dtype=bool)
     newflags[zpt:][not_thr] = 1
 
-
-    return corflux, corflatflux, correction, newflags
+    return corflux, corflatflux, correction[not_thr], newflags
 
 
 

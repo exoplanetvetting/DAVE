@@ -163,6 +163,7 @@ def run_C0_detrend(time, lc, xbar, ybar, skip, cadstep=200):
         # if len(th_c) == 489:
         #     pass
         if len(outf) != len(indata):
+            print('help!')
             import ipdb
             ipdb.set_trace()
         outflux = np.r_[outflux, outf]
@@ -170,7 +171,7 @@ def run_C0_detrend(time, lc, xbar, ybar, skip, cadstep=200):
         thr_cad = np.r_[thr_cad, th_c]
 
     assert len(outflux) == len(outcorr)
-    assert len(outflux) == len(thr_cad)
+    assert len(outflux) == len(outcorr)
 
     return outflux, outcorr, thr_cad
 
