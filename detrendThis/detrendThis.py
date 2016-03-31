@@ -17,7 +17,8 @@ def twostepreplace(arr1, arr2, idx1, idx2, zpt):
 
 def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None,
                 inpflag=None,
-                ap=4.0):
+                ap=4.0,
+                cadstep=300):
 
     """
     code to run self flat field on K2 data
@@ -44,13 +45,14 @@ def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None,
 
     # we are going to remove all the bad values
     # we should never pass out the time
+    # this should never trigger
     badmask = np.isfinite(flux) * (inpflag > 0.)
 
-    time = time[badmask]
-    flux = flux[badmask]
-    ferr = ferr[badmask]
-    xpos = xpos[badmask]
-    ypos = ypos[badmask]
+    time = np.copy(time[badmask])
+    flux = np.copy(flux[badmask])
+    ferr = np.copy(ferr[badmask])
+    xpos = np.copy(xpos[badmask])
+    ypos = np.copy(ypos[badmask])
 
     flatlc = extract_lc.medfilt(time, flux, window=3)
 
@@ -64,6 +66,9 @@ def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None,
 
     outflux, correction, thr_cad = extract_lc.run_C0_detrend(
         time, flatlc, xpos, ypos, cadstep=cadstep, skip=None)
+
+    assert len(outflux) == len(correction)
+    assert len(correction) == len(time[zpt:][not_thr])
     not_thr = ~thr_cad
     corflux = (flux[zpt:][not_thr] /
                np.median(flux[zpt:][not_thr]) /
@@ -74,20 +79,16 @@ def detrendThat(time, flux, xpos, ypos, ferr=None, qflags=None,
                    correction[not_thr])
 
 # The 1.4826 and *4 factors make this similar to a 4-sigma cut.
+# this will never trigger
     mad_cut = 1.4826*MAD(corflatflux-1.)*4
     keep = np.abs(corflatflux-1.) < mad_cut
 
-    outcorflux = np.ones(len(badmask)) * np.nan
-    outcorflatflux = np.ones(len(badmask)) * np.nan
-    outcorrection = np.ones(len(badmask)) * np.nan
+    
+    newflags = np.zeros(len(flux), dtype=bool)
+    newflags[zpt:][not_thr] = 1
 
-    outcorflux = twostepreplace(outcorflux, corflux, badmask, not_thr, zpt)
-    outcorflatflux = twostepreplace(outcorflatflux, corflatflux, badmask,
-                                    not_thr, zpt)
-    outcorrection = twostepreplace(outcorrection, correction, badmask,
-                                   not_thr, zpt)
 
-    return outcorflux, outcorflatflux, outcorrection
+    return corflux, corflatflux, correction, newflags
 
 
 

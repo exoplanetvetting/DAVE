@@ -116,20 +116,20 @@ def run_C0_data_extract(fn, second_half_only=True,
     if return_qual:
         return None
     else:
-        return (time,lc, xbar /
-            np.mean(xbar), ybar / np.mean(xbar), regnum)
+        return (time,lc, xbar -
+            np.mean(xbar), ybar - np.mean(ybar), regnum)
 
 
 def run_C0_detrend(time, lc, xbar, ybar, skip, cadstep=200):
     #some reasonable defaults
-    npoly_cxcy = 3 # Order of ploynomial fit to target centroids
-    sigma_cxcy = 10.0 # Sigma-clipping threshold for fit to target centroids [sigma]
-    npoly_ardx = 5 # Order of ploynomial fit for thruster firing detection
-    npoly_dsdt = 1 # Order of ploynomial fit for thruster firing detection
+    npoly_cxcy = 3  # Order of ploynomial fit to target centroids
+    sigma_cxcy = 10.0  # Sigma-clipping threshold for fit to target centroids [sigma]
+    npoly_ardx = 5  # Order of ploynomial fit for thruster firing detection
+    npoly_dsdt = 1  # Order of ploynomial fit for thruster firing detection
 #    sigma_dsdt = 1.5 # Sigma-clipping threshold for thruster firing detection [sigma]
-    sigma_dsdt = 3.0 # Sigma-clipping threshold for thruster firing detection [sigma]
-    npoly_arfl = 3 # Order of ploynomial for for arclength-flux calibration
-    sigma_arfl = 3.0 # Sigma-clipping threshold for arclength-flux calibration [sigma]
+    sigma_dsdt = 3.0  # Sigma-clipping threshold for thruster firing detection [sigma]
+    npoly_arfl = 3  # Order of ploynomial for for arclength-flux calibration
+    sigma_arfl = 3.0  # Sigma-clipping threshold for arclength-flux calibration [sigma]
 
     #normalize lc
     lc = (lc / np.median(lc))
@@ -151,22 +151,33 @@ def run_C0_detrend(time, lc, xbar, ybar, skip, cadstep=200):
         centr1 = xbar[tran]
         centr2 = ybar[tran]
 
-        outf, outc, th_c = martinsff(intime,indata,
-                centr1,centr2,
-                npoly_cxcy,sigma_cxcy,npoly_ardx,
-                npoly_dsdt,sigma_dsdt,npoly_arfl,
-                sigma_arfl,2,'crapfile',
-                0)
-        if len(th_c) == 489:
-            pass
-        outflux = np.r_[outflux,outf]
-        outcorr = np.r_[outcorr,outc]
-        thr_cad = np.r_[thr_cad,th_c]
+        outf, outc, th_c = martinsff(intime, indata,
+                                     centr1, centr2,
+                                     npoly_cxcy, sigma_cxcy, npoly_ardx,
+                                     npoly_dsdt, sigma_dsdt, npoly_arfl,
+                                     sigma_arfl, 2, 'crapfile',
+                                     0)
+        assert len(outc) == len(indata)
+        assert len(outf) == len(indata)
+        assert len(th_c) == len(indata)
+        # if len(th_c) == 489:
+        #     pass
+        if len(outf) != len(indata):
+            import ipdb
+            ipdb.set_trace()
+        outflux = np.r_[outflux, outf]
+        outcorr = np.r_[outcorr, outc]
+        thr_cad = np.r_[thr_cad, th_c]
 
-    return outflux,outcorr, thr_cad
+    assert len(outflux) == len(outcorr)
+    assert len(outflux) == len(thr_cad)
+
+    return outflux, outcorr, thr_cad
 
 import untrendy
-def medfilt(time,flux,window=10.0):
+
+
+def medfilt(time, flux, window=10.0):
     """
     window in days
     """

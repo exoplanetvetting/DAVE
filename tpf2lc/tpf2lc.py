@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from astropy.table import Table
 import numpy as np
 import matplotlib
-import mastio
+import dave.fileio.mastio as mastio
 
 from astropy.io import fits as pyfits
 from photo_test import raw_moment, intertial_axis, plot_bars
@@ -81,7 +81,7 @@ def bg_sub(fla):
     return fla
 
 
-def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=False, toss_resat=True, bg_cut=5, skip=0):
+def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=False, toss_resat=False, bg_cut=5, skip=0):
     """
     This routine determines an optimal apertures and outputs the flux (i.e. a light curve) from a TPF.
 
@@ -174,7 +174,7 @@ def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=Fa
     momlims = [ymin,ymax+1,xmin,xmax+1]
 
     #loop that performs the aperture photometry
-    for i,fl in enumerate(fluxarr):
+    for i,fl in enumerate(flux_b):
         lc[i] = np.sum(fl[lab == regnum])
         #lc[i] = np.sum(fl[np.where(lab == 1)]
         momim = fl[momlims[0]:momlims[1],
@@ -186,7 +186,8 @@ def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=Fa
     if return_qual:
         return None
     else:
-        return (time,lc, xbar / np.nanmean(xbar), ybar / np.nanmean(xbar), regnum, lab)
+        # TODO: think about whether this should be normalized
+        return (time,lc, xbar - np.nanmean(xbar), ybar - np.nanmean(ybar), regnum, lab)
 
 if __name__=="__main__":
     pass
