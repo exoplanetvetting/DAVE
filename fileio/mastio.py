@@ -491,3 +491,40 @@ class K2Archive(MastArchive):
 
 
 #
+class SocNfsArchive(K2Archive):
+    def __init__(self, path, localDir=None):
+        """Get data from the the SOC NFS directories.
+
+        Data is stored on the SOC NFS drive before export to MAST.
+        If we need to vet data before delivery, we can access it
+        with this Archive class. Note this only works if you
+        are behind the SOC firewall and have access to their disks.
+
+        Inputs:
+        -----------
+        path
+            (str) Path to data. The path you specify should have
+            subdirectories of cad_targ_soc/ and lcv/
+
+        Notes:
+        ----------
+        * Only works behind the soc firewall
+        * Fits files are only stored on disk for a brief time before
+          delivery to MAST. Do not expect this data to stick around
+          for more than a few weeks.
+
+      """
+        if localDir is None:
+            self.localDir = os.path.join(os.environ['HOME'], '.mastio', 'k2')
+
+        self.remoteServer = "file://"
+        self.remoteFluxPath = os.path.join(path, 'lcv')
+        self.remoteTpfPath = os.path.join(path, 'cad_targ_soc')
+
+    def makeRemoteUrl(self, remotePath, k2id, campaign, filename, compressed):
+
+        url = "%s/%s/%s" %(self.remoteServer, remotePath, filename)
+        if compressed:
+            url = url + '.gz'
+        print url
+        return url
