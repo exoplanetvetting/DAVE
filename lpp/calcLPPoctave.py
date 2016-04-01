@@ -59,25 +59,18 @@ def fergalVersion(time, flux, mapFile, period, duration, phase):
     #oct2py.octave is not threadsafe and will crash when run in
     #parallel. Oct2Py() won't
 
-    octave = Oct2Py()
-    octave.addpath(path)
-    octave.addpath(path + "/octave/transitLike")
-    octave.addpath(path + "/octave/createLightCurves/")
-    octave.addpath(path + "/octave/drtoolbox/")
-    octave.addpath(path + "/octave/drtoolbox/techniques")
+    with Oct2Py() as octave:
+        octave.addpath(path)
+        octave.addpath(path + "/octave/transitLike")
+        octave.addpath(path + "/octave/createLightCurves/")
+        octave.addpath(path + "/octave/drtoolbox/")
+        octave.addpath(path + "/octave/drtoolbox/techniques")
 
-    #Print out octave's path as a diagnostic
-#    octPath = octave.path()
-#    print type(str(octPath))
-#    import re
-#    octPath = re.split(":", octPath)
-#    print "\n".join(octPath)
-
-    Tlpp, Y, binnedFlux = octave.calcLPPMetricLCarray(\
-        time,flux,period,duration,phase,mapFile)
+        Tlpp, Y, binnedFlux = octave.calcLPPMetricLCarray(\
+            time,flux,period,duration,phase,mapFile)
 
 
-    return Tlpp, Y, binnedFlux
+    return Tlpp.copy(), Y.copy(), binnedFlux.copy()
 
 
 
