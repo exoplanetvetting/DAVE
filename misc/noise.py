@@ -120,6 +120,9 @@ def computeSgCdpp_ppm(y, transitDuration_cadences=13, plot=False):
     #Name change for consistency with original algorithm
     cadencesPerTransit = transitDuration_cadences
 
+    if cadencesPerTransit < 4:
+        raise ValueError("Cadences per transit must be >= 4")
+
     trend = savgol_filter(y, window_length=window, polyorder=polyorder)
     detrend = y-trend
 

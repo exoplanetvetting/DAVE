@@ -53,7 +53,7 @@ def loadConfigForTest():
 
     tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
         dpp.cotrendDataTask
-        dpp.detrendDataTask dpp.blsTask fblsTask dpp.saveClip""".split()
+        dpp.detrendDataTask dpp.blsTask dpp.saveClip""".split()
 #
     cfg['taskList'] = tasks
     return cfg

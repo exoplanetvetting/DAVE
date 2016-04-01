@@ -70,7 +70,7 @@ def loadDefaultConfig():
     cfg['debug'] = True
     cfg['campaign'] = 3
     cfg['timeout_sec'] = 120
-    cfg['nPointsForMedianSmooth'] = 2*48
+    cfg['nPointsForMedianSmooth'] = 26
     cfg['blsMinPeriod'] = 0.5
     cfg['blsMaxPeriod'] = 30
 
@@ -107,7 +107,7 @@ def loadDefaultConfig():
 
     #My front end
     tasks = """checkDirExistTask serveTask extractLightcurveTask
-        computeCentroidsTask rollPhaseTask cotrendDataTask detrendDataTask
+        computeCentroidsTask rollPhaseTask cotrendSffDataTask detrendDataTask'
         fblsTask trapezoidFitTask vetTask plotTask saveClip""".split()   # Jeff added plotTask
     cfg['taskList'] = tasks
 
@@ -200,7 +200,7 @@ def extractLightcurveTask(clip):
     data = clip['serve.socData']
     numInitialCadencesToIgnore = clip['config.numInitialCadencesToIgnore']
     flagValues = clip.get('serve.flags', data[:, 'SAP_QUALITY'])
-    flux = data[:, 'SAP_FLUX']
+    flux = data[:, 'SAP_FLUX'].copy()
 
     #Convert flags to a boolean, and flag other bad data
     mask = kplrfits.getMaskForBadK2Data()
@@ -219,6 +219,7 @@ def extractLightcurveTask(clip):
 
     #Enforce contract
     clip['extract.rawLightcurve']
+    clip['extract.flags']
     return clip
 
 
@@ -228,7 +229,7 @@ def cotrendDataTask(clip):
 
     data = clip['serve.socData']
     flags = clip['extract.flags']
-    flux = data[:, 'PDCSAP_FLUX']
+    flux = data[:, 'PDCSAP_FLUX'].copy()
 
     #Cotrending may also produce Nans
     flags |= ~np.isfinite(flux)
@@ -247,9 +248,19 @@ def cotrendDataTask(clip):
     return clip
 
 
+from dave.blsCode import outlier_detection
 @task.task
 def detrendDataTask(clip):
+    """
+
+    TODO:
+    This code could be considerably simplified if we set flux[singleOutlierIndices]
+    ==0. Would this produce the same results?
+    """
+
+
     flux = clip['cotrend.flux_frac']
+    time = clip['serve.time']
     flags = clip['cotrend.flags']
 
     nPoints = clip['config.nPointsForMedianSmooth']
@@ -257,17 +268,38 @@ def detrendDataTask(clip):
     #When you detrend, you must do something about the gaps and bad values.
     #This is the simplest possible thing. Replace all bad/missing data with
     #zeros. This is a placehold. Bad data inside a transit is replaced with
-    #a zero, which is not what you want.
+    #a zero.
     flux[flags] = 0
 
-    #Do a simple detrend.
-    detrend = kplrfits.medianSubtract1d(flux, nPoints)
+    #Flag the outliers in the data
+    singleOutlierIndices = outlier_detection.outlierRemoval(time, flux)
+
+
+    notSingleOutlierIndices = np.delete(np.arange(len(flux)),singleOutlierIndices)
+
+    #do a simple detrend with the outliers not included
+    fluxprime = flux[notSingleOutlierIndices]
+    medianVector = outlier_detection.medianDetrend(fluxprime, nPoints)
+
+    #put everything back together
+    #with outliers filled
+    detrendedFlux = np.zeros_like(flux)
+    detrendedFlux[notSingleOutlierIndices] = fluxprime - medianVector
+
+    for cad in singleOutlierIndices:
+        fillval = detrendedFlux[cad-3:cad+3]
+        detrendedFlux[cad] = flux[cad] - np.mean(fillval[fillval != 0])
+
+
+    outlierflag = np.zeros_like(flux,dtype=bool)
+    outlierflag[singleOutlierIndices] = 1
+
     clip['detrend'] = dict()
-    clip['detrend.flux_frac'] = detrend
-    clip['detrend.flags'] = flags
+    clip['detrend.flux_frac'] = detrendedFlux
+    clip['detrend.flags'] = flags | outlierflag
     clip['detrend.source'] = "Simple Median detrend"
 
-    assert(detrend is not None)
+    assert(detrendedFlux is not None)
     return clip
 
 
@@ -276,8 +308,8 @@ def computeCentroidsTask(clip):
     data = clip['serve.socData']
 
     cent_colrow = np.empty( (len(data), 2))
-    cent_colrow[:,0] = data[:, 'MOM_CENTR1']
-    cent_colrow[:,1] = data[:, 'MOM_CENTR2']
+    cent_colrow[:,0] = data[:, 'MOM_CENTR1'].copy()
+    cent_colrow[:,1] = data[:, 'MOM_CENTR2'].copy()
     clip['centroids'] = {'cent_colrow': cent_colrow}
     clip['centroids.source'] = "SOC PA Pipeline"
 
@@ -395,7 +427,6 @@ def fblsTask(clip):
     idx = kplrfits.markTransitCadences(time_days, period, epoch, \
         duration, flags=flags)
     snr = (depth/rms)*np.sqrt(np.sum(idx))
-    print depth, rms, np.sum(idx)
 
     out = dict()
     out['period'] = period
@@ -542,7 +573,6 @@ def modshiftTask(clip):
     basePath = clip['config.modshiftBasename']
     epicStr = "%09i" %(epic)
     basename = getOutputBasename(basePath, epicStr)
-    print basename
 
     # Name that will go in title of modshift plot
     objectname = "EPIC %09i" %(epic)
@@ -847,8 +877,8 @@ def loadTpfAndLc(k2id, campaign, storeDir):
     ar = mastio.K2Archive(storeDir)
 
     out = dict()
-    fits, hdr = ar.getLongTpf(k2id, campaign, header=True)
-    hdr0 = ar.getLongTpf(k2id, campaign, ext=0)
+    fits, hdr = ar.getLongTpf(k2id, campaign, header=True, mmap=False)
+    hdr0 = ar.getLongTpf(k2id, campaign, ext=0, mmap=False)
     cube = tpf.getTargetPixelArrayFromFits(fits, hdr)
 
     out['cube'] = cube
@@ -866,8 +896,8 @@ def loadTpfAndLc(k2id, campaign, storeDir):
     data = nca.Nca(data)
     data.setLookup(1, lookup)
     out['socData'] = data
-    out['time'] = fits['TIME']
-    out['flags'] = fits['SAP_QUALITY']
+    out['time'] = fits['TIME'].copy()
+    out['flags'] = fits['SAP_QUALITY'].copy()
     return out
 
 
@@ -912,3 +942,89 @@ def getOutputBasename(basePath, epic):
         raise IOError("Can't write to output directory %s" %path)
 
     return os.path.join(path, epicStr)
+
+@task.task
+def cotrendSffDataTask(clip):
+    """Produce a cotrended lightcurve in units of fractional amplitude"""
+    from dave.detrendThis.detrendThis import detrendThat
+
+    time = clip['serve.time']
+    flags = clip['extract.flags']
+    xbar = clip['extract.centroid_col']
+    ybar = clip['extract.centroid_row'] 
+    rawflux = clip['extract.rawLightcurve']
+
+    outcorflux, outcorflatflux, outcorrection, detrendFlags = detrendThat(
+                time[~flags], rawflux[~flags], xbar[~flags], ybar[~flags],
+                ferr=None, 
+                qflags=None,
+                inpflag=None,
+                ap=4.0)
+
+    newDetrendFlags = np.zeros_like(flags)
+    newDetrendFlags[~flags] = ~detrendFlags
+    flags |= newDetrendFlags
+    flux = rawflux.copy()
+    flux[~flags] = outcorflux
+
+    newCorr = np.zeros_like(rawflux)
+    newCorr[~flags] = outcorrection
+
+    #Cotrending may also produce Nans
+    flags |= ~np.isfinite(flux)
+
+    #Remove dc offset
+    dcOffset = np.median( flux[~flags])
+    flux = (flux/ dcOffset) - 1
+    clip['cotrend'] = {'flux_frac': flux}
+    clip['cotrend.dcOffset'] = dcOffset
+    clip['cotrend.flags'] = flags
+    clip['cotrend.dcOffset'] = dcOffset
+    clip['cotrend.source'] = "SFF Cotrend"
+
+    #Enforce contract
+    clip['cotrend.flux_frac']
+    return clip
+
+@task.task
+def extractLightcurveFromTpfTask(clip):
+    from dave.tpf2lc.tpf2lc import optimalAperture
+    time = clip['serve.time']
+    fluxcube = clip['serve.cube']
+    data = clip['serve.socData']
+    socflux = data[:,'SAP_FLUX']
+    numInitialCadencesToIgnore = clip['config.numInitialCadencesToIgnore']
+    flagValues = clip.get('serve.flags', data[:, 'SAP_QUALITY'])
+
+    #Convert flags to a boolean, and flag other bad data
+    mask = kplrfits.getMaskForBadK2Data()
+    flags = (flagValues & mask).astype(bool)
+    flags |= ~np.isfinite(time)
+    flags |= ~np.isfinite(socflux)
+    flags[socflux<1] = True
+    flags[:numInitialCadencesToIgnore] = True
+
+    newtime, flux, xbar, ybar, _, _ = optimalAperture(time[~flags], fluxcube[~flags], flags[~flags], 
+        qual_cut=False,
+        bg_cut=4)
+
+    newY = socflux.copy()
+    newXbar = np.zeros_like(socflux)
+    newYbar = np.zeros_like(socflux)
+    newY[~flags] = flux
+    newXbar[~flags] = xbar
+    newYbar[~flags] = ybar
+
+    #Placeholder. Use the SOC PA data for the lightcurve
+    out = dict()
+    out['rawLightcurve'] = newY
+    clip['extract'] = out
+    clip['extract.source'] = "Labeled Extraction Pipeline"
+    clip['extract.flags'] = flags
+    clip['extract.centroid_col'] = newXbar 
+    clip['extract.centroid_row'] = newYbar 
+
+    #Enforce contract
+    clip['extract.rawLightcurve']
+    clip['extract.flags']
+    return clip

@@ -18,20 +18,22 @@ import numpy as np
 import dave.pipeline.clipboard as dpc
 import dave.pipeline.fergalmain as dpf
 import dave.pipeline.exporter as exporter
-import numpy as np
+import dave.pipeline.gather as gather
 
 from glob import glob
+from join import join
 
-
-def loadKeesConfig():
+def loadSoConfig():
     cfg = dpf.loadMyConfiguration()
     cfg['debug'] = False
-    cfg['campaign'] = 5
+    cfg['campaign'] = 6
     cfg['taskList'][-1] = "dpp.saveClip"  #Save all clips
-#    cfg['taskList'].insert(9, "dpp.lppMetricTask") #Not in parallel
-    cfg['clipSavePath'] = "./clips"
+    cfg['clipSavePath'] = "./c5BlsClips"
+
 
     cfg['minSnrForDetection'] = 3
+    cfg['blsMinPeriod'] = 0.1
+    cfg['blsMaxPeriod'] = 4
     return cfg
 
 
@@ -40,7 +42,7 @@ def main():
     epicList = epicList[:]
 
     cfg = loadKeesConfig()
-    dpf.runAll(dpf.runOne, epicList, cfg)
+    dpf.runAll(dpf.runOne, epicList[:], cfg)
 
 
 #    for epic in epicList:
@@ -81,6 +83,7 @@ def getPcList():
             print filename, clip.exception
     return pcList
 
+
 def writeTable(pcList):
     for fn in pcList:
         clip = dpc.loadClipboard(fn)
@@ -95,17 +98,65 @@ def display(pcList):
         print i, pc
         clip = dpc.loadClipboard(pc)
         clip = pl.serveTask(clip)
-
-        mp.figure(1)
-        mp.clf()
-        dpp.plotData(clip)
-
-        mp.figure(2)
-        mp.clf()
-        cb.compareFits(clip)
+        displayOne(clip)
 
         mp.pause(1)
         raw_input("Press ENTER to continue")
+
+
+def displayOne(clip):
+    mp.figure(1)
+    mp.clf()
+    dpp.plotData(clip)
+
+    mp.figure(2)
+    mp.clf()
+    cb.compareFits(clip)
+
+
+def blsSummaryPlot(clipList, num=None):
+    mags = np.loadtxt("kees-c5.mags", delimiter="|")
+    nPad = mags.shape[1]
+
+#    epic, blsArray = gather.gatherValue(clipList, 'bls.convolved_bls')
+    epic, blsArray = gather.gatherFunction(clipList, getBls)
+    #Strip out occasional bls spectrum with non standard length
+    lengths = np.array(map(lambda x: len(x), blsArray))
+    typicalLength = int(np.median(lengths))
+    idx = lengths == typicalLength
+
+    epic = np.array(epic)[idx]
+    blsArray = np.array(blsArray)[idx]
+    obj = np.column_stack([epic, blsArray])
+
+
+    obj2 = join(mags, 0, None, obj, 0, None, dtype=object)
+    nPad += 1
+#    print obj2.shape
+
+    magCol = 3
+    idx = np.argsort(obj2[:, magCol])
+    obj2 = obj2[idx]
+
+    mag = obj2[:,magCol]
+    blsArray = np.vstack(obj2[:, -1])
+    print blsArray.shape
+#    return obj2
+
+    mp.clf()
+    mp.imshow(blsArray, interpolation="nearest", origin="bottom",\
+        aspect="auto", cmap=mp.cm.YlGnBu_r)
+    mp.colorbar()
+    return blsArray
+
+
+import dave.fileio.kplrfits as kf
+def getBls(clip):
+    bls = clip['bls.convolved_bls']
+    filt = kf.medianSubtract1d(bls, 100)
+    return filt
+
+
 
 if __name__ == "__main__":
     main()

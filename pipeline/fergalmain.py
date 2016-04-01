@@ -2,14 +2,13 @@
 """
 This is a template top level script.
 
-Please don't edit this file. Instead, copy it to
-youname_main.py, then run and edit that file.
 
 """
 
 import dave.pipeline.pipeline as dpp
 import dave.pipeline.clipboard as clipboard
 
+import gc
 
 def main():
     """A bare bones main program"""
@@ -35,7 +34,7 @@ def loadMyConfiguration():
     tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
         dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
         dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask dpp.modshiftTask
-        dpp.measureDiffImgCentroidsTask dpp.dispositionTask
+        dpp.lppMetricTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveClip""".split()
 
 #    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
@@ -65,7 +64,7 @@ def runAll(func, iterable, config):
     ----------
     func
 	(A function) The top level function, e.g runOne(), below
-
+1
     iterable
 	(list, array, etc.) A list of values to operate on.
 
@@ -81,12 +80,12 @@ def runAll(func, iterable, config):
     count = multiprocessing.cpu_count()-1
 
     with contextlib.closing(pool.Pool(count)) as p:
-        out = parmap.map(func, iterable, config, pool=p, parallel=parallel)
+        out = parmap.map(func, iterable, config, pool=p, parallel=parallel, chunksize=5)
 
     return out
 
 
-def runOne(k2id, config):
+def runOne(k2id, config, returnClip=False):
     """Run the pipeline on a single target.
 
     Inputs:
@@ -124,8 +123,15 @@ def runOne(k2id, config):
         f = eval(t)
         clip = f(clip)
 
-    return clip
+    gc.collect()
 
+    import psutil
+    import os
+    p = psutil.Process(os.getpid())
+    print "open files:", p.open_files()
+    clip['open_files'] = p.open_files()
+    if returnClip:
+        return clip
 
 
 

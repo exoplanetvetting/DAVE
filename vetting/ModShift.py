@@ -38,6 +38,10 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
       The significance of the positive event assuming white noise
     mod_sig_oe
       The significance of the odd-even metric
+    mod_dmm
+      The ratio of the individual depths's median and mean values.
+    mod_shape
+      The shape metric.
     mod_sig_fa1
       The False Alarm threshold assuming 20,000 objects evaluated
     mod_sig_fa2
@@ -73,14 +77,14 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
     # Write data to a tempoary file so it can be read by model-shift
     # compiled C code. mkstemp ensures the file is written to a random
     # location so the code can be run in parallel.
-    tmpFilename = tempfile.mkstemp(prefix="modshift-%s" %(objectname))[1]
+    fpNum, tmpFilename = tempfile.mkstemp(prefix="modshift-%s" %(objectname))
     numpy.savetxt(tmpFilename, numpy.c_[time,flux,model])
 
     # Run modshift, and return the output
     #Python 2's subprocess module does not easily support timeouts, so
     #instead we use the shell's version
     #Insert rant here asking why subprocess doesn't have a timeout when it's
-    #the complicated module that was supposed to communication better.
+    #the complicated module that was supposed to handle communication better.
     path = getModShiftDir()
     cmd = ["timeout", "%i" %(timeout_sec),  "%s/modshift" %(path), \
        tmpFilename, plotname, objectname, str(period), str(epoch)]
@@ -88,33 +92,40 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
     try:
         modshiftcmdout = check_output(cmd)
     except CalledProcessError, e:
+        os.close(fpNum)
+        os.remove(tmpFilename)
+
         #The called process error message isn't very helpful
         msg = "FAIL: modshift returned error: %s" %(e.output)
         raise IOError(msg)
 
 
     # Delete the input text file
+    os.close(fpNum)
     os.remove(tmpFilename)
 
     # Read the modshift output back in to variables
     info = modshiftcmdout.split()
+    del(modshiftcmdout)
     mod_sig_pri = float(info[1])
     mod_sig_sec = float(info[2])
     mod_sig_ter = float(info[3])
     mod_sig_pos = float(info[4])
     mod_sig_oe = float(info[5])
-    mod_sig_fa1 = float(info[6])
-    mod_sig_fa2 = float(info[7])
-    mod_Fred    = float(info[8])
-    mod_ph_pri  = float(info[9])
-    mod_ph_sec  = float(info[10])
-    mod_ph_ter  = float(info[11])
-    mod_ph_pos  = float(info[12])
-    mod_secdepth = float(info[13])
-    mod_secdeptherr = float(info[14])
+    mod_dmm = float(info[6])
+    mod_shape = float(info[7])
+    mod_sig_fa1 = float(info[8])
+    mod_sig_fa2 = float(info[9])
+    mod_Fred    = float(info[10])
+    mod_ph_pri  = float(info[11])
+    mod_ph_sec  = float(info[12])
+    mod_ph_ter  = float(info[13])
+    mod_ph_pos  = float(info[14])
+    mod_secdepth = float(info[15])
+    mod_secdeptherr = float(info[16])
 
 
-    return {'mod_sig_pri':mod_sig_pri, 'mod_sig_sec':mod_sig_sec, 'mod_sig_ter':mod_sig_ter, 'mod_sig_pos':mod_sig_pos, 'mod_sig_oe':mod_sig_oe, 'mod_sig_fa1':mod_sig_fa1, 'mod_sig_fa2':mod_sig_fa2, 'mod_Fred':mod_Fred, 'mod_ph_pri':mod_ph_pri, 'mod_ph_sec':mod_ph_sec, 'mod_ph_ter':mod_ph_ter, 'mod_ph_pos':mod_ph_pos, 'mod_secdepth':mod_secdepth, 'mod_secdeptherr':mod_secdeptherr}
+    return {'mod_sig_pri':mod_sig_pri, 'mod_sig_sec':mod_sig_sec, 'mod_sig_ter':mod_sig_ter, 'mod_sig_pos':mod_sig_pos, 'mod_sig_oe':mod_sig_oe, 'mod_dmm':mod_dmm, 'mod_shape':mod_shape, 'mod_sig_fa1':mod_sig_fa1, 'mod_sig_fa2':mod_sig_fa2, 'mod_Fred':mod_Fred, 'mod_ph_pri':mod_ph_pri, 'mod_ph_sec':mod_ph_sec, 'mod_ph_ter':mod_ph_ter, 'mod_ph_pos':mod_ph_pos, 'mod_secdepth':mod_secdepth, 'mod_secdeptherr':mod_secdeptherr}
 
 
 
