@@ -7,6 +7,21 @@ import pyfits
 __version__ = "$Id: mastio.py 1780 2014-08-27 16:36:11Z fmullall $"
 __URL__ = "$URL: svn+ssh://flux/home/fmullall/svn/kepler/py/mastio.py $"
 
+"""
+
+TODO
+
+K2Archive should be treated as a subclass of KeplerArchive. MastArchive.getLocalDir()
+should be a method of KeplerArchive()
+
+K2Archive.getFile() should be removed.
+KeplerArchive.getFilename should take a "prefix" (== "kplr" for Kepler) from self.
+
+so KeplerArchive.prefix = "kplr"
+K2Archive.prefix = "ktwo"
+
+MastArchive.remote[Flux/Tpf]Path should be arguments to KeplerArchive()
+"""
 
 class MastArchive():
     """Base class for queries of the MAST Kepler and K2 archives.
@@ -490,41 +505,101 @@ class K2Archive(MastArchive):
         return url
 
 
-#
-class SocNfsArchive(K2Archive):
-    def __init__(self, path, localDir=None):
-        """Get data from the the SOC NFS directories.
+class LocalK2Archive(K2Archive):
+    def __init__(self, llcPath=".", lpdPath=None, slcPath=None, spdPath=None):
+        """Get data from the local directories.
 
-        Data is stored on the SOC NFS drive before export to MAST.
-        If we need to vet data before delivery, we can access it
-        with this Archive class. Note this only works if you
-        are behind the SOC firewall and have access to their disks.
-
-        Inputs:
+        A special case class to deal with a situation where data is available on
+        a local disk in a directory structure different than what a K2Archive()
+        wants to use. Each file type (long cadence, short cadence, flux/TPF file)
+        is stored in its own directory.
+        
+        Optional Inputs:
         -----------
-        path
-            (str) Path to data. The path you specify should have
-            subdirectories of cad_targ_soc/ and lcv/
+        llcPath
+            (string) Location of long cadence flux files
+        lpdPath
+            (string) Location of long cadence TPF files. Defaults to llcPath
+        slcPath
+            (string) Location of short cadence flux files. Defaults to llcPath
+        spdPath
+            (string) Location of short  cadence TPF files. Defaults to **lpdPath**
+
 
         Notes:
-        ----------
-        * Only works behind the soc firewall
-        * Fits files are only stored on disk for a brief time before
-          delivery to MAST. Do not expect this data to stick around
-          for more than a few weeks.
+        --------
+        Does not cache files, nor does it seek to download the data if its missing.
+       """
 
-      """
-        if localDir is None:
-            self.localDir = os.path.join(os.environ['HOME'], '.mastio', 'k2')
+        #By setting remoteServer to a nonsensical value, we ensure we never
+        #succeed in downloading any data
+        K2Archive.__init__(self, remoteServer="www.example.com")
+        self.llcPath = llcPath
 
-        self.remoteServer = "file://"
-        self.remoteFluxPath = os.path.join(path, 'lcv')
-        self.remoteTpfPath = os.path.join(path, 'cad_targ_soc')
+        if lpdPath is None:
+            lpdPath = self.llcPath
+        self.lpdPath = lpdPath
 
-    def makeRemoteUrl(self, remotePath, k2id, campaign, filename, compressed):
+        if slcPath is None:
+            slcPath = self.llcPath
+        self.slcPath = slcPath
 
-        url = "%s/%s/%s" %(self.remoteServer, remotePath, filename)
-        if compressed:
-            url = url + '.gz'
-        print url
-        return url
+        if spdPath is None:
+            spdPath = self.lpdPath
+        self.spdPath = spdPath
+
+
+    def getFile(self, kepid, campaign, isFluxFile, isShortCadence=False, *args, **kwargs):
+        """Get a file of a given type for a given kepid/campaign[/month]
+
+        Inputs:
+        ---------
+        kepid   (int)
+            Kepid of target of interest
+        campaign (int)
+            campaign of interest
+        isFluxFile (bool)
+            If True, a lightcurve file is returned, otherwise a target
+            pixel file is returned
+
+        Optional Inputs:
+        ----------------
+        isShortCadence (bool)
+            if True, get short cadence data
+
+        All other optional inputs are passed to ``pyfits.getdata()``
+
+        Returns:
+        -------------
+        A FITs object, and possibly more, depending on the optional
+        arguments to ``pyfits.getdata``
+
+        Notes:
+        -------------
+        Overrides the base class because the local URL depends on the file type.
+        """
+
+        filename = self.getFilename(kepid, campaign, isFluxFile, isShortCadence)
+
+        #Compute local url
+        if not isShortCadence:
+            #Long cadence
+            if isFluxFile:
+                localUrl = self.llcPath
+            else:
+                localUrl = self.lpdPath
+        else:
+            if isFluxFile:
+                localUrl = self.slcPath
+            else:
+                localUrl = self.spdPath
+        localUrl = os.path.join(localUrl, filename)
+    
+        compressedOnServer = True
+        if isFluxFile:
+            compressedOnServer = False
+            
+        remoteUrl = "NoUrlForLocalArchiveClass"
+        return self.getData(localUrl, remoteUrl, compressedOnServer, *args, **kwargs)
+
+
