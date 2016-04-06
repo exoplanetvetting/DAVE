@@ -11,7 +11,7 @@ This code is depricated, see pipeline.multiPagePlot
 
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
-import dave.susanplay.sueplotting as sp
+import dave.pipeline.plotting as pp
 import dave.diffimg.plot as dip 
  
 def plot_all_multipages(outfile,clip,intext):
@@ -33,19 +33,19 @@ def plot_all_multipages(outfile,clip,intext):
     
     fig = plt.figure(figsize=figuresize, dpi=dotperinch)
     # Plot whatever you wish to plot
-    sp.summaryPlot(clip)
+    pp.summaryPlot1(clip)
     # Done with the page
     pdf_pages.savefig(fig)
     plt.close()
  
     fig = plt.figure(figsize=figuresize, dpi=dotperinch)
-    sp.indivPlot(clip,6)    
+    pp.indivTransitPlot(clip,7)    
     pdf_pages.savefig(fig)
     plt.close()
 
     try:
         fig = plt.figure(figsize=figuresize, dpi=dotperinch)
-        sp.blsPlot(clip)    
+        pp.blsPlot(clip)    
         pdf_pages.savefig(fig)
         plt.close()
     except AttributeError:
