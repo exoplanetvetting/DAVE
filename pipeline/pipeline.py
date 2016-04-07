@@ -943,6 +943,7 @@ def getOutputBasename(basePath, epic):
 
     return os.path.join(path, epicStr)
 
+
 @task.task
 def cotrendSffDataTask(clip):
     """Produce a cotrended lightcurve in units of fractional amplitude"""
@@ -951,12 +952,12 @@ def cotrendSffDataTask(clip):
     time = clip['serve.time']
     flags = clip['extract.flags']
     xbar = clip['extract.centroid_col']
-    ybar = clip['extract.centroid_row'] 
+    ybar = clip['extract.centroid_row']
     rawflux = clip['extract.rawLightcurve']
 
     outcorflux, outcorflatflux, outcorrection, detrendFlags = detrendThat(
                 time[~flags], rawflux[~flags], xbar[~flags], ybar[~flags],
-                ferr=None, 
+                ferr=None,
                 qflags=None,
                 inpflag=None,
                 ap=4.0)
@@ -981,10 +982,12 @@ def cotrendSffDataTask(clip):
     clip['cotrend.flags'] = flags
     clip['cotrend.dcOffset'] = dcOffset
     clip['cotrend.source'] = "SFF Cotrend"
+    clip['cotrend.correction'] = newCorr
 
     #Enforce contract
     clip['cotrend.flux_frac']
     return clip
+
 
 @task.task
 def extractLightcurveFromTpfTask(clip):
@@ -1004,7 +1007,7 @@ def extractLightcurveFromTpfTask(clip):
     flags[socflux<1] = True
     flags[:numInitialCadencesToIgnore] = True
 
-    newtime, flux, xbar, ybar, _, _ = optimalAperture(time[~flags], fluxcube[~flags], flags[~flags], 
+    newtime, flux, xbar, ybar, _, _ = optimalAperture(time[~flags], fluxcube[~flags], flags[~flags],
         qual_cut=False,
         bg_cut=4)
 
@@ -1021,8 +1024,8 @@ def extractLightcurveFromTpfTask(clip):
     clip['extract'] = out
     clip['extract.source'] = "Labeled Extraction Pipeline"
     clip['extract.flags'] = flags
-    clip['extract.centroid_col'] = newXbar 
-    clip['extract.centroid_row'] = newYbar 
+    clip['extract.centroid_col'] = newXbar
+    clip['extract.centroid_row'] = newYbar
 
     #Enforce contract
     clip['extract.rawLightcurve']
