@@ -184,9 +184,26 @@ def serveTask(clip):
     campaign = clip['config.campaign']
     storeDir = clip['config.dataStorePath']
 
-    clip['serve'] = loadTpfAndLc(k2id, campaign, storeDir)
+    ar = mastio.K2Archive(storeDir)
+    clip['serve'] = loadTpfAndLc(k2id, campaign, ar)
 
     #Enforce contract. (Make sure expected keys are in place)
+    clip['serve.time']
+    clip['serve.cube']
+    clip['serve.socData']
+    clip['serve.tpfHeader']
+    return clip
+
+@task.task
+def serveLocalTask(clip):
+    k2id= clip['value']
+    campaign = clip['config.campaign']
+    lcpath="/soc/nfs/production-nfs2/c7/exports/archive_ksop2554/lcv/"
+    tppath="/soc/nfs/production-nfs2/c7/exports/archive_ksop2554/cad_targ_soc/"
+    
+    ar = mastio.LocalK2Archive(llcPath=lcpath,lpdPath=tppath)
+    clip['serve'] = loadTpfAndLc(k2id,campaign,ar)
+    
     clip['serve.time']
     clip['serve.cube']
     clip['serve.socData']
@@ -873,8 +890,8 @@ def saveClip(clip):
 
     return clip
 
-def loadTpfAndLc(k2id, campaign, storeDir):
-    ar = mastio.K2Archive(storeDir)
+def loadTpfAndLc(k2id, campaign, ar):
+#    ar = mastio.K2Archive(storeDir)  #Removed by SEM to generalize this function
 
     out = dict()
     fits, hdr = ar.getLongTpf(k2id, campaign, header=True, mmap=False)
@@ -899,7 +916,6 @@ def loadTpfAndLc(k2id, campaign, storeDir):
     out['time'] = fits['TIME'].copy()
     out['flags'] = fits['SAP_QUALITY'].copy()
     return out
-
 
 
 
@@ -1031,3 +1047,4 @@ def extractLightcurveFromTpfTask(clip):
     clip['extract.rawLightcurve']
     clip['extract.flags']
     return clip
+

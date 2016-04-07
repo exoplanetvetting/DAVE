@@ -140,7 +140,7 @@ def summaryPlot1(output):
     epicid=str(output['value'])
     trapsnr=output['trapFit.snr']
     trapper=output['trapFit.period_days']
-    trapdur=output['trapFit.duration_hrs']
+    trapdur=output['trapFit.duration_hrs']/24.0
     trapdepth=output['trapFit.depth_frac']*1.0e6;
     centroids =output['diffImg.centroid_timeseries']
 
@@ -166,8 +166,8 @@ def summaryPlot1(output):
 
     plt.subplot(224)
     plotFolded(output)
-    if trapdur*3 < trapper:
-        plt.xlim(trapper*.25-trapdur*1.5,trapper*.25+trapdur*1.5)
+    if trapdur*1.5 < trapper:
+        plt.xlim(trapper*.25-trapdur*1.9,trapper*.25+trapdur*1.9)
     else:
         plt.xlim(trapper*.15, trapper*.35)
 

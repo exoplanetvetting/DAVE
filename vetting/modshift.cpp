@@ -231,8 +231,8 @@ results.sigoe = fabs(results.odddepth - results.evndepth)/sqrt(pow(results.oddde
 
 // ofstream tmplogout;
 // tmplogout.open("jeff");
-
-
+// 
+// 
 // tmplogout << tstart << " " << tend << " " << endl;
 
 int ninda,nindb;
@@ -299,7 +299,11 @@ epoch = epochorig;  // Load original epoch
 DO_SHIFT();  // Run shift
 
 
+// ofstream tmplogout;
+// tmplogout.open("jeff");
 
+
+// tmplogout << tstart << " " << tend << " " << endl;
 
 /////// Test 2
 
@@ -417,7 +421,7 @@ void DO_SHIFT()
   int sw1,sw2,ntmp;
   int midti,startti,endti;  // Index for middle of transit point, start of transit, and end of transit
   double widthfac;
-  double width,halfwidth,tenthwidth;
+  double width,halfwidth,detrenddur;
   double nintrans;
   double med,std,sigreject,mad;
   double tmpsum1,tmpsum2;
@@ -471,14 +475,27 @@ void DO_SHIFT()
   j=0;
   for(i=0;i<ndat;i++)
     if(data[i].model!=baseflux)
-      j=1;
+      j++;
+    
+// ofstream tmplogout;
+// tmplogout.open("jeff");
+// tmplogout << "j = " << j << endl;
+// tmplogout.close();
+    
   if(j==0)
     {
     cout << "Model is all flat! Exiting..." << endl;
     exit(1);
     }
+  if(j==1)
+    {
+    cout << "Only one point in-transit. Exiting..." << endl;
+    exit(1);
+    }
+ 
 
  
+
 //   outfile.open("tmpout");
 //   outfile << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
     
@@ -503,7 +520,7 @@ void DO_SHIFT()
 
 
   if(tstart<0)  // Make width symmetrical. Also prevents glitches on cases if no in-transit data at positive phase.
-    tend = fabs(tstart); 
+    tend = fabs(tstart);
   else  // If tstart is positive then data or fit is not right, or no in-transit data points before phase 0.0, so go off the end time
     tstart = -1.0*tend;
 
@@ -520,7 +537,15 @@ void DO_SHIFT()
 
 
   width = tend-tstart;  // Record Width
-  tenthwidth = 0.1*width;
+//   detrenddur = 0.1*width;  // Normally detrend at one tenth of a tranist duration
+//   if(detrenddur < 0.02043981)
+    detrenddur = 0.02043981;  // Set detrending window to one cadence duration
+  
+  ofstream tmplogout;
+tmplogout.open("jeff");
+tmplogout << width << " " << detrenddur << endl;
+tmplogout.close();
+  
   for(l=0;l<1;l++)  // Number of outlier passes - ONLY NEED ONE WHEN USING MAD - JUST LEAVING LOOP IN CASE I EVER WANT TO CHANGE MY MIND
     {
     for(i=0;i<ndat;i++)
@@ -542,7 +567,7 @@ void DO_SHIFT()
       k=0;
       sw1=0;
       for(j=0;j<ndat;j++)
-        if(fabs(data[i].phase-data[j].phase) < tenthwidth)  // look at points within a transit duration
+        if(fabs(data[i].phase-data[j].phase) < detrenddur)  // look at points within a tenth of a transit duration
           {
           tmpdob1[k]=data[j].resid;
           k++;
@@ -1198,11 +1223,11 @@ void PLOT()
   // syscmd = "cp outfile1-" + basename + ".dat " + basename + ".cln";  // Make clean file for use later - COMMENTING OUT - NOT NEEDED AT PRESENT
   // system(syscmd.c_str());
   syscmd = "rm " + basename + "-outfile*.dat";
-  system(syscmd.c_str());
+//   system(syscmd.c_str());
 //   syscmd = "rm " + basename + "-bin*dat";
 //   system(syscmd.c_str());
   syscmd = "rm " + basename + "-ModShift.gnu";
-  system(syscmd.c_str());
+//   system(syscmd.c_str());
   }
   
 //////////////////////////////////////////////////////////////////////////////
