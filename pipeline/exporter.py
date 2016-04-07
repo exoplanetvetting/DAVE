@@ -9,8 +9,6 @@ import dave.pipeline.multiPagePlot as mpp
 import dave.pipeline.pipeline as dpp
 import dave.stellar.readStellarTable as stel
 import os
-import dave.pipeline.plotting as pp
-import dave.diffimg.plot as dip 
 from pdb import set_trace as db
 #%%
 def createExportString(clip, delimiter=" ", badValue="nan"):
@@ -70,7 +68,7 @@ def createOutputs(clip):
     and appends results to a table (logTableFile)
     """
     #Some of this needs to not be hardwired here.  This is ugly.
-    clip['config']['exportLoc']='/soc/nfs/so-nfs/dave/c7-pdc'
+    clip['config']['exportLoc']='/soc/nfs/so-nfs/dave/c7-pdc/'
     clip['config']['onepageBasename']=clip['config']['exportLoc']
     clip['config']['dataStorePath']='/home/smullall/Science/datastore'
     epic=str(int(clip.value))
@@ -78,9 +76,9 @@ def createOutputs(clip):
     #print clip.serve
 
     try:
-        clip.serve
+        clip.serve.time
     except AttributeError:
-        clip=dpp.serveTask(clip)    
+        clip=dpp.serveLocalTask(clip)    
         print 'hi serve'        
         print clip.serve
     try:
@@ -92,7 +90,7 @@ def createOutputs(clip):
     cmd=""
 
     try:
-        if True :
+        if clip.disposition.isSignificantEvent:
             clip['config']['stellarPar']=['Mass','Rad','Teff','dis','rho','prov','logg'] 
             clip['config']['stellarFile']='/home/smullall/Science/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt' 
 

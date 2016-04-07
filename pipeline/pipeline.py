@@ -1045,9 +1045,3 @@ def extractLightcurveFromTpfTask(clip):
     clip['extract.flags']
     return clip
 
-import dave.pipeline.exporter as exporter
-@task.task
-def runExporterTask(clip):
-    exporter.createOutputs(clip)
-    
-    return clip
