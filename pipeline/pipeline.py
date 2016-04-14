@@ -224,7 +224,7 @@ def extractLightcurveTask(clip):
     flags = (flagValues & mask).astype(bool)
     flags |= ~np.isfinite(time)
     flags |= ~np.isfinite(flux)
-    flags[flux<1] = True
+    #flags[flux<1] = True
     flags[:numInitialCadencesToIgnore] = True
 
     #Placeholder. Use the SOC PA data for the lightcurve
@@ -306,10 +306,9 @@ def detrendDataTask(clip):
     for cad in singleOutlierIndices:
         fillval = detrendedFlux[cad-3:cad+3]
         detrendedFlux[cad] = flux[cad] - np.mean(fillval[fillval != 0])
-
-
     outlierflag = np.zeros_like(flux,dtype=bool)
     outlierflag[singleOutlierIndices] = 1
+    outlierflag[detrendedFlux<-1] = 1  #Added by SET so TrapFit will work
 
     clip['detrend'] = dict()
     clip['detrend.flux_frac'] = detrendedFlux
@@ -431,7 +430,8 @@ def fblsTask(clip):
     minPeriod = clip['config.blsMinPeriod']
     maxPeriod = clip['config.blsMaxPeriod']
 
-    durations = np.array([ 2,4,6,8, 10, 12])/24.
+#    durations = np.array([ 2,4,6,8, 10, 12])/24.
+    durations = np.array([ 4,6,8, 10, 12])/24.
     idx = flags == 0
     blsObj = fbls.BlsSearch(time_days[idx], flux_norm[idx], \
         [minPeriod, maxPeriod], durations)
@@ -572,7 +572,7 @@ def trapezoidFitTask(clip):
 
 
 
-import dave.trapezoidFit.trapfit as trapFit
+#import dave.trapezoidFit.trapfit as trapFit
 import dave.vetting.ModShift as ModShift
 @task.task
 def modshiftTask(clip):
@@ -582,9 +582,9 @@ def modshiftTask(clip):
     fl = clip['detrend.flags']
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
-    dur_hrs =  clip['trapFit.duration_hrs']
-    ingress_hrs = clip['trapFit.ingress_hrs']
-    depth_ppm = 1e6*clip['trapFit.depth_frac']
+    #dur_hrs =  clip['trapFit.duration_hrs']
+    #ingress_hrs = clip['trapFit.ingress_hrs']
+    #depth_ppm = 1e6*clip['trapFit.depth_frac']
 
     epic = clip['value']
     basePath = clip['config.modshiftBasename']
@@ -603,7 +603,7 @@ def modshiftTask(clip):
     model = clip['trapFit.bestFitModel']
     out = ModShift.runModShift(time[~fl], flux[~fl], model[~fl], \
         basename, objectname, period_days, epoch_bkjd)
-
+    
     clip['modshift'] = out
 
     #Enforce contract
