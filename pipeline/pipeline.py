@@ -200,10 +200,10 @@ def serveLocalTask(clip):
     campaign = clip['config.campaign']
     lcpath="/soc/nfs/production-nfs2/c7/exports/archive_ksop2554/lcv/"
     tppath="/soc/nfs/production-nfs2/c7/exports/archive_ksop2554/cad_targ_soc/"
-    
+
     ar = mastio.LocalK2Archive(llcPath=lcpath,lpdPath=tppath)
     clip['serve'] = loadTpfAndLc(k2id,campaign,ar)
-    
+
     clip['serve.time']
     clip['serve.cube']
     clip['serve.socData']
@@ -230,6 +230,7 @@ def extractLightcurveTask(clip):
     #Placeholder. Use the SOC PA data for the lightcurve
     out = dict()
     out['rawLightcurve'] = flux
+    out['time'] = time
     clip['extract'] = out
     clip['extract.source'] = "SOC PA Pipeline"
     clip['extract.flags'] = flags
