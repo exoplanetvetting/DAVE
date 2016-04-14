@@ -97,9 +97,11 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
 #    tce = clip['eventList'][0]
     tce = clip  #In prepartion for the multi-search pipeline
     flux = clip['detrend.flux_frac']
-    period = tce['trapFit.period_days']
-    epoch = tce['trapFit.epoch_bkjd']
-    model = tce['trapFit.bestFitModel']
+#    period = tce['trapFit.period_days']
+#    epoch = tce['trapFit.epoch_bkjd']
+#    model = tce['trapFit.bestFitModel']
+    period = tce['bls.period']
+    epoch = tce['bls.epoch']
 
     if doublePeriod:
         period *= 2
@@ -237,7 +239,7 @@ def indivTransitPlot(clip,ndur):
     desat=2**5
     therms=np.bitwise_and(qflag,thr+safe+desat) != 0;
     print len(therms[therms])
-    
+
     plt.clf()
     #Plot first six
     c=1;
