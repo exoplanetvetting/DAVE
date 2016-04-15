@@ -175,14 +175,24 @@ def run_C0_detrend(time, lc, xbar, ybar, skip, cadstep=200):
 
     return outflux, outcorr, thr_cad
 
-import untrendy
+def median_detrend(x, y, dt=4.):
+    """
+    De-trend a light curve using a windowed median.
+    """
+    x, y = np.atleast_1d(x), np.atleast_1d(y)
+    assert len(x) == len(y)
+    r = np.empty(len(y))
+    for i, t in enumerate(x):
+        inds = (x >= t - 0.5 * dt) * (x <= t + 0.5 * dt)
+        r[i] = np.median(y[inds])
+    return r
 
 
 def medfilt(time, flux, window=10.0):
     """
     window in days
     """
-    flux = flux / untrendy.median(
+    flux = flux / median_detrend(
         time,flux,dt=window)
     return flux
 

@@ -97,9 +97,11 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
 #    tce = clip['eventList'][0]
     tce = clip  #In prepartion for the multi-search pipeline
     flux = clip['detrend.flux_frac']
-    period = tce['trapFit.period_days']
-    epoch = tce['trapFit.epoch_bkjd']
-    model = tce['trapFit.bestFitModel']
+#    period = tce['trapFit.period_days']
+#    epoch = tce['trapFit.epoch_bkjd']
+#    model = tce['trapFit.bestFitModel']
+    period = tce['bls.period']
+    epoch = tce['bls.epoch']
 
     if doublePeriod:
         period *= 2
@@ -138,7 +140,7 @@ def summaryPlot1(output):
     epicid=str(output['value'])
     trapsnr=output['trapFit.snr']
     trapper=output['trapFit.period_days']
-    trapdur=output['trapFit.duration_hrs']
+    trapdur=output['trapFit.duration_hrs']/24.0
     trapdepth=output['trapFit.depth_frac']*1.0e6;
     centroids =output['diffImg.centroid_timeseries']
 
@@ -164,8 +166,8 @@ def summaryPlot1(output):
 
     plt.subplot(224)
     plotFolded(output)
-    if trapdur*3 < trapper:
-        plt.xlim(trapper*.25-trapdur*1.5,trapper*.25+trapdur*1.5)
+    if trapdur*1.5 < trapper:
+        plt.xlim(trapper*.25-trapdur*1.9,trapper*.25+trapdur*1.9)
     else:
         plt.xlim(trapper*.15, trapper*.35)
 
@@ -237,7 +239,7 @@ def indivTransitPlot(clip,ndur):
     desat=2**5
     therms=np.bitwise_and(qflag,thr+safe+desat) != 0;
     print len(therms[therms])
-    
+
     plt.clf()
     #Plot first six
     c=1;

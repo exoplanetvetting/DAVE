@@ -184,9 +184,26 @@ def serveTask(clip):
     campaign = clip['config.campaign']
     storeDir = clip['config.dataStorePath']
 
-    clip['serve'] = loadTpfAndLc(k2id, campaign, storeDir)
+    ar = mastio.K2Archive(storeDir)
+    clip['serve'] = loadTpfAndLc(k2id, campaign, ar)
 
     #Enforce contract. (Make sure expected keys are in place)
+    clip['serve.time']
+    clip['serve.cube']
+    clip['serve.socData']
+    clip['serve.tpfHeader']
+    return clip
+
+@task.task
+def serveLocalTask(clip):
+    k2id= clip['value']
+    campaign = clip['config.campaign']
+    lcpath="/soc/nfs/production-nfs2/c7/exports/archive_ksop2554/lcv/"
+    tppath="/soc/nfs/production-nfs2/c7/exports/archive_ksop2554/cad_targ_soc/"
+
+    ar = mastio.LocalK2Archive(llcPath=lcpath,lpdPath=tppath)
+    clip['serve'] = loadTpfAndLc(k2id,campaign,ar)
+
     clip['serve.time']
     clip['serve.cube']
     clip['serve.socData']
@@ -207,12 +224,13 @@ def extractLightcurveTask(clip):
     flags = (flagValues & mask).astype(bool)
     flags |= ~np.isfinite(time)
     flags |= ~np.isfinite(flux)
-    flags[flux<1] = True
+    #flags[flux<1] = True
     flags[:numInitialCadencesToIgnore] = True
 
     #Placeholder. Use the SOC PA data for the lightcurve
     out = dict()
     out['rawLightcurve'] = flux
+    out['time'] = time
     clip['extract'] = out
     clip['extract.source'] = "SOC PA Pipeline"
     clip['extract.flags'] = flags
@@ -289,10 +307,9 @@ def detrendDataTask(clip):
     for cad in singleOutlierIndices:
         fillval = detrendedFlux[cad-3:cad+3]
         detrendedFlux[cad] = flux[cad] - np.mean(fillval[fillval != 0])
-
-
     outlierflag = np.zeros_like(flux,dtype=bool)
     outlierflag[singleOutlierIndices] = 1
+    outlierflag[detrendedFlux<-1] = 1  #Added by SET so TrapFit will work
 
     clip['detrend'] = dict()
     clip['detrend.flux_frac'] = detrendedFlux
@@ -414,7 +431,8 @@ def fblsTask(clip):
     minPeriod = clip['config.blsMinPeriod']
     maxPeriod = clip['config.blsMaxPeriod']
 
-    durations = np.array([ 2,4,6,8, 10, 12])/24.
+#    durations = np.array([ 2,4,6,8, 10, 12])/24.
+    durations = np.array([ 4,6,8, 10, 12])/24.
     idx = flags == 0
     blsObj = fbls.BlsSearch(time_days[idx], flux_norm[idx], \
         [minPeriod, maxPeriod], durations)
@@ -555,7 +573,7 @@ def trapezoidFitTask(clip):
 
 
 
-import dave.trapezoidFit.trapfit as trapFit
+#import dave.trapezoidFit.trapfit as trapFit
 import dave.vetting.ModShift as ModShift
 @task.task
 def modshiftTask(clip):
@@ -565,9 +583,9 @@ def modshiftTask(clip):
     fl = clip['detrend.flags']
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
-    dur_hrs =  clip['trapFit.duration_hrs']
-    ingress_hrs = clip['trapFit.ingress_hrs']
-    depth_ppm = 1e6*clip['trapFit.depth_frac']
+    #dur_hrs =  clip['trapFit.duration_hrs']
+    #ingress_hrs = clip['trapFit.ingress_hrs']
+    #depth_ppm = 1e6*clip['trapFit.depth_frac']
 
     epic = clip['value']
     basePath = clip['config.modshiftBasename']
@@ -586,7 +604,7 @@ def modshiftTask(clip):
     model = clip['trapFit.bestFitModel']
     out = ModShift.runModShift(time[~fl], flux[~fl], model[~fl], \
         basename, objectname, period_days, epoch_bkjd)
-
+    
     clip['modshift'] = out
 
     #Enforce contract
@@ -873,8 +891,8 @@ def saveClip(clip):
 
     return clip
 
-def loadTpfAndLc(k2id, campaign, storeDir):
-    ar = mastio.K2Archive(storeDir)
+def loadTpfAndLc(k2id, campaign, ar):
+#    ar = mastio.K2Archive(storeDir)  #Removed by SEM to generalize this function
 
     out = dict()
     fits, hdr = ar.getLongTpf(k2id, campaign, header=True, mmap=False)
@@ -899,7 +917,6 @@ def loadTpfAndLc(k2id, campaign, storeDir):
     out['time'] = fits['TIME'].copy()
     out['flags'] = fits['SAP_QUALITY'].copy()
     return out
-
 
 
 
@@ -943,6 +960,7 @@ def getOutputBasename(basePath, epic):
 
     return os.path.join(path, epicStr)
 
+
 @task.task
 def cotrendSffDataTask(clip):
     """Produce a cotrended lightcurve in units of fractional amplitude"""
@@ -951,12 +969,12 @@ def cotrendSffDataTask(clip):
     time = clip['serve.time']
     flags = clip['extract.flags']
     xbar = clip['extract.centroid_col']
-    ybar = clip['extract.centroid_row'] 
+    ybar = clip['extract.centroid_row']
     rawflux = clip['extract.rawLightcurve']
 
     outcorflux, outcorflatflux, outcorrection, detrendFlags = detrendThat(
                 time[~flags], rawflux[~flags], xbar[~flags], ybar[~flags],
-                ferr=None, 
+                ferr=None,
                 qflags=None,
                 inpflag=None,
                 ap=4.0)
@@ -981,10 +999,12 @@ def cotrendSffDataTask(clip):
     clip['cotrend.flags'] = flags
     clip['cotrend.dcOffset'] = dcOffset
     clip['cotrend.source'] = "SFF Cotrend"
+    clip['cotrend.correction'] = newCorr
 
     #Enforce contract
     clip['cotrend.flux_frac']
     return clip
+
 
 @task.task
 def extractLightcurveFromTpfTask(clip):
@@ -1004,7 +1024,7 @@ def extractLightcurveFromTpfTask(clip):
     flags[socflux<1] = True
     flags[:numInitialCadencesToIgnore] = True
 
-    newtime, flux, xbar, ybar, _, _ = optimalAperture(time[~flags], fluxcube[~flags], flags[~flags], 
+    newtime, flux, xbar, ybar, _, _ = optimalAperture(time[~flags], fluxcube[~flags], flags[~flags],
         qual_cut=False,
         bg_cut=4)
 
@@ -1021,10 +1041,11 @@ def extractLightcurveFromTpfTask(clip):
     clip['extract'] = out
     clip['extract.source'] = "Labeled Extraction Pipeline"
     clip['extract.flags'] = flags
-    clip['extract.centroid_col'] = newXbar 
-    clip['extract.centroid_row'] = newYbar 
+    clip['extract.centroid_col'] = newXbar
+    clip['extract.centroid_row'] = newYbar
 
     #Enforce contract
     clip['extract.rawLightcurve']
     clip['extract.flags']
     return clip
+
