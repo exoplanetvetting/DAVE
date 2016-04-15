@@ -550,10 +550,10 @@ tmplogout.close();*/
 //   if(detrenddur < 0.02043981)
     detrenddur = 0.02043981;  // Set detrending window to one cadence duration
   
-//   ofstream tmplogout;
-// tmplogout.open("jeff");
-// tmplogout << width << " " << detrenddur << endl;
-// tmplogout.close();
+// //   ofstream tmplogout;
+// // tmplogout.open("jeff");
+// // tmplogout << width << " " << detrenddur << endl;
+// // tmplogout.close();
   
   for(l=0;l<1;l++)  // Number of outlier passes - ONLY NEED ONE WHEN USING MAD - JUST LEAVING LOOP IN CASE I EVER WANT TO CHANGE MY MIND
     {
