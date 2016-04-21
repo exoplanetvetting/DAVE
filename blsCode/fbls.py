@@ -325,7 +325,7 @@ def computeBlsForManyPeriods(t, y, durationList, periodList, minNumBinsPerTransi
         raise ValueError("Periods must be > 0")
 
     maxNumBins = minNumBinsPerTransit * max(periodList) / min(durationList)
-    out = np.zeros((len(periodList), len(durationList), maxNumBins))
+    out = np.zeros((len(periodList), len(durationList), int(maxNumBins)))
     dt = t - np.min(t)
 
     for i,period in enumerate(periodList):
