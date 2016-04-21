@@ -21,26 +21,25 @@ def loadSoConfig():
         dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveClip """.split() #dpp.runExporterTask
         
-    sfftasks ="""dpp.checkDirExistTask dpp.serveLocalTask dpp.extractLightcurveTask
-        dpp.computeCentroidsTask dpp.rollPhaseTask 
-        dpp.extractLightcurveFromTpfTask dpp.cotrendSffDataTask
+    sfftasks ="""dpp.checkDirExistTask dpp.serveLocalTask dpp.extractLightcurveFromTpfTask
+        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendSffDataTask
         dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask dpp.lppMetricTask 
         dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveClip """.split()   
         
-    cfg['taskList'] = sfftasks
+    cfg['taskList'] = tasks
     
     #cfg['taskList'][-1] = "dpp.saveClip"  #Save all clips
 #    cfg['taskList'].insert(9, "dpp.lppMetricTask") #Not in parallel
    # cfg['taskList'] = cfg['taskList'][:8]  #Limited set
     
     cfg['minSnrForDetection'] = 5
-    cfg['blsMinPeriod'] = 0.7
-    cfg['blsMaxPeriod'] = 40
+    cfg['blsMinPeriod'] = 0.25
+    cfg['blsMaxPeriod'] = 25
     cfg['maxLppForTransit']= 0.007093282347242814
 
     cfg['keysToIgnoreWhenSaving'] = "serveTask"
-    davePath = "/soc/nfs/so-nfs/dave/c7-sff/"
+    davePath = "/soc/nfs/so-nfs/dave/c7-pdc/"
     cfg['modshiftBasename'] =  davePath
     cfg['onepageBasename']  = davePath
     cfg['clipSavePath'] = davePath
@@ -50,8 +49,8 @@ def loadSoConfig():
 
 
 #%%
-epicList = np.loadtxt("/home/smullall/Science/DAVE/C7/epiclist", usecols=(0,), delimiter=",")
+epicList = np.loadtxt("/home/smullall/Science/DAVE/C7/davelist", usecols=(0,), delimiter=",",comments='#')
 #print epicList
 cfg = loadSoConfig()
 #clip=dpf.runOne(epicList[4],cfg,True)
-dpf.runAll(dpf.runOne, epicList[200:1000], cfg)
+dpf.runAll(dpf.runOne, epicList[0:2530], cfg)

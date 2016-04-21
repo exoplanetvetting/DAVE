@@ -40,9 +40,9 @@ double flat[2*N]; // residual assuming flat baseline
 datastruct inpdata[N];  // Input data for binning
 datastruct bindat[N];   // Output binned data
 
-double convolveddepth[N];
+double convolveddepth[N]={0};
 
-struct resultstruct {double sigpri; double sigsec; double sigter; double sigpos; double sigodd; double sigevn; double sigfa1; double sigfa2; double fred; double prilowtime; double seclowtime; double terlowtime; double sechightime; double depfacsec; double depfacter; double depfacpos; double depsig; double tdepth; double odddepth; double evndepth; double odddeptherr; double evndeptherr; double sigoe; double depthmedmeanrat; double shape;};
+struct resultstruct {double sigpri=0; double sigsec=0; double sigter=0; double sigpos=0; double sigodd=0; double sigevn=0; double sigfa1=1; double sigfa2=1; double fred=1; double prilowtime=0; double seclowtime=0; double terlowtime=0; double sechightime=0; double depfacsec=0; double depfacter=0; double depfacpos=0; double depsig=1; double tdepth=0; double odddepth=0; double evndepth=0; double odddeptherr=1; double evndeptherr=1; double sigoe=0; double depthmedmeanrat=0; double shape=0;};
 resultstruct results;
 
 int ndat,ndatorig;
@@ -169,17 +169,18 @@ for(i=0;i<ndat;i++)  // Phase data
 sort(data,data+ndat,phase_sort);  // Sort data on phase
 
 
-
 i=0;
 while(data[i].phase < 0.25)  // Find data that now have phase less than 0.5 - these are the odd transits
   i++;
 ndat = i;
+
 
 period/=2;  // Set period back to normal
 DO_SHIFT();  // Run shift
 // results.sigodd = results.sigpri;  // Record sigodd
 results.odddepth = results.tdepth;
 results.odddeptherr = results.depsig;
+
 
 //syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-odd.dat";
 syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-odd.dat";
@@ -223,7 +224,8 @@ system(syscmd.c_str());
 
 
 // Compute odd/even sigma
-results.sigoe = fabs(results.odddepth - results.evndepth)/sqrt(pow(results.odddeptherr,2) + pow(results.evndeptherr,2));
+if(results.odddepth!=0 && results.evndepth!=0)
+  results.sigoe = fabs(results.odddepth - results.evndepth)/sqrt(pow(results.odddeptherr,2) + pow(results.evndeptherr,2));
 
 
 
@@ -313,7 +315,9 @@ DO_SHIFT();  // Run shift
 
 // Calculate shape metric
 // results.shape = (MAX(convolveddepth,ndat) - MEDIAN(convolveddepth,ndat)) / (MAX(convolveddepth,ndat) - MIN(convolveddepth,ndat));
-results.shape = MAX(convolveddepth,ndat) / (MAX(convolveddepth,ndat) - MIN(convolveddepth,ndat));   // Same as above assuming a median of 0.0
+
+if(MAX(convolveddepth,ndat) - MIN(convolveddepth,ndat) != 0)  // Add safety check to avoid divide by zero
+  results.shape = MAX(convolveddepth,ndat) / (MAX(convolveddepth,ndat) - MIN(convolveddepth,ndat));   // Same as above assuming a median of 0.0
 
 
 // ofstream tmplogout;
@@ -477,22 +481,27 @@ void DO_SHIFT()
     if(data[i].model!=baseflux)
       j++;
     
-// ofstream tmplogout;
-// tmplogout.open("jeff");
-// tmplogout << "j = " << j << endl;
-// tmplogout.close();
+  if(j<1)
+    return;  // Exit function since there are no points in-transit
     
-  if(j==0)
-    {
-    cout << "Model is all flat! Exiting..." << endl;
-    exit(1);
-    }
-  if(j==1)
-    {
-    cout << "Only one point in-transit. Exiting..." << endl;
-    exit(1);
-    }
+/*    
+ofstream tmplogout;
+tmplogout.open("jeff");
+tmplogout << "j = " << j << endl;
+tmplogout.close();*/
+    
+//   if(j==0)
+//     {
+//     cout << "Model is all flat! Exiting..." << endl;
+//     exit(1);
+//     }
+//   if(j==1)
+//     {
+//     cout << "Only one point in-transit. Exiting..." << endl;
+//     exit(1);
+//     }
  
+
 
  
 
@@ -541,10 +550,10 @@ void DO_SHIFT()
 //   if(detrenddur < 0.02043981)
     detrenddur = 0.02043981;  // Set detrending window to one cadence duration
   
-  ofstream tmplogout;
-tmplogout.open("jeff");
-tmplogout << width << " " << detrenddur << endl;
-tmplogout.close();
+// //   ofstream tmplogout;
+// // tmplogout.open("jeff");
+// // tmplogout << width << " " << detrenddur << endl;
+// // tmplogout.close();
   
   for(l=0;l<1;l++)  // Number of outlier passes - ONLY NEED ONE WHEN USING MAD - JUST LEAVING LOOP IN CASE I EVER WANT TO CHANGE MY MIND
     {
