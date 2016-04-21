@@ -123,6 +123,9 @@ def computeSgCdpp_ppm(y, transitDuration_cadences=13, plot=False):
     if cadencesPerTransit < 4:
         raise ValueError("Cadences per transit must be >= 4")
 
+    if len(y) < window:
+        raise ValueError("Can't compute CDPP for timeseries with fewer points than defined window (%i points)" %(window))
+
     trend = savgol_filter(y, window_length=window, polyorder=polyorder)
     detrend = y-trend
 
