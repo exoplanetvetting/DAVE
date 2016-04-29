@@ -4,7 +4,7 @@ import numpy
 import os
 
 
-def runModShift(time,flux,model,plotname,objectname,period,epoch):
+def runModShift(time,flux,model,plotname,objectname,period,epoch,plot):
     """Run the Model-Shift test
 
     Inputs:
@@ -23,7 +23,10 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
         The period of the system in days.
     epoch
         The epoch of the system in days.
-
+    modplotint
+       If modplotint==1, then plot will be produced, else it won't
+    
+    
     Returns:
     -------------
     A dictionary containing the following keys:
@@ -63,7 +66,7 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
 
     Output:
     ----------
-    The model-shift plot is also created as a PDF file
+    The model-shift plot is also created as a PDF file if plot==1
     """
 
 #    # Uncomment next 4 lines for testing'mod_sig_fa':mod_sig_fa
@@ -87,7 +90,7 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch):
     #the complicated module that was supposed to handle communication better.
     path = getModShiftDir()
     cmd = ["timeout", "%i" %(timeout_sec),  "%s/modshift" %(path), \
-       tmpFilename, plotname, objectname, str(period), str(epoch)]
+       tmpFilename, plotname, objectname, str(period), str(epoch), modplotint]
 
     try:
         modshiftcmdout = check_output(cmd)

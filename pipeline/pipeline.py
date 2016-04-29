@@ -602,8 +602,9 @@ def modshiftTask(clip):
 #    model = ioBlock.modellc -1   #Want mean of zero
 #    #model *= -1  #Invert for testing
     model = clip['trapFit.bestFitModel']
+    modplotint=1  # Change to 0 or anything besides 1 to not have modshift produce plot
     out = ModShift.runModShift(time[~fl], flux[~fl], model[~fl], \
-        basename, objectname, period_days, epoch_bkjd)
+        basename, objectname, period_days, epoch_bkjd, modplotint)
     
     clip['modshift'] = out
 
