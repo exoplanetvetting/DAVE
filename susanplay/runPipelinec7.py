@@ -27,7 +27,7 @@ def loadSoConfig():
         dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveClip """.split()   
         
-    cfg['taskList'] = tasks
+    cfg['taskList'] = sfftasks
     
     #cfg['taskList'][-1] = "dpp.saveClip"  #Save all clips
 #    cfg['taskList'].insert(9, "dpp.lppMetricTask") #Not in parallel
@@ -35,11 +35,12 @@ def loadSoConfig():
     
     cfg['minSnrForDetection'] = 5
     cfg['blsMinPeriod'] = 0.25
-    cfg['blsMaxPeriod'] = 25
+    cfg['blsMaxPeriod'] = 1
     cfg['maxLppForTransit']= 0.007093282347242814
 
     cfg['keysToIgnoreWhenSaving'] = "serveTask"
     davePath = "/soc/nfs/so-nfs/dave/c7-pdc/"
+    davePath="/home/sthomp/daveOutput/"
     cfg['modshiftBasename'] =  davePath
     cfg['onepageBasename']  = davePath
     cfg['clipSavePath'] = davePath
