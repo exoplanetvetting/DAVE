@@ -4,7 +4,7 @@ import numpy
 import os
 
 
-def runModShift(time,flux,model,plotname,objectname,period,epoch,plot):
+def runModShift(time,flux,model,plotname,objectname,period,epoch,modplotint):
     """Run the Model-Shift test
 
     Inputs:
