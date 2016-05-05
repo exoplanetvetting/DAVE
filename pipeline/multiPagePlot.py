@@ -50,6 +50,8 @@ def plot_multipages(outfile,clip,intext):
          plantxt=clip.get('planet',defaultValue='No Planet Param. Avail.')
          plt.figtext(0.7,0.2,plantxt)
 
+    fig.patch.set_visible(False)
+    plt.gca().axis('off')
     plt.savefig(pdf_pages,format='pdf')
     plt.close(1)
     
