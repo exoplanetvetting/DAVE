@@ -242,8 +242,11 @@ def modshiftTask(clip):
 #    model *= -1  #Invert for testing
 
     basename = "%s-%010i" %(basename, epic)
+    
+    modplotint=1  # Change to 0 or anything besides 1 to not have modshift produce plot
+    
     out = ModShift.runModShift(time[~fl], flux[~fl], model, basename, \
-        "OBJECTNAME", period_days, epoch_bkjd)
+        "OBJECTNAME", period_days, epoch_bkjd, modplotint)
 
     clip['modshift'] = out
 

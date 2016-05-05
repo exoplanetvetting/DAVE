@@ -24,13 +24,12 @@ outfile='/home/sthomp/daveOutput/c6/%s.txt' %(vers)
 #fid=open(outfile,'a')
 
 cfg = mS.loadMyConfiguration()
-cfg['minSnrForDetection'] = 5
-cfg['blsMinPeriod'] = 10
-cfg['blsMaxPeriod'] = 15
+
 davePath = os.path.join(os.environ['HOME'],"daveOutput","c6")
 cfg['modshiftBasename'] =  davePath
 cfg['onepageBasename']  = davePath
 cfg['clipSavePath'] = davePath
+cfg['timeoout_sec'] = 200
 
 cfg['stellarPar']=('Rad','Teff','Mass','logg')    
 cfg['stellarFile']='/home/sthomp/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt'
@@ -41,7 +40,7 @@ cfg['stellarFile']='/home/sthomp/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt'
 indata=np.loadtxt(infile,dtype='float',delimiter=',',comments='#',usecols=[0,3])
 data=indata
 #%%
-span=[0,1]
+span=[498,500]
 for i,v in enumerate(data[span[0]:span[1],0]):    
     epicid=np.int(v)
     acti=i+span[0]
@@ -55,12 +54,12 @@ for i,v in enumerate(data[span[0]:span[1],0]):
         rep="%u --bad -- %s\n" % (epicid, clip['exception'])
         print ' ! !  EXCEPTION EXCEPTION ! ! ! ! '
         oneout="/home/sthomp/daveOutput/c6/epic%s.exc" % epicid
-        fida=open(oneout,'w')
-        fida.write(clip['backtrace'])
-        fida.close()
+        #fida=open(oneout,'w')
+        #fida.write(clip['backtrace'])
+        #fida.close()
         
     except KeyError:
-        print "%u   %s" % (epicid,clip.disposition.isCandidate)
-        
+        #print "%u   %s" % (epicid,clip.disposition.isCandidate)
+        pass
     
     

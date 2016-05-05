@@ -53,6 +53,8 @@ int i,j,k,l,m,n;
 ifstream infile;
 ofstream outfile;
 string syscmd;
+int modplotint; // 1 = do plot, else no plot
+
 
 double tstart,tend;
 string tmpstr1;
@@ -111,6 +113,16 @@ else
   cin >> epoch;
   }
 
+if(argc>6)
+  modplotint = atoi(argv[6]);
+else
+  {
+  cout << "Plot? (1==yes, else no) ";
+  cin >> modplotint;
+  }
+
+  
+  
 
 // Open input file and check to make sure file exists
 infile.open(infilename.c_str());
@@ -1225,17 +1237,18 @@ void PLOT()
   // And make the whole thing
   outfile << "unset multiplot" << endl;
   tmpstr1 = "gnuplot " + basename + "-ModShift.gnu";
-  system(tmpstr1.c_str());
+  if(modplotint==1)
+    system(tmpstr1.c_str());
 
 
   // Clean up files
   // syscmd = "cp outfile1-" + basename + ".dat " + basename + ".cln";  // Make clean file for use later - COMMENTING OUT - NOT NEEDED AT PRESENT
   // system(syscmd.c_str());
-  syscmd = "rm " + basename + "-outfile*.dat";
+//   syscmd = "rm " + basename + "-outfile*.dat";
 //   system(syscmd.c_str());
 //   syscmd = "rm " + basename + "-bin*dat";
 //   system(syscmd.c_str());
-  syscmd = "rm " + basename + "-ModShift.gnu";
+//   syscmd = "rm " + basename + "-ModShift.gnu";
 //   system(syscmd.c_str());
   }
   
