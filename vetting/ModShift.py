@@ -90,7 +90,7 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch,modplotint):
     #the complicated module that was supposed to handle communication better.
     path = getModShiftDir()
     cmd = ["timeout", "%i" %(timeout_sec),  "%s/modshift" %(path), \
-       tmpFilename, plotname, objectname, str(period), str(epoch), modplotint]
+       tmpFilename, plotname, objectname, str(period), str(epoch), str(modplotint)]
 
     try:
         modshiftcmdout = check_output(cmd)
