@@ -28,6 +28,7 @@ def plot_all_multipages(outfile,clip,intext):
     #pdf_pages.attach_note(('KIC %u   [%u]' % (clip.value, clip.disposition.isCandidate)),positionRect=[100,200,10,400])
     fig =  plt.figure(figsize=figuresize, dpi=dotperinch)  
     plt.figtext(0.5,0.5,intext,color='r',fontsize=15)
+    plt.gca().set_axis_off()
     pdf_pages.savefig(fig)
     plt.close()
     
