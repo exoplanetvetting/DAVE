@@ -36,13 +36,15 @@ def createExportString(clip, delimiter=" ", badValue="nan"):
                         ('trapFit.epoch_bkjd', '%12.6f'), \
                         ('trapFit.duration_hrs', '%7.3f'), \
                         ('trapFit.snr', '%6.2f'), \
-                        ('stellar.Teff', '%4.1f'),\
+                        ('stellar.Teff', '%6.1f'),\
                         ('stellar.Rad', '%5.3f'),\
-                        ('stellar.dis', '%5.1f'),\
-                        ('planet.rad_earth', '%5.2f'),\
-                        ('planet.sma_au','%6.4f'),\
-                        ('disposition.isSignificantEvent', ' %1i'), \
-                        ('disposition.isCandidate', ' %i'), \
+                        ('stellar.dis', '%6.1f'),\
+                        ('planet.rad_earth', '%6.2f'),\
+                        ('planet.sma_au','%6.3f'),\
+                        ('disposition.fluxVet.not_trans_like', '\t%1i'), \
+                        ('disposition.fluxVet.sig_sec', ' %1i'),\
+                        ('disposition.centroidVet.isCentroidFail', ' %1i'),\
+                        ('disposition.isCandidate', ' %1i'), \
                         ('disposition.reasonForFail', ' %s'), \
                     )
                     

@@ -19,11 +19,13 @@ config File
 import dave.pipeline.clipboard as clipboard
 import numpy as np
 import sys
+import os
 import getopt as getopt
 import dave.pipeline.exporter as ex
 import dave.pipeline.multiPagePlot as mpp
 import datetime
 import dave.pipeline.pipeline as dpp
+import dave.stellar.readStellarTable as stel
 
 def main():
     """A bare bones main program"""
@@ -65,7 +67,7 @@ def main():
     data=loadEphemFile(ephemFile)
     
     for i,epic in enumerate(data[:,0]):
-        cfg['campaign']=data[i,1]
+        cfg['campaign']=int(data[i,1])
         try:
             dep=data[i,4]/1.0e6
         except:
@@ -80,6 +82,9 @@ def main():
             print 'Created Outputs %s\n\n' % outfile
         else:
             print "No Outputs\n"
+            fid=open(output,'a') 
+            fid.write("%s %f 0   0   0   0   0   0   0   0 \t-1 -1 -1 -1 NO_Analysis\n" % clip.value,clip.bls.period)
+            fid.close()
             #outfile=runExport(clip,output)
             print clip.exception
             print clip.backtrace
@@ -92,6 +97,8 @@ def usage():
     
     print "justVet -f input ephem file -c config file -o output directory\n"
     print "writes stuff to current directory\n\n"
+    print "Format of the input ephem file is\n"
+    print "epic campaign period_days epoch depth"
 
 
 def loadEphemFile(ephemFile):
@@ -138,11 +145,17 @@ def suppConfiguration(cfg):
 
     cfg['debug'] = False
 
-    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveFromTpfTask
-        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendSffDataTask
+#    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveFromTpfTask
+#        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendSffDataTask
+#        dpp.detrendDataTask dpp.trapezoidFitTask dpp.lppMetricTask 
+#        dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
+#        dpp.saveOnError""".split()  
+        
+    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
+        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
         dpp.detrendDataTask dpp.trapezoidFitTask dpp.lppMetricTask 
         dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
-        dpp.saveOnError""".split()  
+        dpp.saveClip""".split()
      
     cfg['taskList'] = tasks
     
@@ -160,7 +173,7 @@ def suppConfiguration(cfg):
 
 
 
-def runOneEphem(k2id,period,epoch,config,duration=2,depth=.0001):
+def runOneEphem(k2id,period,epoch,config,duration=3.5,depth=.0001):
     """
     Run just the vetting and return an output.
     Inputs:
@@ -210,16 +223,29 @@ def runExport(clip,output):
     per=np.round(clip.bls.period*10)
     epoch=np.round(clip.bls.epoch)
     
+    try:
+        clip['config']['stellarPar']=['Mass','Rad','Teff','dis','rho','prov','logg']
+        clip=stel.addStellarToClip(clip)
+        clip=stel.estimatePlanetProp(clip)
+    except:
+        print 'No Stellar Values'
         
     outstr,header=ex.createExportString(clip, delimiter=" ", badValue="nan")
-    print outstr
 
-    fid=open(output,'a')
-    fid.write(outstr)
+    fid=open(output,'a') 
+    fid.write("%s\n" % outstr)
     fid.close()    
 
     tag="%i-%02i-%04i" % (clip.value,per,epoch)
-    outfile="jvet%s.pdf" % (tag)
+    outfile="%09i/jvet%s.pdf" % (int(clip.value),tag)
+
+    if ~(os.path.isdir(str(clip.value))):
+        try:
+            os.makedirs(str(clip.value))
+            
+        except:
+            print 'Error making directory %s' % clip.value
+    
     date=datetime.datetime.now()
     
     if ('disposition' not in clip.keys()):
