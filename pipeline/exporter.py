@@ -31,7 +31,7 @@ def createExportString(clip, delimiter=" ", badValue="nan"):
     Two strings. The first is the text to be exported. The second is the 
     list of keys that were exported
     """
-    keysForExport = (   ('value' , '%10i'), \
+    keysForExport = (   ('value' , '%09i'), \
                         ('trapFit.period_days', '%7.3f'), \
                         ('trapFit.epoch_bkjd', '%12.6f'), \
                         ('trapFit.duration_hrs', '%7.3f'), \

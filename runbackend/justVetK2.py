@@ -24,7 +24,7 @@ import getopt as getopt
 import dave.pipeline.exporter as ex
 import dave.pipeline.multiPagePlot as mpp
 import datetime
-import dave.pipeline.pipeline as dpp
+import dave.pipeline.pipeline as dpp   #You need this
 import dave.stellar.readStellarTable as stel
 
 def main():
@@ -83,7 +83,7 @@ def main():
         else:
             print "No Outputs\n"
             fid=open(output,'a') 
-            fid.write("%s %f 0   0   0   0   0   0   0   0 \t-1 -1 -1 -1 NO_Analysis\n" % clip.value,clip.bls.period)
+            fid.write("%s %f 0   0   0   0   0   0   0   0 \t-1 -1 -1 -1 NO_Analysis\n" % (clip.value,clip.bls.period))
             fid.close()
             #outfile=runExport(clip,output)
             print clip.exception
@@ -239,10 +239,11 @@ def runExport(clip,output):
     tag="%i-%02i-%04i" % (clip.value,per,epoch)
     outfile="%09i/jvet%s.pdf" % (int(clip.value),tag)
 
-    if ~(os.path.isdir(str(clip.value))):
+    thedir=str(int(clip.value))
+    print thedir
+    if ~(os.path.isdir(thedir)):
         try:
-            os.makedirs(str(clip.value))
-            
+            os.makedirs(thedir)
         except:
             print 'Error making directory %s' % clip.value
     
