@@ -198,8 +198,10 @@ def serveTask(clip):
 def serveLocalTask(clip):
     k2id= clip['value']
     campaign = clip['config.campaign']
-    lcpath="/soc/nfs/production-nfs2/c7/exports/archive_ksop2554/lcv/"
-    tppath="/soc/nfs/production-nfs2/c7/exports/archive_ksop2554/cad_targ_soc/"
+#    lcpath="/soc/nfs/production-nfs2/c7/exports/archive_ksop2554/lcv/"
+#    tppath="/soc/nfs/production-nfs2/c7/exports/archive_ksop2554/cad_targ_soc/"
+    lcpath="/media/soc-nfs/production_nfs2/c7/exports/archive_ksop2554/lcv/"
+    tppath="/media/soc-nfs/production_nfs2/c7/exports/archive_ksop2554/cad_targ_soc/"
 
     ar = mastio.LocalK2Archive(llcPath=lcpath,lpdPath=tppath)
     clip['serve'] = loadTpfAndLc(k2id,campaign,ar)
@@ -605,7 +607,6 @@ def modshiftTask(clip):
     modplotint=1  # Change to 0 or anything besides 1 to not have modshift produce plot
     out = ModShift.runModShift(time[~fl], flux[~fl], model[~fl], \
         basename, objectname, period_days, epoch_bkjd, modplotint)
-    
     clip['modshift'] = out
 
     #Enforce contract
