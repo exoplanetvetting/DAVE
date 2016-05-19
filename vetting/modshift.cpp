@@ -1089,12 +1089,12 @@ void PLOT()
   // Clean up files
   // syscmd = "cp outfile1-" + basename + ".dat " + basename + ".cln";  // Make clean file for use later - COMMENTING OUT - NOT NEEDED AT PRESENT
   // system(syscmd.c_str());
-  syscmd = "rm " + basename + "-outfile*.dat";
-  system(syscmd.c_str());
-  syscmd = "rm " + basename + "-bin*dat";
-  system(syscmd.c_str());
-  syscmd = "rm " + basename + "-ModShift.gnu";
-  system(syscmd.c_str());
+//  syscmd = "rm " + basename + "-outfile*.dat";
+//  system(syscmd.c_str());
+//  syscmd = "rm " + basename + "-bin*dat";
+//  system(syscmd.c_str());
+//  syscmd = "rm " + basename + "-ModShift.gnu";
+//  system(syscmd.c_str());
   }
   
 //////////////////////////////////////////////////////////////////////////////
