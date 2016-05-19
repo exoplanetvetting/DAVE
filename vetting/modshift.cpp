@@ -1,9 +1,7 @@
 /* Jeff Coughlin
    modshift-v4.cpp
 
-Last modified: 2015-11-25
-
-TO-DO: Find a secondary every time.
+Last modified: 2016-05-12
    
 */
 
@@ -25,51 +23,51 @@ const int N=100000;  // Max number of data points. Increase if needed.
 
 
 // Declare Functions
-void DO_SHIFT(),PLOT(),BIN_NOERR(string, double, string);
+void DO_SHIFT(),PLOT(),BIN_NOERR(string, double, string), DMM(), OE();
 double STDEV(double[],int),RMS(double[],int),MEDIAN(double[],int),MAX(double[],int),MIN(double[],int),INVERFC(double),MAD(double[],int),MEAN(double[],int),MODSCALE(double[],double[],int);
 string FORMAT(double);
 
 struct datastruct {double time; double phase; double flux; double model; double resid;};  // Time, Phase, Flux, Model, Residual
 
-// Declare global variables
-// Using global for large arrasy so memory is statically allocated for these large arrays.
+// Declare global variables (Using global for large array so memory is statically allocated for these large arrays.)
+
 datastruct data[2*N],dataorig[2*N];  // The main data array
-double rms[N],tmpdob1[N],tmpdob2[N],tmpdob3[N],chi2[N];
-int tmpint[N];  // Array of ints for temporary use
+double rms[N],chi2[N];
+double tmpdobarry1[N],tmpdobarry2[N],tmpdob3[N];  // Generic temporary double arrays
+int tmpintarry[N];  // Array of ints for temporary use
 double flat[2*N]; // residual assuming flat baseline
 datastruct inpdata[N];  // Input data for binning
 datastruct bindat[N];   // Output binned data
+double convolveddepth[N]={0};  // Array of the convovled depth values
 
-double convolveddepth[N]={0};
-
-struct resultstruct {double sigpri=0; double sigsec=0; double sigter=0; double sigpos=0; double sigodd=0; double sigevn=0; double sigfa1=1; double sigfa2=1; double fred=1; double prilowtime=0; double seclowtime=0; double terlowtime=0; double sechightime=0; double depfacsec=0; double depfacter=0; double depfacpos=0; double depsig=1; double tdepth=0; double odddepth=0; double evndepth=0; double odddeptherr=1; double evndeptherr=1; double sigoe=0; double depthmedmeanrat=0; double shape=0;};
+struct resultstruct {double sigpri=0; double sigsec=0; double sigter=0; double sigpos=0; double sigfa1=1; double sigfa2=1; double fred=1; double prilowtime=0; double seclowtime=0; double terlowtime=0; double sechightime=0; double depfacsec=0; double depfacter=0; double depfacpos=0; double depsig=1; double tdepth=0; double odddepth=0; double evndepth=0; double odddeptherr=1; double evndeptherr=1; double sigoe=0; double depthmedmeanrat=0; double shape=0; double duration=0; double baseflux=0; double fullmoddepth=0;};
 resultstruct results;
 
 int ndat,ndatorig;
-double period,epoch,periodorig,epochorig,baseflux;
+double period,epoch,periodorig,epochorig;
 string basename,infilename,objectname;
 
-int i,j,k,l,m,n;
-ifstream infile;
-ofstream outfile;
-string syscmd;
+int i,j,k,l,m,n; // General purpose counting integers
+int sw1,sw2;  // Switches
+ifstream infile;  // Generic ifstream
+ofstream outfile;  // Generic ofstream
+string syscmd;  // Generic system command string
 int modplotint; // 1 = do plot, else no plot
 
+double tstart,tend;  // Start and end times of model fit
+string tmpstr1;  // Generic string for names
+double tmpdob1;  // Generic temporary double
+int tmpint1;
 
-double tstart,tend;
-string tmpstr1;
-double modscale;  // Variable to scale model to data, if it is not already good fit
-
-  
 // Sorting functions
 bool double_sort (double lhs, double rhs) {return lhs < rhs;}
 bool phase_sort (datastruct lhs, datastruct rhs) {return lhs.phase < rhs.phase;}
 bool time_sort (datastruct lhs, datastruct rhs) {return lhs.time < rhs.time;}
 
 
+
 // And main prog here
 int main (int argc, char* argv[]) {
-
 
 
 if(argc>1)
@@ -121,8 +119,7 @@ else
   cin >> modplotint;
   }
 
-  
-  
+
 
 // Open input file and check to make sure file exists
 infile.open(infilename.c_str());
@@ -159,148 +156,61 @@ epochorig = epoch;
 for(i=0;i<ndat;i++)
   dataorig[i] = data[i];
 
-
-
-
-// Compute for Odd transits only first
-ndat = ndatorig;  // Restore original ndat
-for(i=0;i<ndat;i++)  // Load original data
-  data[i] = dataorig[i];
-period = periodorig;  // Load original period
-epoch = epochorig;  // Load original epoch
-
-// epoch-=0.5*period
-period*=2;   // Compute phase assuming twice period
-for(i=0;i<ndat;i++)  // Phase data
+// Phase Data given period and epoch
+for(i=0;i<ndat;i++)
   {
-  data[i].phase = ((data[i].time-epoch)/period - int((data[i].time-epoch)/period));
-  if(data[i].phase > 0.75)
-    data[i].phase-=1.0;  // Make pahse go from -0.25 to 0.75
+  data[i].phase = period*((data[i].time-epoch)/period - int((data[i].time-epoch)/period));
+  if(data[i].phase > 0.75*period)  // Make so ranges from -0.25*period to 0.75*period
+    data[i].phase-=period;
   }
 
-sort(data,data+ndat,phase_sort);  // Sort data on phase
+  
+// Sort data on phase
+sort(data,data+ndat,phase_sort);
 
-
-i=0;
-while(data[i].phase < 0.25)  // Find data that now have phase less than 0.5 - these are the odd transits
-  i++;
-ndat = i;
-
-
-period/=2;  // Set period back to normal
-DO_SHIFT();  // Run shift
-// results.sigodd = results.sigpri;  // Record sigodd
-results.odddepth = results.tdepth;
-results.odddeptherr = results.depsig;
-
-
-//syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-odd.dat";
-syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-odd.dat";
-system(syscmd.c_str());
-
-
-
-
-
-// Compute for even only
-ndat = ndatorig;  // Restore original ndat
-for(i=0;i<ndat;i++)  // Load original data
-  data[i] = dataorig[i];
-period = periodorig;  // Load original period
-epoch = epochorig;  // Load original epoch
-
-epoch-=period;   // Select only even transits. Doing minus so epoch stays earlier than first data time
-period*=2;   // Compute phase assuming twice period
-for(i=0;i<ndat;i++)  // Phase data
+// Record width in phase space
+sw1=0;
+for(i=0;i<ndat;i++)
   {
-  data[i].phase = ((data[i].time-epoch)/period - int((data[i].time-epoch)/period));
-  if(data[i].phase > 0.75)
-    data[i].phase-=1.0;  // Make phase go from -0.25 to 0.75
-  }
-
-sort(data,data+ndat,phase_sort);  // Sort data on phase
-
-i=0;
-while(data[i].phase < 0.25)  // Find data that now have phase less than 0.5 - these are the even transits, since we've shifted epoch above
-  i++;
-ndat = i;
-
-period/=2;  // Set period back to normal
-DO_SHIFT();  // Run shift
-// results.sigevn = results.sigpri;  // Record sigevn
-results.evndepth = results.tdepth;
-results.evndeptherr = results.depsig;
-//syscmd = "mv outfile1-" + basename + ".dat  outfile1-" + basename + "-evn.dat";
-syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-evn.dat";
-system(syscmd.c_str());
-
-
-// Compute odd/even sigma
-if(results.odddepth!=0 && results.evndepth!=0)
-  results.sigoe = fabs(results.odddepth - results.evndepth)/sqrt(pow(results.odddeptherr,2) + pow(results.evndeptherr,2));
-
-
-
-/////////////////////////////////// Test
-
-// ofstream tmplogout;
-// tmplogout.open("jeff");
-// 
-// 
-// tmplogout << tstart << " " << tend << " " << endl;
-
-int ninda,nindb;
-double indivdepths[1000];
-int nindivdepths;
-double depthsmed,depthsmean;
-
-period = periodorig;  // Load original period
-epoch = epochorig;  // Load original epoch
-
-ninda=0; // Index to loop through all possible individual events
-nindb=0; // index to keep track of indiv measurements, for transits which actually exist in the data
-
-double dmmwidth = 1.5*(tend-tstart);  // Use data that is within 1.5 transit duration of transit, i.e., transit width either side for baseline. Units are in days.
-
-while(epoch + ninda*period <= dataorig[ndatorig-1].time)
-  {
-  j=0;
-  for(i=0;i<ndatorig;i++)  // Load original data...
-    if(dataorig[i].time > epoch + ninda*period - dmmwidth && dataorig[i].time < epoch + ninda*period + dmmwidth)  // ...if it falls within half a period of an indidivual transit
-      {
-      data[j] = dataorig[i];
-      j++;
-      }
-  ndat = j;
-
-  // Check to see if model is all flat or not, i.e., if there is data in-transit
-  j=0;
-  for(i=0;i<ndat;i++)
-    if(data[i].model!=data[0].model)
-      j=1;  // a j value of 1 means the model is not all flat, and we can proceed
-
-  if(ndat>0 && j==1)
+  if(i==0)
+    results.baseflux = data[i].model; // Out of transit baseline flux of the model
+  
+  if(sw1==0 && data[i].model!=results.baseflux)
     {
-    DO_SHIFT();  // Run shift
-    
-    if(results.sigpri > 0)
-      {
-//       tmplogout << ninda << " " << ndat << " " << results.sigpri << " " << results.tdepth << " " << results.depsig << endl;
-      indivdepths[nindb] = -results.tdepth;  // Minus sign is to make depth positive number
-      nindb++;
-      }
+    tstart=data[i].phase;
+    sw1=1;
     }
-  ninda++;  // Try looking at next indidivual event
+  if(sw1==1 && data[i].model==results.baseflux)
+    {
+    tend=data[i-1].phase;
+    sw1=2;
+    }
+  if(sw2==0 && data[i].phase > 0)
+    {
+    tmpint1 = i;
+    sw2=1;
+    }
+  i++;
   }
-nindivdepths = nindb;
 
-depthsmed = MEDIAN(indivdepths,nindivdepths);
-depthsmean = MEAN(indivdepths,nindivdepths);
-results.depthmedmeanrat = depthsmean/depthsmed;
-// tmplogout << "Median = " << depthsmed << ", MEAN = " << depthsmean << ", RATIO = " << depthmedmeanrat << endl;
+// Check for odd cases of no model data before or after midpoint
+if(tstart>0) // If tstart is positive then there is no model before center, so go off the end time
+  tstart = -1.0*tend;
+if(tend<0)  // If tend is negative, then there is no model after center of transit, so go off end time.
+  tend = -1.0*tstart;
 
-////////////////////////////////// Test
+// Record duration
+results.duration = tend-tstart;
 
+// Record nominal model depth
+results.fullmoddepth = fabs(data[tmpint1].model - results.baseflux);
+
+
+// Run Odd-Even Test
+OE();
+
+// Run DMM test
+DMM();
 
 
 // Okay now do it normally
@@ -313,60 +223,161 @@ epoch = epochorig;  // Load original epoch
 DO_SHIFT();  // Run shift
 
 
-// ofstream tmplogout;
-// tmplogout.open("jeff");
-
-
-// tmplogout << tstart << " " << tend << " " << endl;
-
-/////// Test 2
-
-
-// for(i=0;i<ndat;i++)
-//   tmpdob1[i] = results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med);
-
-// Calculate shape metric
-// results.shape = (MAX(convolveddepth,ndat) - MEDIAN(convolveddepth,ndat)) / (MAX(convolveddepth,ndat) - MIN(convolveddepth,ndat));
-
 if(MAX(convolveddepth,ndat) - MIN(convolveddepth,ndat) != 0)  // Add safety check to avoid divide by zero
   results.shape = MAX(convolveddepth,ndat) / (MAX(convolveddepth,ndat) - MIN(convolveddepth,ndat));   // Same as above assuming a median of 0.0
 
 
-// ofstream tmplogout;
-// tmplogout.open("jeff");
-// tmplogout << results.shape << endl;
-// // // // tmpdob2 = results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med)  and is computed in DO_SHIFT
-// // tmplogout << MEDIAN(convolveddepth,ndat) << " " << MAX(convolveddepth,ndat) << " " << MIN(convolveddepth,ndat) << endl;
-// // tmplogout << results.shape << endl;
-// // // for(i=0; i<ndat; i++)
-// // //   tmplogout << convolveddepth[i] << endl;
-// tmplogout.close();
-
-
-////////// END of Test 2
-
-
-// tmplogout << results.sigpri << " " << results.tdepth << " " << results.depsig << endl;
-// tmplogout.close();
-
-// outfile.open("tmpout");
-// outfile << setprecision(20) << results.odddepth << " " << results.odddeptherr << endl << results.evndepth << " " << results.evndeptherr << endl << results.tdepth << " " << results.depsig << endl << results.sigoe << endl;
-// outfile.close();
-
 // Terminal output
 cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigoe << " " << results.depthmedmeanrat << " " << results.shape << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
-// cout << basename << " " << fixed << setprecision(10) << results.sigpri << " " << results.sigsec << " " << results.sigter << " " << results.sigpos << " " << results.sigodd << " " << results.sigevn << " " << results.sigfa1 << " " << results.sigfa2 << " " << results.fred << " " << results.prilowtime/period << " " << results.seclowtime/period << " " << results.terlowtime/period << " " << results.sechightime/period << " " << -results.depfacsec*results.tdepth << " " << results.depsig << endl;
-//cout << fixed << setprecision(6) << basename <<  " " << results.depfacsec*results.tdepth << " " << results.depsig << endl;
 
 
 PLOT();
 
 // cout << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
-// */
 
 return 0;
 }
 
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void DMM()  // Compute individual depths for depth mean to median ratio test
+  {
+  // Depth mean to median params here
+  int ninda,nindb;
+  double indivdepths[5000]; // Big just in case - max possible should be ~2800 given 0.5 day TCE and 1400 day baseline
+  double depthsmed,depthsmean;
+  double dmmwidth;
+  
+
+
+
+  period = periodorig;  // Load original period
+  epoch = epochorig;  // Load original epoch
+
+  ninda=0; // Index to loop through all possible individual events
+  nindb=0; // index to keep track of indiv measurements, for transits which actually exist in the data
+
+  dmmwidth = 1.5*results.duration;  // Use data that is within 1.5 transit duration of transit, i.e., transit width either side for baseline. Units are in days.
+
+  while(epoch + ninda*period <= dataorig[ndatorig-1].time)  // Go through all possible individual transit events
+    {
+    ndat=0;
+    for(i=0;i<ndatorig;i++)  // Load from original data...
+      if(dataorig[i].time > epoch + ninda*period - dmmwidth && dataorig[i].time < epoch + ninda*period + dmmwidth)  // ...if it falls within dmmwidth of an indidivual transit
+        {
+        data[ndat] = dataorig[i];
+        ndat++;
+        }
+      
+    // Check to see if model is all flat or not, i.e., if there is data in-transit
+    j=0;
+    for(i=0;i<ndat;i++)
+      if(data[i].model!=data[0].model)
+        j=1;  // a j value of 1 means the model is not all flat, and we can proceed
+    
+    // If there is data, and data in-transit, compute the depth of the individual transit
+    if(ndat>0 && j==1)
+      {
+      // Scale model to fit the data
+      for(i=0;i<ndat;i++)
+        {
+        tmpdobarry1[i] = data[i].flux;   // This is just so the data can feed into MODSCALE
+        tmpdobarry2[i] = data[i].model;  // This is just so the data can feed into MODSCALE
+        }
+      tmpdob1 = MODSCALE(tmpdobarry1,tmpdobarry2,ndat);
+    
+      // Record model depth of primary transit
+      indivdepths[nindb] = tmpdob1*results.fullmoddepth;  // -fabs(data[midti].model - results.baseflux);
+      
+      // Advance counter for number of successsful individual event measurements
+      nindb++;
+      }
+    
+    ninda++;  // Try looking at next indidivual event
+    }
+
+  depthsmed = MEDIAN(indivdepths,nindb);
+  depthsmean = MEAN(indivdepths,nindb);
+  results.depthmedmeanrat = depthsmean/depthsmed;
+  }
+  
+  
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void OE()  // Compute odd/even statistic
+  {
+  // Compute for Odd transits only first
+  ndat = ndatorig;  // Restore original ndat
+  for(i=0;i<ndat;i++)  // Load original data
+    data[i] = dataorig[i];
+  period = periodorig;  // Load original period
+  epoch = epochorig;  // Load original epoch
+
+  // epoch-=0.5*period
+  period*=2;   // Compute phase assuming twice period
+  for(i=0;i<ndat;i++)  // Phase data
+    {
+    data[i].phase = ((data[i].time-epoch)/period - int((data[i].time-epoch)/period));
+    if(data[i].phase > 0.75)
+      data[i].phase-=1.0;  // Make pahse go from -0.25 to 0.75
+    }
+
+  sort(data,data+ndat,phase_sort);  // Sort data on phase
+
+  i=0;
+  while(data[i].phase < 0.25)  // Find data that now have phase less than 0.5 - these are the odd transits
+    i++;
+  ndat = i;
+
+  period = periodorig;  // Set period back to normal
+  DO_SHIFT();  // Run shift
+  results.odddepth = results.tdepth;
+  results.odddeptherr = results.depsig;
+
+  syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-odd.dat";
+  system(syscmd.c_str());
+
+  
+
+  // Now compute for even only
+  ndat = ndatorig;  // Restore original ndat
+  for(i=0;i<ndat;i++)  // Load original data
+    data[i] = dataorig[i];
+  period = periodorig;  // Load original period
+  epoch = epochorig;  // Load original epoch
+
+  epoch-=period;   // Select only even transits. Doing minus so epoch stays earlier than first data time
+  period*=2;   // Compute phase assuming twice period
+  for(i=0;i<ndat;i++)  // Phase data
+    {
+    data[i].phase = ((data[i].time-epoch)/period - int((data[i].time-epoch)/period));
+    if(data[i].phase > 0.75)
+      data[i].phase-=1.0;  // Make phase go from -0.25 to 0.75
+    }
+
+  sort(data,data+ndat,phase_sort);  // Sort data on phase
+
+  i=0;
+  while(data[i].phase < 0.25)  // Find data that now have phase less than 0.5 - these are the even transits, since we've shifted epoch above
+    i++;
+  ndat = i;
+
+  period = periodorig;  // Set period back to normal
+  DO_SHIFT();  // Run shift
+  results.evndepth = results.tdepth;
+  results.evndeptherr = results.depsig;
+  syscmd = "mv " + basename + "-outfile1.dat " + basename + "-outfile1-evn.dat";
+  system(syscmd.c_str());
+
+
+  
+  // Compute odd/even sigma
+  if(results.odddepth!=0 && results.evndepth!=0)
+    results.sigoe = fabs(results.odddepth - results.evndepth)/sqrt(pow(results.odddeptherr,2) + pow(results.evndeptherr,2));
+  }
+  
+  
 
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -376,7 +387,7 @@ return 0;
 double MODSCALE(double flux[], double model[], int ndat)
   {
   double modscale,rmsscale,modscaletmp,rmsorig,rmsscaletmp,dinc;
-  int sw1; // 0 is try up, 1 is try down
+//   int sw1; // 0 is try up, 1 is try down
   
   // Starting values
   modscale = modscaletmp = 1.0;
@@ -434,7 +445,7 @@ double MODSCALE(double flux[], double model[], int ndat)
 void DO_SHIFT()
   {
   double rmsmin=9E9,chi2med,chi2outlow,chi2outhigh,chi2inlow,chi2low,chi2terlow;
-  int sw1,sw2,ntmp;
+  int ntmp;
   int midti,startti,endti;  // Index for middle of transit point, start of transit, and end of transit
   double widthfac;
   double width,halfwidth,detrenddur;
@@ -451,128 +462,59 @@ void DO_SHIFT()
     if(data[i].phase > 0.75*period)  // Make so ranges from -0.25*period to 0.75*period
       data[i].phase-=period;
     }
-    
 
   // Sort data on phase
   sort(data,data+ndat,phase_sort);
 
-  // Record width in phase space
+  // Find middle index
   sw1=0;
-  sw2=0;
   for(i=0;i<ndat;i++)
     {
-    if(i==0)
-      baseflux = data[i].model; // Out of transit baseline flux of the model
-    
-    if(sw1==0 && data[i].model!=baseflux)
-      {
-      tstart=data[i].phase;
-      sw1=1;
-      }
-    if(sw1==1 && data[i].model==baseflux)
-      {
-      tend=data[i-1].phase;
-      sw1=2;
-      }
-    if(sw2==0 && data[i].phase > 0)
+    if(sw1==0 && data[i].phase > 0)
       {
       midti = i;
-      sw2=1;
+      sw1=1;
       }
     i++;
     }
 
-
-
-
-
-
   // Check to make sure model isn't all flat
   j=0;
   for(i=0;i<ndat;i++)
-    if(data[i].model!=baseflux)
+    if(data[i].model!=results.baseflux)
       j++;
     
-  if(j<1)
+  if(j==0)
     return;  // Exit function since there are no points in-transit
     
-/*    
-ofstream tmplogout;
-tmplogout.open("jeff");
-tmplogout << "j = " << j << endl;
-tmplogout.close();*/
-    
-//   if(j==0)
-//     {
-//     cout << "Model is all flat! Exiting..." << endl;
-//     exit(1);
-//     }
-//   if(j==1)
-//     {
-//     cout << "Only one point in-transit. Exiting..." << endl;
-//     exit(1);
-//     }
  
-
-
- 
-
-//   outfile.open("tmpout");
-//   outfile << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
-    
   // Scale model to fit data best (Should be the case, but may not due to odd/even stuff.)
   for(i=0;i<ndat;i++)
     {
-    tmpdob1[i] = data[i].flux;;  // Calculate residuals
-    tmpdob2[i] = data[i].model;
+    tmpdobarry1[i] = data[i].flux;;  // Calculate residuals
+    tmpdobarry2[i] = data[i].model;
     }
-  modscale = MODSCALE(tmpdob1,tmpdob2,ndat);
+  tmpdob1 = MODSCALE(tmpdobarry1,tmpdobarry2,ndat);
   
   for(i=0;i<ndat;i++)
-    data[i].model *= modscale;
-  
-//   outfile << modscale << endl;
-//   outfile << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
-//   outfile.close();
-  
+    data[i].model *= tmpdob1;
+    
 
   // Record model depth of primary transit
-  results.tdepth = -fabs(data[midti].model - baseflux);
+  results.tdepth = -fabs(data[midti].model - results.baseflux);
 
 
-  if(tstart<0)  // Make width symmetrical. Also prevents glitches on cases if no in-transit data at positive phase.
-    tend = fabs(tstart);
-  else  // If tstart is positive then data or fit is not right, or no in-transit data points before phase 0.0, so go off the end time
-    tstart = -1.0*tend;
-
-
-  // if(tstart==0.0)  // If tstart is 0.0, model is flat, or somethign went wrong, so revert to default values
-  //   {
-  //   tstart = -0.1;
-  //   tend = 0.1;
-  //   }
-  //   
   // Remove very large outliers
-  // cout << ndat << endl;
-  //  cout << double( clock() - startTime ) / (double)CLOCKS_PER_SEC << " seconds." << endl;
-
-
-  width = tend-tstart;  // Record Width
-//   detrenddur = 0.1*width;  // Normally detrend at one tenth of a tranist duration
-//   if(detrenddur < 0.02043981)
-    detrenddur = 0.02043981;  // Set detrending window to one cadence duration
-  
-// //   ofstream tmplogout;
-// // tmplogout.open("jeff");
-// // tmplogout << width << " " << detrenddur << endl;
-// // tmplogout.close();
-  
+  // detrenddur = 0.1*results.duration;  // I used to detrend at one tenth of a tranist duration
+  // if(detrenddur < 0.02043981)
+  detrenddur = 0.02043981;  // Set detrending window to one cadence duration. Try for now
+   
   for(l=0;l<1;l++)  // Number of outlier passes - ONLY NEED ONE WHEN USING MAD - JUST LEAVING LOOP IN CASE I EVER WANT TO CHANGE MY MIND
     {
     for(i=0;i<ndat;i++)
       data[i].resid = data[i].flux - data[i].model;  // Calculate residuals
 
-  //   std = STDEV(data.resid,ndat);
+  // std = STDEV(data.resid,ndat);  // Saving this line in case I go back to std instead of mad
     for(i=0;i<ndat;i++)
       tmpdob3[i] = data[i].resid;
     mad = MAD(tmpdob3,ndat);  // MAD is Median Absolute Devitation - better than STD - only need one pass.
@@ -581,27 +523,27 @@ tmplogout.close();*/
     sigreject = sqrt(2)*INVERFC(1.0/ndat);  // Calculate sigma threshold based on number of data points
       
     for(i=0;i<ndat;i++)  // Keep track of which data points to remove. 0 is good, if flagged as 1, remove later
-      tmpint[i]=0;
+      tmpintarry[i]=0;
 
     for(i=0;i<ndat;i++)
       {
       k=0;
       sw1=0;
       for(j=0;j<ndat;j++)
-        if(fabs(data[i].phase-data[j].phase) < detrenddur)  // look at points within a tenth of a transit duration
+        if(fabs(data[i].phase-data[j].phase) < detrenddur)  // look at points within the detrend duration
           {
-          tmpdob1[k]=data[j].resid;
+          tmpdobarry1[k]=data[j].resid;
           k++;
           }
-      med = MEDIAN(tmpdob1,k);
+      med = MEDIAN(tmpdobarry1,k);
       
       if(fabs(data[i].resid - med) > sigreject*std)  // Keep data points within sigreject standard deviations of median
-        tmpint[i] = 1;
+        tmpintarry[i] = 1;
       }
 
     m=0;
     for(i=0;i<ndat;i++)
-      if(tmpint[i]==0)  // Keep good data points
+      if(tmpintarry[i]==0)  // Keep good data points
         {
         data[m].time = data[i].time;
         data[m].phase = data[i].phase;
@@ -628,8 +570,7 @@ tmplogout.close();*/
     }  
   
   
-  
-  halfwidth = 0.5*width;  // Pre-computing so don't have to do inside comp. intensive loop
+  halfwidth = 0.5*results.duration;  // Pre-computing so don't have to do inside comp. intensive loop
 
   // Record the indexs of points that correspond to start and end of transit.
   sw1=0;
@@ -650,14 +591,13 @@ tmplogout.close();*/
   
   // To speed things up, assume outside of transit is flat
   for(j=0;j<2*ndat;j++)
-    flat[j] = pow(data[j].flux - baseflux,2);
-
+    flat[j] = pow(data[j].flux - results.baseflux,2);
 
   // Okay do the actual perumtation. 
   for(i=0;i<ndat;i++)  // Perform ndat pertubations
     {
     tmpsum2 = 0;
-    
+  
     // Before transit, can look up values for compuatation speed increase
     for(j=0;j<startti;j++)
       tmpsum2 += flat[j+i];
@@ -665,7 +605,7 @@ tmplogout.close();*/
     // Compute new values inside transit
     for(j=startti;j<endti;j++)
       tmpsum2 += pow(data[j+i].flux - data[j].model,2);  // Shitfing data, holding model steady. Moving data points backwards, or model forwards, same thing
-    
+      
     // After transit, can look up values for computation speed increase
     for(j=endti;j<ndat;j++)
       tmpsum2 += flat[j+i];
@@ -676,12 +616,9 @@ tmplogout.close();*/
     }
   
   
-  
-  
   // Now look at convolved data to find pri, sec, etc. and do other things
   nintrans=0; 
   chi2low = 9E9;
-  // tmpstr1 = "outfile1-" + basename + ".dat";
   tmpstr1 = basename + "-outfile1.dat";
   outfile.open(tmpstr1.c_str());
   for(i=0;i<ndat;i++)  // Calculate chi squared and find lowest chi squared value
@@ -694,8 +631,6 @@ tmplogout.close();*/
       nintrans++;
     }
   outfile.close();
-
-
 
   // Search for sec. eclipse and compute in-primary params
   chi2outlow = chi2inlow = 9E9;
@@ -733,7 +668,6 @@ tmplogout.close();*/
           }
         }
   
-    
   // Find tertiary and biggest positive peak that's outside primary and secondary eclipse
   chi2terlow = 9E9;
   results.terlowtime = -2*period;
@@ -762,7 +696,6 @@ tmplogout.close();*/
         }
     }
 
-    
   // Compute median excluding primary and secondary eclipse. I have built in contigency in cases of sparse data so this should never fail.  
   widthfac=2;
   ntmp=0;
@@ -772,84 +705,13 @@ tmplogout.close();*/
     for(i=0;i<ndat;i++)
       if((data[i+midti].phase < results.prilowtime+widthfac*tstart || data[i+midti].phase > results.prilowtime+widthfac*tend) && (data[i+midti].phase < results.prilowtime+widthfac*tstart+period || data[i+midti].phase > results.prilowtime+widthfac*tend+period) && (data[i+midti].phase < results.prilowtime+widthfac*tstart-period || data[i+midti].phase > results.prilowtime+widthfac*tend-period) && (data[i+midti].phase < results.seclowtime+widthfac*tstart || data[i+midti].phase > results.seclowtime+widthfac*tend) && (data[i+midti].phase < results.seclowtime+widthfac*tstart+period || data[i+midti].phase > results.seclowtime+widthfac*tend)+period && (data[i+midti].phase < results.seclowtime+widthfac*tstart-period || data[i+midti].phase > results.seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
         {
-        tmpdob1[ntmp]=chi2[i];
+        tmpdobarry1[ntmp]=chi2[i];
         ntmp++;
         }
       widthfac-=0.01;  // Reduce width factor by -0.1 and search again if no points were found out of transit & eclipse
     }
-  chi2med = MEDIAN(tmpdob1,ntmp);
-  
-
-  
- /* 
-  ntmp=0;
-  widthfac=2;
-  for(i=0;i<ndat;i++)
-    if((data[i+midti].phase < results.prilowtime+widthfac*tstart || data[i+midti].phase > results.prilowtime+widthfac*tend) && (data[i+midti].phase < results.prilowtime+widthfac*tstart+period || data[i+midti].phase > results.prilowtime+widthfac*tend+period) && (data[i+midti].phase < results.prilowtime+widthfac*tstart-period || data[i+midti].phase > results.prilowtime+widthfac*tend-period) && (data[i+midti].phase < results.seclowtime+widthfac*tstart || data[i+midti].phase > results.seclowtime+widthfac*tend) && (data[i+midti].phase < results.seclowtime+widthfac*tstart+period || data[i+midti].phase > results.seclowtime+widthfac*tend)+period && (data[i+midti].phase < results.seclowtime+widthfac*tstart-period || data[i+midti].phase > results.seclowtime+widthfac*tend-period)  )  // If outside primray and secondary     
-      {
-      tmpdob1[ntmp]=chi2[i];
-      ntmp++;
-      }
-  if(ntmp>0)
-    chi2med = MEDIAN(tmpdob1,ntmp);
-  else  // First contigency - if still can't find any data just outside primary, try it by allowing for just a widthfac of 1.5 instead of 2
-    {
-    ntmp=0;
-    widthfac=1.5;
-    for(i=0;i<ndat;i++)
-      if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
-        {
-        tmpdob1[ntmp]=chi2[i];
-        ntmp++;
-        }
-    if(ntmp>0)
-      chi2med = MEDIAN(tmpdob1,ntmp);
-    else  // Second contigency - if still can't find any data just outside primary, try it by allowing for just a widthfac of 1 instead of 1.5
-      {
-      ntmp=0;
-      widthfac=1.0;
-      for(i=0;i<ndat;i++)
-        if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
-          {
-          tmpdob1[ntmp]=chi2[i];
-          ntmp++;
-          }
-      if(ntmp>0)
-        chi2med = MEDIAN(tmpdob1,ntmp);
-      else // Third contigency - if there were no points outside the width of the pri and secondary eclipse, try again by only excluding data inside primary
-        {
-        ntmp=0;
-        widthfac=1;
-        for(i=0;i<ndat;i++)
-          if((data[i+midti].phase < widthfac*tstart || data[i+midti].phase > widthfac*tend) && (data[i+midti].phase < widthfac*tstart+period || data[i+midti].phase > widthfac*tend+period) && (data[i+midti].phase < widthfac*tstart-period || data[i+midti].phase > widthfac*tend-period))  // If outside primary transit
-            {
-            tmpdob1[ntmp]=chi2[i];
-            ntmp++;
-            }
-        if(ntmp>0)
-          chi2med = MEDIAN(tmpdob1,ntmp);
-        else  // Really? So the only data points we have are in-transit? Allright just use those...the only way we could fail now is if there is literally no data, in which case we should have crashed long ago.
-          {
-          ntmp=0;
-          for(i=0;i<ndat;i++)
-            {
-            tmpdob1[ntmp]=chi2[i];
-            ntmp++;
-            }
-          if(ntmp>0)
-            chi2med = MEDIAN(tmpdob1,ntmp);
-          else
-            {
-            cout << "You should never see this message. I think you have no data at all in your light curve." << endl;
-            exit(1);
-            }
-          }
-        }
-      }
-    }
-*/
-
-    
+  chi2med = MEDIAN(tmpdobarry1,ntmp);
+      
   // Calculate rmsmin and Fred, ratio of gaussian noise to systematic noise, excluding primary and secondary
   widthfac=2;
   ntmp=0;
@@ -859,20 +721,18 @@ tmplogout.close();*/
     for(i=0;i<ndat;i++)
       if((data[i+midti].phase < results.prilowtime+widthfac*tstart || data[i+midti].phase > results.prilowtime+widthfac*tend) && (data[i+midti].phase < results.prilowtime+widthfac*tstart+period || data[i+midti].phase > results.prilowtime+widthfac*tend+period) && (data[i+midti].phase < results.prilowtime+widthfac*tstart-period || data[i+midti].phase > results.prilowtime+widthfac*tend-period) && (data[i+midti].phase < results.seclowtime+widthfac*tstart || data[i+midti].phase > results.seclowtime+widthfac*tend) && (data[i+midti].phase < results.seclowtime+widthfac*tstart+period || data[i+midti].phase > results.seclowtime+widthfac*tend)+period && (data[i+midti].phase < results.seclowtime+widthfac*tstart-period || data[i+midti].phase > results.seclowtime+widthfac*tend-period)  )  // If outside primary and secondary     
         {
-        tmpdob1[ntmp]=data[i+midti].flux-data[i+midti].model;  // Original data
-        tmpdob2[ntmp]=results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med);  // Converted depth value of the convolved data
+        tmpdobarry1[ntmp]=data[i+midti].flux-data[i+midti].model;  // Original data
+        tmpdobarry2[ntmp]=results.tdepth*(chi2[i]-chi2med)/(chi2inlow-chi2med);  // Converted depth value of the convolved data
         ntmp++;
         }
     widthfac-=0.01;  // Reduce width factor by -0.1 and search again if no points were found out of transit & eclipse
     }
-  rmsmin = RMS(tmpdob1,ntmp);  // RMS assuming gaussian noise and excluding pri and sec events  
-  results.fred = sqrt(nintrans)*STDEV(tmpdob2,ntmp)/rmsmin;  // Have to account for the number of points in-transit we're averaging over.
-
+  rmsmin = RMS(tmpdobarry1,ntmp);  // RMS assuming gaussian noise and excluding pri and sec events  
+  results.fred = sqrt(nintrans)*STDEV(tmpdobarry2,ntmp)/rmsmin;  // Have to account for the number of points in-transit we're averaging over.
 
   // Calculate Sigma_FA - the false alarm rate. I've set it so we shoudl only see one false alarm in 10,000 KOIs, assuming gaussian noise.
   results.sigfa1 = sqrt(2)*INVERFC((tend-tstart)/(period*20000));  // Assume 20,000 KOIs
   results.sigfa2 = sqrt(2)*INVERFC((tend-tstart)/(period));
-
 
   // If a sec, ter, or pos event was not found, set it to zero effectively
   if(chi2outlow == 9E9)
@@ -886,8 +746,6 @@ tmplogout.close();*/
   results.depfacsec = (chi2outlow-chi2med)/(chi2inlow-chi2med);
   results.depfacter = (chi2terlow-chi2med)/(chi2inlow-chi2med);
   results.depfacpos = (chi2outhigh-chi2med)/(chi2inlow-chi2med);
-
-
   
   // Significance of primary, secondary, tertiary, and positive events
   results.depsig = rmsmin/sqrt(nintrans);  // Noise level within transit duration assuming gaussian noise
@@ -902,7 +760,6 @@ tmplogout.close();*/
   if(fabs(results.sigter)<1E-2) results.sigter=0;
   if(fabs(results.sigpos)<1E-2) results.sigpos=0;
 
-
   // Make all phases fit within -0.25 to 0.75
   if(results.prilowtime<-0.25*period)
     results.prilowtime+=period;
@@ -916,11 +773,7 @@ tmplogout.close();*/
   if(results.sechightime<-0.25*period)
     results.sechightime+=period; 
     
-  
-  
-  // Uncoment for Plotting
   // Output file for plotting
-  //tmpstr1 = "outfile2-" + basename + ".dat";
   tmpstr1 = basename + "-outfile2.dat";
   outfile.open(tmpstr1.c_str());
   for(i=0;i<ndat;i++)
@@ -936,20 +789,16 @@ tmplogout.close();*/
 void PLOT()
   {
   // Sort for plotting
-  // tmpstr1 = "sort -k 1n outfile2-" + basename + ".dat > outfile3-" + basename + ".dat";
-  tmpstr1 = "sort -k 1n " + basename + "-outfile2.dat > " + basename + "-outfile3.dat";
-  system(tmpstr1.c_str());
+  syscmd = "sort -k 1n " + basename + "-outfile2.dat > " + basename + "-outfile3.dat";
+  system(syscmd.c_str());
 
   // Make files for binning
-  //syscmd = "awk '{print($1,$2)}' outfile1-" + basename + ".dat > " + basename +"-bininput.dat";
   syscmd = "awk '{print($1,$2)}' " + basename + "-outfile1.dat > " + basename +"-bininput.dat";
   system(syscmd.c_str());
 
-  // syscmd = "awk '{print($1,$2)}' outfile1-" + basename + "-odd.dat > " + basename +"-bininput-odd.dat";
   syscmd = "awk '{print($1,$2)}' " +  basename + "-outfile1-odd.dat > " + basename +"-bininput-odd.dat";
   system(syscmd.c_str());
-  
-  //syscmd = "awk '{print($1,$2)}' outfile1-" + basename + "-evn.dat > " + basename +"-bininput-evn.dat";
+
   syscmd = "awk '{print($1,$2)}' " + basename + "-outfile1-evn.dat > " + basename +"-bininput-evn.dat";
   system(syscmd.c_str());
 
@@ -958,7 +807,6 @@ void PLOT()
   BIN_NOERR(basename+"-bininput-odd.dat",((tend-tstart)/period)/10,basename+"-binned2-odd.dat");
   BIN_NOERR(basename+"-bininput-evn.dat",((tend-tstart)/period)/10,basename+"-binned2-evn.dat");
   
-  
   // Make plot file
   tmpstr1 = basename + "-ModShift.gnu";
   outfile.open(tmpstr1.c_str());
@@ -966,10 +814,7 @@ void PLOT()
   outfile << "set output '" << basename << "-modshift.pdf'" << endl;
   outfile << "set multiplot layout 4,1 title \"" << objectname << ", P = " << setprecision(6) << period << " Days, E = " << setprecision(6) << epoch << " Days\" font ',20'" << endl;
 
-  
-  
   // Make the table containing the results
-  
   outfile << "a = 0.045" << endl;
   outfile << "b = 0.0575" << endl;
   outfile << "c = a+7.25*b" << endl;
@@ -1003,8 +848,8 @@ void PLOT()
   outfile << "set label \"{Sec}\"         at screen (a+1*b),e center font ', 16'" << endl;
   outfile << "set label \"{Ter}\"         at screen (a+2*b),e center font ', 16'" << endl;
   outfile << "set label \"{Pos}\"         at screen (a+3*b),e center font ', 16'" << endl;
-  outfile << "set label \"{FA}\"          at screen (a+4*b),e center font ', 16'" << endl;
-  outfile << "set label \"{FA}'\"         at screen (a+5*b),e center font ', 16'" << endl;
+  outfile << "set label \"{FA_{1}}\"          at screen (a+4*b),e center font ', 16'" << endl;
+  outfile << "set label \"{FA_{2}}\"         at screen (a+5*b),e center font ', 16'" << endl;
   outfile << "set label \"F_{Red}\"                   at screen (a+6*b),e center font ', 16'" << endl;
 //   outfile << "set label \"{Pri}/F_{red}\" at screen (c+0*d),e center font ', 16'" << endl;
   outfile << "set label \"{Pri-Ter}\"     at screen (c+0*d),e center font ', 16'" << endl;
@@ -1137,7 +982,7 @@ void PLOT()
   outfile << "unset x2label" << endl;
   outfile << "unset y2tics" << endl;
   outfile << "unset y2label" << endl;
-  outfile << "set autoscale y" << endl;
+  outfile << "unset autoscale y" << endl;
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
@@ -1157,7 +1002,7 @@ void PLOT()
   outfile << "unset x2label" << endl;
   outfile << "unset y2tics" << endl;
   outfile << "unset y2label" << endl;
-  outfile << "set autoscale y" << endl;
+//   outfile << "set autoscale y" << endl;
   outfile << "set ytics format '%6.0f' mirror" << endl;
   outfile << "set ytics auto" << endl;
   outfile << "set ylabel ' '" << endl;
@@ -1182,7 +1027,7 @@ void PLOT()
   outfile << "set ytics auto" << endl;
   outfile << "unset ylabel" << endl;
   outfile << "set ylabel 'Flux (ppm)'" << endl;
-  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.seclowtime/period << "):((" << baseflux << " + " << results.depfacsec << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
+  outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.seclowtime/period << "):((" << results.baseflux << " + " << results.depfacsec << "*($3-" << results.baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.seclowtime/period << "):((" << results.baseflux << " + " << results.depfacsec << "*($3-" << results.baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.seclowtime/period << "):((" << results.baseflux << " + " << results.depfacsec << "*($3-" << results.baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
 
   outfile << "unset label" << endl;
 
@@ -1205,7 +1050,7 @@ void PLOT()
     outfile << "set ytics format '%6.0f' mirror" << endl;
     outfile << "set ytics auto" << endl;
     outfile << "set ylabel ' '" << endl;
-    outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.terlowtime/period << "):((" << baseflux << " + " << results.depfacter << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
+    outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.terlowtime/period << "):((" << results.baseflux << " + " << results.depfacter << "*($3-" << results.baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.terlowtime/period << "):((" << results.baseflux << " + " << results.depfacter << "*($3-" << results.baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.terlowtime/period << "):((" << results.baseflux << " + " << results.depfacter << "*($3-" << results.baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
     }
   
   outfile << "unset label" << endl;
@@ -1228,7 +1073,7 @@ void PLOT()
     outfile << "set ytics format '%6.0f' mirror" << endl;
     outfile << "set ytics auto" << endl;
     outfile << "set ylabel ' '" << endl;
-    outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.sechightime/period << "):((" << baseflux << " + " << results.depfacpos << "*($3-" << baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
+    outfile << "plot '" << basename << "-binned2.dat' u 1:($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1+1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '' u ($1-1.0):($2*1E6):($3*1E6) with yerrorbars lt 1 pt 7 ps 0.5 lc 3 notitle, '" << basename << "-outfile1.dat' u ($1+" << setprecision(10) << results.sechightime/period << "):((" << results.baseflux << " + " << results.depfacpos << "*($3-" << results.baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1+1.0+" << results.sechightime/period << "):((" << results.baseflux << " + " << results.depfacpos << "*($3-" << results.baseflux << "))*1E6) with lines lt 1 lc 7 notitle, '' u ($1-1.0+" << results.sechightime/period << "):((" << results.baseflux << " + " << results.depfacpos << "*($3-" << results.baseflux << "))*1E6) with lines lt 1 lc 7 notitle" << endl;
     }
   
   outfile << "unset label" << endl;
@@ -1244,12 +1089,12 @@ void PLOT()
   // Clean up files
   // syscmd = "cp outfile1-" + basename + ".dat " + basename + ".cln";  // Make clean file for use later - COMMENTING OUT - NOT NEEDED AT PRESENT
   // system(syscmd.c_str());
-//   syscmd = "rm " + basename + "-outfile*.dat";
-//   system(syscmd.c_str());
-//   syscmd = "rm " + basename + "-bin*dat";
-//   system(syscmd.c_str());
-//   syscmd = "rm " + basename + "-ModShift.gnu";
-//   system(syscmd.c_str());
+//  syscmd = "rm " + basename + "-outfile*.dat";
+//  system(syscmd.c_str());
+//  syscmd = "rm " + basename + "-bin*dat";
+//  system(syscmd.c_str());
+//  syscmd = "rm " + basename + "-ModShift.gnu";
+//  system(syscmd.c_str());
   }
   
 //////////////////////////////////////////////////////////////////////////////
@@ -1436,7 +1281,7 @@ void BIN_NOERR(string bininfile, double binsize, string binoutfile)
   // Outputs new binned Xvalue, Yvalue, and error (from stdev) of the binned data point
   
   int i;  // Counting integers
-  int n,sw1;  // n is number of points going into current bin - sw1 is a switch
+  int n;  // n is number of points going into current bin - sw1 is a switch
   int Nraw,Nbin; // Number of original and binned data points
   double curbin;
   ifstream datain;
@@ -1449,6 +1294,7 @@ void BIN_NOERR(string bininfile, double binsize, string binoutfile)
     exit(1);
     }
 
+    
   i=0;
   datain.open(bininfile.c_str());
   datain >> inpdata[i].phase;
@@ -1461,6 +1307,7 @@ void BIN_NOERR(string bininfile, double binsize, string binoutfile)
   datain.close();
   Nraw = i;
 
+  
   Nbin=0;
   for(curbin=inpdata[0].phase; curbin<inpdata[Nraw-1].phase+binsize; curbin+=binsize)
     {
