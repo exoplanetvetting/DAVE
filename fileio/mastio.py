@@ -35,7 +35,12 @@ class MastArchive():
         self.remoteServer = remoteServer
 
         if not os.path.exists(localDir):
-            raise ValueError("Local path %s doesn't exist" %(localDir))
+            try:
+                os.mkdir(localDir)
+            except IOError, e:
+                msg = "Local path %s does not exist and can't be created: %s" \
+                    %(localDir, e)
+                raise IOError(e)
 
 
     def getData(self, localUrl, remoteUrl, compressedOnServer, *args, **kwargs):
