@@ -268,6 +268,37 @@ def cotrendDataTask(clip):
     return clip
 
 
+import dave.fileio.vanderburgio as vio
+@task.task
+def vanderburgCotrendTask(clip):
+    """Produce a cotrended lightcurve in units of fractional amplitude"""
+
+    epic = clip['value']
+    campaign = clip['config.campaign']
+    flags = clip['extract.flags']
+        
+    
+    ar = vio.VanderburgArchive()
+    data = ar.getLongCadence(epic, campaign)
+    flux = data[:,1].copy()
+    
+    #Cotrending may also produce Nans
+    flags |= ~np.isfinite(flux)
+
+    #Remove dc offset
+    dcOffset = np.median( flux[~flags])
+    flux = (flux/ dcOffset) - 1
+    
+    clip['cotrend'] = {'flux_frac': flux}
+    clip['cotrend.dcOffset'] = dcOffset
+    clip['cotrend.flags'] = flags
+    clip['cotrend.source'] = "Vanderburg"
+
+    #Enforce contract
+    clip['cotrend.flux_frac']
+    return clip
+
+
 from dave.blsCode import outlier_detection
 @task.task
 def detrendDataTask(clip):
