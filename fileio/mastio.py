@@ -8,19 +8,28 @@ __version__ = "$Id: mastio.py 1780 2014-08-27 16:36:11Z fmullall $"
 __URL__ = "$URL: svn+ssh://flux/home/fmullall/svn/kepler/py/mastio.py $"
 
 """
+This module communicates with the MAST archive for the purpose of 
+downloading Kepler data. To reduce the amount of code written it uses
+a fairly complex inheritance structure.
 
-TODO
+TL;DR
+To get K2 data do the following:
+ar = mastio.K2Archive()
+fits = ar.getLongCadence(epic, campaign)
 
-K2Archive should be treated as a subclass of KeplerArchive. MastArchive.getLocalDir()
-should be a method of KeplerArchive()
+any optional arguments to getLongCadence() are passed directly to pyfits.getdata(),
+so you can treat one function as a replacement for the other. K2Archive() also 
+has methods to get short cadence data, and target pixel files.
 
-K2Archive.getFile() should be removed.
-KeplerArchive.getFilename should take a "prefix" (== "kplr" for Kepler) from self.
+Details:
+K2Archive() is used to get K2 data, KeplerArchive for classic Kepler data. Both
+draw most of their code from AbstractKeplerClass() where all the common code is 
+written. Anything in the Abstract class can be used to query either archive.
 
-so KeplerArchive.prefix = "kplr"
-K2Archive.prefix = "ktwo"
+To be even more general, functions to download and cache data from MAST are
+implemented in the parent class of AbstractKeplerClass, called MastArchive. This
+will make future efforts to get non-Kepler data from Mast a little easier.
 
-MastArchive.remote[Flux/Tpf]Path should be arguments to KeplerArchive()
 """
 
 
