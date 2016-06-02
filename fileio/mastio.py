@@ -112,7 +112,6 @@ class MastArchive():
         for MAST is FITS, but sub-classes can override this method
         for other file types as necessary
         """
-        
         if 'ext' in kwargs and kwargs['ext'] == 0:
             try:
                 retVal = pyfits.getheader(localUrl, *args, **kwargs)
@@ -441,6 +440,18 @@ class K2Archive(KeplerAbstractClass):
         KeplerAbstractClass.__init__(self, localDir, remoteServer, remoteFluxPath, remoteTpfPath)
 
 
+    def getFile(self, kepid, campaign, isFluxFile, month=None, *args, **kwargs):
+        """See KeplerAbstractClass.getFile()"""
+        
+        #Traps the case of attempting to download a lightcurve file for the 
+        #first three quarters, for which no lightcurve files were created.
+        if campaign < 3 and isFluxFile:
+            raise ValueError("No lightcurve files were created for Campaigns 0,1 or 2")
+        
+        return KeplerAbstractClass.getFile(self, kepid, campaign, isFluxFile, 
+                                                month, *args, **kwargs)
+    
+    
     def getFilename(self, kepid, campaign, isFluxFile, isShortCadence=False):
         if not isShortCadence:
             #Long cadence
