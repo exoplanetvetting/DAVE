@@ -276,19 +276,19 @@ def vanderburgCotrendTask(clip):
     epic = clip['value']
     campaign = clip['config.campaign']
     flags = clip['extract.flags']
-        
-    
+
+
     ar = vio.VanderburgArchive()
     data = ar.getLongCadence(epic, campaign)
     flux = data[:,1].copy()
-    
+
     #Cotrending may also produce Nans
     flags |= ~np.isfinite(flux)
 
     #Remove dc offset
     dcOffset = np.median( flux[~flags])
     flux = (flux/ dcOffset) - 1
-    
+
     clip['cotrend'] = {'flux_frac': flux}
     clip['cotrend.dcOffset'] = dcOffset
     clip['cotrend.flags'] = flags
