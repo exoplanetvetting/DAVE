@@ -41,6 +41,8 @@ def main():
     cfgFile=""
     ephemFile=""
     output=""
+    data=np.zeros((1,5),dtype=float)  
+    print np.shape(data)    
         
     for o, a in opts:
         if o in ("-f","--file"):
@@ -57,7 +59,7 @@ def main():
             cfgFile= a
             print "Config File is: %s\n" % cfgFile
         elif o in ("-1", "--one"):
-            data=np.array(a.split(' '),dtype=float)
+            data[0,:]=np.transpose(np.array(a.split(' '),dtype=float))
         else:
             assert False, "Unhandled option"
             sys.exit()
@@ -100,6 +102,8 @@ def usage():
     print "writes stuff to current directory\n\n"
     print "Format of the input ephem file is\n"
     print "epic campaign period_days epoch depth"
+    print "To run just one, use -1 \"epic campaign period epoch depth(ppm)\""
+    print "You still need -c and -o"
 
 
 def loadEphemFile(ephemFile):
