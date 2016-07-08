@@ -32,7 +32,7 @@ def main():
     
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:c:o:", ["help", "output=","config=","file="])
+        opts, args = getopt.getopt(sys.argv[1:], "hf:c:o:1:", ["help", "output=","config=","file=","one="])
     except getopt.GetoptError as err:
         # print help information and exit:
         usage()
@@ -46,6 +46,7 @@ def main():
         if o in ("-f","--file"):
             ephemFile = a
             print "Ephemeris File is: %s" % ephemFile
+            data=loadEphemFile(ephemFile)
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
@@ -55,6 +56,8 @@ def main():
         elif o in ("-c", "--config"):
             cfgFile= a
             print "Config File is: %s\n" % cfgFile
+        elif o in ("-1", "--one"):
+            data=np.array(a.split(' '),dtype=float)
         else:
             assert False, "Unhandled option"
             sys.exit()
@@ -63,8 +66,6 @@ def main():
      
     cfg=suppConfiguration(cfg)
     #print cfg 
-    
-    data=loadEphemFile(ephemFile)
     
     for i,epic in enumerate(data[:,0]):
         cfg['campaign']=int(data[i,1])
