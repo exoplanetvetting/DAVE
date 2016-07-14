@@ -637,8 +637,9 @@ def modshiftTask(clip):
 #    #model *= -1  #Invert for testing
     model = clip['trapFit.bestFitModel']
     modplotint=1  # Change to 0 or anything besides 1 to not have modshift produce plot
+    plotname = "%s-%02i-%04i" % (basename,np.round(clip.bls.period*10),np.round(clip.bls.epoch))
     out = ModShift.runModShift(time[~fl], flux[~fl], model[~fl], \
-        basename, objectname, period_days, epoch_bkjd, modplotint)
+        plotname, objectname, period_days, epoch_bkjd, modplotint)
     clip['modshift'] = out
 
     #Enforce contract
