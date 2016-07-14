@@ -1,262 +1,70 @@
-import urllib
-import math
-import os
-
-import pyfits
 
 __version__ = "$Id: mastio.py 1780 2014-08-27 16:36:11Z fmullall $"
 __URL__ = "$URL: svn+ssh://flux/home/fmullall/svn/kepler/py/mastio.py $"
 
+
+from dave.fileio.AbstractMast import KeplerAbstractClass
+import numpy as np
+import math
+import os
+
 """
-This module communicates with the MAST archive for the purpose of 
+This module communicates with the MAST archive for the purpose of
 downloading Kepler data. To reduce the amount of code written it uses
 a fairly complex inheritance structure.
 
-TL;DR
+Summary
+------------
 To get K2 data do the following:
-ar = mastio.K2Archive()
-fits = ar.getLongCadence(epic, campaign)
+>>> ar = mastio.K2Archive()
+>>> fits = ar.getLongCadence(epic, campaign)
 
-any optional arguments to getLongCadence() are passed directly to pyfits.getdata(),
-so you can treat one function as a replacement for the other. K2Archive() also 
-has methods to get short cadence data, and target pixel files.
+To get the Vanderburg lightcurves, you use a VanderburgArchive class
+>>> ar = mastio.VanderburgArchive()
+>>> data = ar.getLongCadence(epic, campaign)
 
-Details:
+
+List of classes
+-----------------
+KeplerArchive
+    Get data for classic data. Returns long and short cadence, lightcurves and TPF files
+
+K2Archive
+    Get official project data for K2. Returns all kinds of data. Lightcurves are
+    processed with PDC
+
+VanderburgArchive
+    Lightcurves reduced with SFF. Long cadence lightcurves only. Data is returned as
+    a numpy array
+
+K2SC
+    Lightcurves reduced by Suzanne Aigrain's method
+
+Everest
+    Lightcurves reduced by the Everest method.
+
+
+Notes:
+-----------
 K2Archive() is used to get K2 data, KeplerArchive for classic Kepler data. Both
-draw most of their code from AbstractKeplerClass() where all the common code is 
+draw most of their code from AbstractKeplerClass() where all the common code is
 written. Anything in the Abstract class can be used to query either archive.
 
 To be even more general, functions to download and cache data from MAST are
 implemented in the parent class of AbstractKeplerClass, called MastArchive. This
 will make future efforts to get non-Kepler data from Mast a little easier.
 
+Not every K2 reduction returns short cadence, or TPF files. All return
+long cadence data.
+
+Each class's getLongCadence() returns a different object depending on what
+is stored at MAST.
+
+Any optional arguments to getLongCadence() are passed directly to pyfits.getdata(),
+so you can treat one function as a replacement for the other. K2Archive() also
+has methods to get short cadence data, and target pixel files.
 """
 
-
-class MastArchive():
-    """Base class for queries of the MAST Kepler and K2 archives.
-    Handles submitting the URL, receiving and caching the results
-
-    The child class determines the url to submit
-    """
-    def __init__(self, localDir, remoteServer):
-        self.localDir = localDir
-        self.remoteServer = remoteServer
-
-        if not os.path.exists(localDir):
-            try:
-                os.mkdir(localDir)
-            except IOError, e:
-                msg = "Local path %s does not exist and can't be created: %s" \
-                    %(localDir, e)
-                raise IOError(e)
-
-
-    def getData(self, localUrl, remoteUrl, compressedOnServer, *args, **kwargs):
-        forceDownload = kwargs.pop("force", False)
-
-        if not forceDownload:
-            if os.path.exists(localUrl):
-                isEmpty = os.stat(localUrl)[6]==0
-                if isEmpty:
-                    raise IOError("File %s previously returned 404" %(remoteUrl))
-
-        if not os.path.exists(localUrl):
-            if compressedOnServer:
-                self.download(remoteUrl, localUrl + '.gz')
-                os.system("gunzip %s" %(localUrl + '.gz'))
-            else:
-                self.download(remoteUrl, localUrl)
-
-        return self.parse(localUrl, *args, **kwargs)
-
-    
-    def download(self, remoteUrl, localUrl, clobber=True, verbose=False):
-        """Download data from MAST archive for a given filename and a
-        given quarter.
-
-        Inputs:
-        clobber:    If true, allow locally existing files to be overwritten
-        verbose:    If true, print the file meta-information
-        """
-
-        if not clobber:
-            if os.path.exists(localUrl):
-                raise IOError("File %s already exists. Refusing to overwrite" %(localUrl))
-
-        u = urllib.urlopen(remoteUrl)
-        if u.getcode() == 404:
-            #Write a zero length file to indicate no file is present
-            if localUrl[-3:] == ".gz":
-                localUrl = localUrl[:-3]
-
-            fp = open(localUrl, 'w')
-            fp.write("")
-            fp.close()
-            raise ValueError("File not found at MAST: %s" %(remoteUrl))
-            return
-
-        try:
-            (f,h) = urllib.urlretrieve(remoteUrl, localUrl)
-        except IOError, e:
-            raise(e)
-
-
-        if verbose:
-            print h
-    
-    def parse(self, localUrl, *args, **kwargs):
-        """Load data using favourite IO class
-        
-        Assumes that localUrl exists on disk. Default file format
-        for MAST is FITS, but sub-classes can override this method
-        for other file types as necessary
-        """
-        if 'ext' in kwargs and kwargs['ext'] == 0:
-            try:
-                retVal = pyfits.getheader(localUrl, *args, **kwargs)
-            except IOError, e:
-                raise e
-        else:
-            try:
-                retVal = pyfits.getdata(localUrl, *args, **kwargs)
-            except IOError, e:
-                raise e
-
-        return retVal
-
-
-
-
-class KeplerAbstractClass(MastArchive):
-    """Base class for classes interacting with Kepler/K2 data.
-    
-    This class contains methods for querying for Lightcurve and 
-    TPF files in either short or long cadence.
-    
-    Example daughter classes are KeplerArchive and K2Archive.
-    Daughter classes must, at a minimum, reimplement getFilename()
-    and makeRemoteUrl(). You may want to write your own init, too.
-    
-    """
-    
-    def __init__(self, localDir, remoteServer, remoteFluxPath, remoteTpfPath):
-        MastArchive.__init__(self, localDir, remoteServer)
-        self.remoteFluxPath = remoteFluxPath
-        self.remoteTpfPath = remoteTpfPath
-
-        
-    def getLocalDir(self, quarter, kepid, quarterPrefix="Q"):
-        quarterDir = "%s%s" %(quarterPrefix, quarter)
-
-        localDir = os.path.join(self.localDir, quarterDir)
-        if not os.path.exists(localDir):
-            try:
-                os.mkdir(localDir)
-            except OSError, e:
-                #Re-raising an exception makes the error easier to read
-                raise e
-
-        thou = "%04i" %( math.floor( float(kepid)/1000.))
-        localDir = os.path.join(localDir, thou)
-        if not os.path.exists(localDir):
-            try:
-                os.makedirs(localDir)
-            except OSError. e:
-                #Re-raising an exception makes the error easier to read
-                raise e
-
-        return localDir
-
-
-    def getLongCadence(self, kepid, quarter, *args, **kwargs):
-        """Get a long cadence lightcurve file.
-
-        A thin wrapper around getFile()
-        """
-        return self.getFile(kepid, quarter, True, None, *args, **kwargs)
-
-
-    def getShortCadence(self, kepid, quarter, month, *args, **kwargs):
-        """Get a short cadence lightcurve file.
-
-        A thin wrapper around getFile()
-        """
-        return self.getFile(kepid, quarter, True, month, *args, **kwargs)
-
-
-    def getLongTpf(self, kepid, quarter, *args, **kwargs):
-        """Get a long cadence TPF file.
-
-        A thin wrapper around getFile()
-        """
-        return self.getFile(kepid, quarter, False, None, *args, **kwargs)
-
-
-    def getShortTpf(self, kepid, quarter, month, *args, **kwargs):
-        """Get a short cadence TPF file.
-
-        A thin wrapper around getFile()
-        """
-        return self.getFile(kepid, quarter, False, month, *args, **kwargs)
-
-
-    def getFile(self, kepid, quarter, isFluxFile, month=None, *args, **kwargs):
-        """Get a file of a given type for a given kepid/quarter[/month]
-
-        Inputs:
-        ---------
-        kepid   (int)
-            Kepid of target of interest
-        quarter (int)
-            Quarter of interest
-        isFluxFile (bool)
-            If True, a lightcurve file is returned, otherwise a target
-            pixel file is returned
-
-        Optional Inputs:
-        ----------------
-        month   (int)
-            If None, a long cadence file is returned, if a value
-            of 1,2 or 3 is supplied, a short cadence file is returned.
-
-        All other optional inputs are passed to ``pyfits.getdata()``
-
-        Returns:
-        -------------
-        A FITs object, and possibly more, depending on the optional
-        arguments to ``pyfits.getdata``
-        """
-
-        filename = self.getFilename(kepid, quarter, isFluxFile, month)
-        localUrl = os.path.join( self.getLocalDir(quarter, kepid), filename)
-
-        #Make remote url
-        if isFluxFile:
-            remotePath = self.remoteFluxPath
-            compressedOnServer = False
-        else:
-            remotePath = self.remoteTpfPath
-            compressedOnServer = True
-
-        remoteUrl = self.makeRemoteUrl(remotePath, kepid, quarter, filename, compressedOnServer)
-        return self.getData(localUrl, remoteUrl, compressedOnServer, *args, **kwargs)
-
-
-    def makeRemoteUrl(self, remotePath, kepid, quarter, filename, compressedOnServer):
-        """Figure out the URL where the desired file is stored.
-        
-        Returns a string, typically similar to
-        http://archive.stsci.edu/$remotePath/.../$filename
-        """
-        raise NotImplementedError("Not Implemented in Base Class")
-
-    def getFilename(self, kepid, quarter, isFluxFile, isShortCadence):
-        """Figure out the name of the file you want to download
-        
-        (But not its path)
-        """
-        raise NotImplementedError("Not Implemented in Base Class")
 
 
 
@@ -369,7 +177,7 @@ class KeplerArchive(KeplerAbstractClass):
 
     def makeRemoteUrl(self, remotePath, kepid, quarter, filename, compressed):
         """Input arg **quarter** is not used in this function"""
-        
+
         kidStr = "%09i" % (kepid)
         subdir = kidStr[:4]
         url = "%s/%s/%s/%s/%s" %(self.remoteServer, remotePath, subdir, \
@@ -405,7 +213,9 @@ class KeplerArchive(KeplerAbstractClass):
 
 
 
-###############3#######################################3
+#############################################################################
+#############################################################################
+#############################################################################
 
 
 class K2Archive(KeplerAbstractClass):
@@ -442,16 +252,16 @@ class K2Archive(KeplerAbstractClass):
 
     def getFile(self, kepid, campaign, isFluxFile, month=None, *args, **kwargs):
         """See KeplerAbstractClass.getFile()"""
-        
-        #Traps the case of attempting to download a lightcurve file for the 
+
+        #Traps the case of attempting to download a lightcurve file for the
         #first three quarters, for which no lightcurve files were created.
         if campaign < 3 and isFluxFile:
             raise ValueError("No lightcurve files were created for Campaigns 0,1 or 2")
-        
-        return KeplerAbstractClass.getFile(self, kepid, campaign, isFluxFile, 
+
+        return KeplerAbstractClass.getFile(self, kepid, campaign, isFluxFile,
                                                 month, *args, **kwargs)
-    
-    
+
+
     def getFilename(self, kepid, campaign, isFluxFile, isShortCadence=False):
         if not isShortCadence:
             #Long cadence
@@ -491,6 +301,82 @@ class K2Archive(KeplerAbstractClass):
         return url
 
 
+#############################################################################
+#############################################################################
+#############################################################################
+
+class VanderburgArchive(KeplerAbstractClass):
+    """Get co-trended long-cadence lightcurves as produced by Andrew Vanderburg
+    from MAST.
+
+    Vanderburg does not produce short cadence data, not does he
+    make anything new available for TPF files, so this class can only
+    return long cadence data.
+    """
+
+    def __init__(self, localDir = None, remoteServer="http://archive.stsci.edu"):
+        if localDir is None:
+            localDir = os.path.join(os.environ['HOME'], '.mastio', 'vanderburg')
+
+        remoteFluxPath = 'missions/hlsp/k2sff'
+        remoteTpfPath = 'NoVanderburgTpfFiles'  #No TPFs for Vanderburg
+        KeplerAbstractClass.__init__(self, localDir, remoteServer, remoteFluxPath, remoteTpfPath)
+
+
+    def getFilename(self, epic, campaign, isFluxFile, isShortCadence=False):
+        """Vanderburg only creates LLC file equivalents.
+        Rather than fix getFile(), to account for this, I know
+        that getFile() always calls this method, so I can catch
+        any attempts to get non-existent files here
+        """
+        if isShortCadence:
+            raise ValueError("Vanderburg doesn't produce short cadence files")
+
+        if not isFluxFile:
+            raise ValueError("Vanderburg doesn't produce TPF files")
+
+        version = 1
+        fn = "hlsp_k2sff_k2_lightcurve_%09i-c%02i_kepler_v%i_llc-default-aper.txt"\
+                %(epic, campaign, version)
+        return fn
+
+
+    def makeRemoteUrl(self, remotePath, k2id, campaign, filename, compressed):
+
+        #/pub/k2/target_pixel_files/c0/200000000/00000
+
+        kidStr = "%09i" % (k2id)
+        subdir1 = "c%02i" %(campaign)
+        subdir2 = "%i" %(1e5*math.floor( int(k2id)/1e5))
+        subdir3 = int(kidStr[-5:])
+
+        #Note sure this is necessary
+        if int(campaign) < 3:
+            subdir3 = "%i" %( 1e3*math.floor( subdir3/1e3))
+
+        url = "%s/%s/%s/%s/%s/%s" %(self.remoteServer, remotePath, \
+                subdir1, subdir2, subdir3, filename)
+
+
+        if compressed:
+            url = url + '.gz'
+#        print url
+        return url
+
+
+    def parse(self, localUrl, *args, **kwargs):
+        """Override MastArchive.parse()
+
+        Mast data is usually stored as fits files, but Vanderburg lightcurves
+        are plain text.
+        """
+
+        return np.loadtxt(localUrl, delimiter=",", skiprows=2, usecols=(0,1))
+
+
+#############################################################################
+#############################################################################
+#############################################################################
 
 class LocalK2Archive(K2Archive):
     def __init__(self, llcPath=".", lpdPath=None, slcPath=None, spdPath=None):
@@ -500,7 +386,7 @@ class LocalK2Archive(K2Archive):
         a local disk in a directory structure different than what a K2Archive()
         wants to use. Each file type (long cadence, short cadence, flux/TPF file)
         is stored in its own directory.
-        
+
         Optional Inputs:
         -----------
         llcPath
@@ -537,10 +423,120 @@ class LocalK2Archive(K2Archive):
 
 
     def makeRemoteUrl(self, remotePath, kepid, quarter, filename, compressedOnServer):
-        """This special case class should never go looking for 
+        """This special case class should never go looking for
         remote files. If it does, it should definitely never find them"""
         return  "NoUrlForLocalArchiveClass"
 
 
 
+#############################################################################
+#############################################################################
+#############################################################################
+
+class K2SCArchive(KeplerAbstractClass):
+    """Get co-trended long-cadence lightcurves as produced by Andrew Vanderburg
+    from MAST.
+
+    Vanderburg does not produce short cadence data, not does he
+    make anything new available for TPF files, so this class can only
+    return long cadence data.
+    """
+
+    def __init__(self, localDir = None, remoteServer="http://archive.stsci.edu"):
+        if localDir is None:
+            localDir = os.path.join(os.environ['HOME'], '.mastio', 'k2sc')
+
+        remoteFluxPath = 'missions/hlsp/k2sc'
+        remoteTpfPath = 'NoK2ScTpfFiles'  #No TPFs for K2Sc
+        KeplerAbstractClass.__init__(self, localDir, remoteServer, remoteFluxPath, remoteTpfPath)
+
+
+    def getFilename(self, epic, campaign, isFluxFile, isShortCadence=False):
+        """Vanderburg only creates LLC file equivalents.
+        Rather than fix getFile(), to account for this, I know
+        that getFile() always calls this method, so I can catch
+        any attempts to get non-existent files here
+        """
+        if isShortCadence:
+            raise ValueError("K2SC doesn't produce short cadence files")
+
+        if not isFluxFile:
+            raise ValueError("K2SC doesn't produce TPF files")
+
+        version = 1
+        #hlsp_k2sc_k2_llc_200004466-c03_kepler_v1_lc.fits
+        fn = "hlsp_k2sc_k2_llc_%09i-c%02i_kepler_v%i_lc.fits"\
+                %(epic, campaign, version)
+        return fn
+
+
+    def makeRemoteUrl(self, remotePath, k2id, campaign, filename, compressed):
+        subdir1 = "c%02i" %(campaign)
+        subdir2 = "%i" %(1e5*math.floor( int(k2id)/1e5))
+
+        url = "%s/%s/%s/%s/%s" %(self.remoteServer, remotePath, \
+                subdir1, subdir2, filename)
+
+
+        if compressed:
+            url = url + '.gz'
+        return url
+
+
+
+#############################################################################
+#############################################################################
+#############################################################################
+
+class EverestArchive(KeplerAbstractClass):
+    """Get co-trended long-cadence lightcurves as produced by Luger2016
+    from MAST. This approach uses a pixel time series decorrelation technique.
+
+    Everest does not produce short cadence data, not does it
+    make anything new available for TPF files, so this class can only
+    return long cadence data.
+    """
+
+    def __init__(self, localDir = None, remoteServer="http://archive.stsci.edu"):
+        if localDir is None:
+            localDir = os.path.join(os.environ['HOME'], '.mastio', 'everest')
+
+        remoteFluxPath = 'missions/hlsp/everest'
+        remoteTpfPath = 'NoEverestTpfFiles'  #No TPFs for Everest
+        KeplerAbstractClass.__init__(self, localDir, remoteServer, remoteFluxPath, remoteTpfPath)
+
+
+    def getFilename(self, epic, campaign, isFluxFile, isShortCadence=False):
+        """Vanderburg only creates LLC file equivalents.
+        Rather than fix getFile(), to account for this, I know
+        that getFile() always calls this method, so I can catch
+        any attempts to get non-existent files here
+        """
+        if isShortCadence:
+            raise ValueError("Everest doesn't produce short cadence files")
+
+        if not isFluxFile:
+            raise ValueError("Everest doesn't produce TPF files")
+
+        version = 1
+        #eg hlsp_everest_k2_llc_206103150-c03_kepler_v1.0_lc.fits
+        fn = "hlsp_everest_k2_llc_%09i-c%02i_kepler_v%3.1f_lc.fits"\
+                %(epic, campaign, version)
+        return fn
+
+
+    def makeRemoteUrl(self, remotePath, k2id, campaign, filename, compressed):
+
+        kidStr = "%09i" % (k2id)
+        subdir1 = "c%02i" %(campaign)
+        subdir2 = "%i" %(1e5*math.floor( int(k2id)/1e5))
+        subdir3 = "%05i" % (int(kidStr[-5:]))
+
+        url = "%s/%s/%s/%s/%s/%s" %(self.remoteServer, remotePath, \
+                subdir1, subdir2, subdir3, filename)
+
+
+        if compressed:
+            url = url + '.gz'
+        return url
 

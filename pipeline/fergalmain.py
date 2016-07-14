@@ -37,9 +37,6 @@ def loadMyConfiguration():
         dpp.lppMetricTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveClip""".split()
 
-#    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
-#        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-#        newDetrendDataTask dpp.saveClip""".split()
 
     cfg['taskList'] = tasks
 
@@ -126,7 +123,6 @@ def runOne(k2id, config, returnClip=False):
         clip = f(clip)
 
     gc.collect()
-
     if returnClip:
         return clip
 
