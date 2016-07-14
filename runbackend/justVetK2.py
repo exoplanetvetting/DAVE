@@ -32,7 +32,7 @@ def main():
     
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:c:o:1:", ["help", "output=","config=","file=","one="])
+        opts, args = getopt.getopt(sys.argv[1:], "hf:c:o:1:l:", ["help", "output=","config=","file=","one=","lc="])
     except getopt.GetoptError as err:
         # print help information and exit:
         usage()
@@ -41,6 +41,7 @@ def main():
     cfgFile=""
     ephemFile=""
     output=""
+    detrendType="pdc"
     data=np.zeros((1,5),dtype=float)  
     print np.shape(data)    
         
@@ -60,11 +61,14 @@ def main():
             print "Config File is: %s\n" % cfgFile
         elif o in ("-1", "--one"):
             data[0,:]=np.transpose(np.array(a.split(),dtype=float))
+        elif o in  ("-l", "--lc"):
+			detrendType=a
         else:
             assert False, "Unhandled option"
             sys.exit()
             
     cfg=loadConfigInput(cfgFile)
+    cfg['detrendType']=detrendType
      
     cfg=suppConfiguration(cfg)
     #print cfg 
@@ -104,6 +108,9 @@ def usage():
     print "epic campaign period_days epoch depth"
     print "To run just one, use -1 \"epic campaign period epoch depth(ppm)\""
     print "You still need -c and -o"
+    print "Use -l or --lc to pick your light curve"
+    print "The names of the light curve choices are pdc,everest,sff,agp,varcat"
+    print "Default is the PDC light curves."
 
 
 def loadEphemFile(ephemFile):
