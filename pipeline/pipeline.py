@@ -183,9 +183,10 @@ def serveTask(clip):
     k2id = clip['value']
     campaign = clip['config.campaign']
     storeDir = clip['config.dataStorePath']
+    detrendType = clip.get('config.detrendType', 'PDC')
 
     ar = mastio.K2Archive(storeDir)
-    clip['serve'] = loadTpfAndLc(k2id, campaign, ar)
+    clip['serve'] = loadTpfAndLc(k2id, campaign, ar, detrendType)
 
     #Enforce contract. (Make sure expected keys are in place)
     clip['serve.time']
@@ -924,7 +925,7 @@ def saveClip(clip):
 
     return clip
 
-def loadTpfAndLc(k2id, campaign, ar):
+def loadTpfAndLc(k2id, campaign, ar, detrendType):
 #    ar = mastio.K2Archive(storeDir)  #Removed by SEM to generalize this function
 
     out = dict()
@@ -946,9 +947,37 @@ def loadTpfAndLc(k2id, campaign, ar):
                  POS_CORR1 POS_CORR2""".split()
     data = nca.Nca(data)
     data.setLookup(1, lookup)
-    out['socData'] = data
+    
+    
+    #Load lightcurves from a specific detrending
+    key = detrendType.upper()
+    if key == "PDC":
+        pass
+    elif key == "EVEREST":
+        detrendAr = mastio.EverestArchive()
+        fits2 = detrendAr.getLongCadence(k2id, campaign)
+        flux = fits2['FLUX']
+        assert len(flux) == len(data)
+        data[:, 'PDCSAP_FLUX'] = flux
+    elif key == "SFF":
+        detrendAr = mastio.VanderburgArchive()
+        lightcurve = detrendAr.getLongCadence(k2id, campaign)
+        flux = lightcurve[:, 1]
+        assert len(flux) == len(data)
+        data[:, 'PDCSAP_FLUX'] = flux
+    elif key == "AGP":
+        detrendAr = mastio.K2SCArchive()
+        fits = detrendAr.getLongCadence(k2id, campaign)
+        flux = fits['flux']
+        assert len(flux) == len(data)
+        data[:, 'PDCSAP_FLUX'] = flux
+    else:
+        raise ValueError("Unrecognised detrending type %s" %(detrendType))
+        
+        
     out['time'] = fits['TIME'].copy()
     out['flags'] = fits['SAP_QUALITY'].copy()
+    out['socData'] = data
     return out
 
 
