@@ -59,7 +59,7 @@ def main():
             cfgFile= a
             print "Config File is: %s\n" % cfgFile
         elif o in ("-1", "--one"):
-            data[0,:]=np.transpose(np.array(a.split(' '),dtype=float))
+            data[0,:]=np.transpose(np.array(a.split(),dtype=float))
         else:
             assert False, "Unhandled option"
             sys.exit()
