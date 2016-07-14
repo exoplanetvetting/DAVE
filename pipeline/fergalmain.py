@@ -37,9 +37,6 @@ def loadMyConfiguration():
         dpp.lppMetricTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveClip""".split()
 
-#    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
-#        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-#        newDetrendDataTask dpp.saveClip""".split()
 
     cfg['taskList'] = tasks
 
@@ -124,12 +121,6 @@ def runOne(k2id, config, returnClip=False):
         clip = f(clip)
 
     gc.collect()
-
-    import psutil
-    import os
-    p = psutil.Process(os.getpid())
-    print "open files:", p.open_files()
-    clip['open_files'] = p.open_files()
     if returnClip:
         return clip
 
