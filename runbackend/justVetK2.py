@@ -32,7 +32,7 @@ def main():
     
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:c:o:", ["help", "output=","config=","file="])
+        opts, args = getopt.getopt(sys.argv[1:], "hf:c:o:1:", ["help", "output=","config=","file=","one="])
     except getopt.GetoptError as err:
         # print help information and exit:
         usage()
@@ -41,11 +41,14 @@ def main():
     cfgFile=""
     ephemFile=""
     output=""
+    data=np.zeros((1,5),dtype=float)  
+    print np.shape(data)    
         
     for o, a in opts:
         if o in ("-f","--file"):
             ephemFile = a
             print "Ephemeris File is: %s" % ephemFile
+            data=loadEphemFile(ephemFile)
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
@@ -55,6 +58,8 @@ def main():
         elif o in ("-c", "--config"):
             cfgFile= a
             print "Config File is: %s\n" % cfgFile
+        elif o in ("-1", "--one"):
+            data[0,:]=np.transpose(np.array(a.split(' '),dtype=float))
         else:
             assert False, "Unhandled option"
             sys.exit()
@@ -63,8 +68,6 @@ def main():
      
     cfg=suppConfiguration(cfg)
     #print cfg 
-    
-    data=loadEphemFile(ephemFile)
     
     for i,epic in enumerate(data[:,0]):
         cfg['campaign']=int(data[i,1])
@@ -99,6 +102,8 @@ def usage():
     print "writes stuff to current directory\n\n"
     print "Format of the input ephem file is\n"
     print "epic campaign period_days epoch depth"
+    print "To run just one, use -1 \"epic campaign period epoch depth(ppm)\""
+    print "You still need -c and -o"
 
 
 def loadEphemFile(ephemFile):
