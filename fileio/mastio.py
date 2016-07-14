@@ -2,7 +2,8 @@
 __version__ = "$Id: mastio.py 1780 2014-08-27 16:36:11Z fmullall $"
 __URL__ = "$URL: svn+ssh://flux/home/fmullall/svn/kepler/py/mastio.py $"
 
-from AbstractMast import AbstractKeplerClass
+
+from dave.fileio.AbstractMast import KeplerAbstractClass
 
 """
 This module communicates with the MAST archive for the purpose of 
