@@ -9,6 +9,7 @@ detected signals.
 """
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
+plt.ioff()
 import dave.pipeline.plotting as pp
 import dave.diffimg.plot as dip 
 import dave.stellar.readStellarTable as stel
