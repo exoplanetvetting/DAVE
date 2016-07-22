@@ -9,7 +9,6 @@ detected signals.
 """
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
-plt.ioff()
 import dave.pipeline.plotting as pp
 import dave.diffimg.plot as dip 
 import dave.stellar.readStellarTable as stel
@@ -32,7 +31,7 @@ def plot_multipages(outfile,clip,intext):
     put these plots all into one multi paged document
     specifieed by outfile
     """
-    
+    plt.ioff()
     dotperinch=120    
     figuresize=(11,8)
     # The PDF document
