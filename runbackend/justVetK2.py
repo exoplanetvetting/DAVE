@@ -72,8 +72,8 @@ def main():
             sys.exit()
 
     #Check all required inputs are sane
-    if not os.path.isfile(ephemFile) or not os.access(cfgFile, R_OK):
-        raise IOError("Can not read ephemeris file: %s" %(ephemFile))
+    if np.sum(np.fabs(data)) == 0:
+        raise IOError("No empheris file loaded. Use --file or --one")
 
     if not os.access(os.path.basename(output), W_OK):
         raise IOError("Can not create output file: %s" %(output))
