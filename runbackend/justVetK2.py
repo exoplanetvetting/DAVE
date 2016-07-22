@@ -75,10 +75,10 @@ def main():
     if np.sum(np.fabs(data)) == 0:
         raise IOError("No empheris file loaded. Use --file or --one")
 
-    if not os.access(os.path.basename(output), W_OK):
+    if not os.access(os.path.basename(output), os.W_OK):
         raise IOError("Can not create output file: %s" %(output))
 
-    if not os.path.isfile(cfgFile) or not os.access(cfgFile, R_OK):
+    if not os.path.isfile(cfgFile) or not os.access(cfgFile, os.R_OK):
         raise IOError("Can not read config file: %s" %(cfgFile))
     
     
