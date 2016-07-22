@@ -637,7 +637,7 @@ def modshiftTask(clip):
 #    #model *= -1  #Invert for testing
     model = clip['trapFit.bestFitModel']
     modplotint=1  # Change to 0 or anything besides 1 to not have modshift produce plot
-    plotname = "%s-%02i-%04i" % (basename,np.round(clip.bls.period*10),np.round(clip.bls.epoch))
+    plotname = "%s-%02i-%04i-%s" % (basename,np.round(clip.bls.period*10),np.round(clip.bls.epoch),clip.config.detrendType)
     out = ModShift.runModShift(time[~fl], flux[~fl], model[~fl], \
         plotname, objectname, period_days, epoch_bkjd, modplotint)
     clip['modshift'] = out
@@ -907,7 +907,7 @@ def saveClip(clip):
         #when I restore?
         keysToSkip = clip.get('config.keysToIgnoreWhenSaving', [])
 
-        fn = "c%09i-%02i.clip" %(value, campaign)
+        fn = "c%09i-%02i-%02i-%04i-%s.clip" %(value,campaign,np.round(clip.bls.period*10),np.round(clip.bls.epoch),clip.config.detrendType)
         fn = os.path.join(path, fn)
 
         if os.path.exists(fn):
