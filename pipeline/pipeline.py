@@ -948,38 +948,89 @@ def loadTpfAndLc(k2id, campaign, ar, detrendType):
                  POS_CORR1 POS_CORR2""".split()
     data = nca.Nca(data)
     data.setLookup(1, lookup)
-    
-    
-    #Load lightcurves from a specific detrending
+
+
+    #Load lightcurves from a specific detrending, and replace
+    #the pdc time series with the new detrending
     key = detrendType.upper()
     if key == "PDC":
         pass
+
     elif key == "EVEREST":
         detrendAr = mastio.EverestArchive()
         fits2 = detrendAr.getLongCadence(k2id, campaign)
         flux = fits2['FLUX']
         assert len(flux) == len(data)
         data[:, 'PDCSAP_FLUX'] = flux
+
     elif key == "SFF":
         detrendAr = mastio.VanderburgArchive()
         lightcurve = detrendAr.getLongCadence(k2id, campaign)
+        sffTime = lightcurve[:,0]
         flux = lightcurve[:, 1]
-        assert len(flux) == len(data)
-        data[:, 'PDCSAP_FLUX'] = flux
+
+        idx = mapTime2ToIndexOfTime1(data[:, 'TIME'], sffTime)
+        data[idx, 'PDCSAP_FLUX'] = flux
+        data[~idx, 'PDCSAP_FLUX'] = np.nan
+
     elif key == "AGP":
         detrendAr = mastio.K2SCArchive()
-        fits = detrendAr.getLongCadence(k2id, campaign)
-        flux = fits['flux']
-        assert len(flux) == len(data)
-        data[:, 'PDCSAP_FLUX'] = flux
+        agpFits = detrendAr.getLongCadence(k2id, campaign)
+        agpTime = agpFits['time']
+        agpFlux = agpFits['flux']
+
+        idx = mapTime2ToIndexOfTime1(data[:, 'TIME'], agpTime)
+        data[idx, 'PDCSAP_FLUX'] = agpFlux
+        data[~idx, 'PDCSAP_FLUX'] = np.nan
     else:
         raise ValueError("Unrecognised detrending type %s" %(detrendType))
-        
-        
+
+
     out['time'] = fits['TIME'].copy()
     out['flags'] = fits['SAP_QUALITY'].copy()
     out['socData'] = data
     return out
+
+
+def mapTime2ToIndexOfTime1(time1, time2):
+    """Compute the indices of time1 that correspond closest to values of time2
+
+    Some K2 detrended lightcurves (like PDC) contain elements for every
+    cadence, others (like sff) only contain elements for good data.
+    This function enables you to figure out which rows of time1 correspond
+    to the same times in time2, so you can place place the first and second
+    data sets in contiguous arrays
+
+    Typical Usage:
+    ----------------
+    A typical usage would look like
+    ::
+        idx = mapTime2ToIndexOfTime1(data1[:, 'TIME'], data2[:, 'TIME'])
+        data1[idx, 'FLUX2'] = data2[:, 'FLUX']
+        data1[~idx, 'FLUX2'] = BAD_VALUE
+
+    Inputs:
+    ------------
+    time1:
+        (1d np array) Array of times to map into
+    time2
+        (1d np array) Array of times to map from. Typically ``len(time2) < len(time1)``
+
+    Returns:
+    -----------
+    A boolean array of length ``time1``
+
+   """
+
+    t1 = np.atleast_2d(time1)
+    t2 = np.atleast_2d(time2)
+    dt = t1 - t2.transpose()
+    dt = np.fabs(dt.asarray())
+    assert dt.ndim == 2
+    dt = np.nanmin(dt, axis=0)
+    idx = dt < 1e-8  #Two times must agree very well to be accepted
+    assert len(idx) == len(time1)
+    return idx
 
 
 
