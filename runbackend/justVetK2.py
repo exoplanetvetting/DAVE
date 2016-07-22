@@ -102,14 +102,14 @@ def usage():
     """Help message
     """
     
-    print "justVet -f input ephem file -c config file -o output directory\n"
+    print "justVet -f input ephem file -c config file -o output filename\n"
     print "writes stuff to current directory\n\n"
     print "Format of the input ephem file is\n"
-    print "epic campaign period_days epoch depth"
+    print "epic campaign period_days epoch_bkjd depth_ppm"
     print "To run just one, use -1 \"epic campaign period epoch depth(ppm)\""
     print "You still need -c and -o"
     print "Use -l or --lc to pick your light curve"
-    print "The names of the light curve choices are pdc,everest,sff,agp,varcat"
+    print "The names of the light curve choices are pdc,everest,sff,agp,varcat (not yet)"
     print "Default is the PDC light curves."
 
 
