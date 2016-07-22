@@ -30,7 +30,11 @@ import dave.stellar.readStellarTable as stel
 def main():
     """A bare bones main program"""
     
-
+    print len(sys.argv)
+    if len(sys.argv) < 2:
+        usage()
+        sys.exit()
+        
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hf:c:o:1:l:", ["help", "output=","config=","file=","one=","lc="])
     except getopt.GetoptError as err:
@@ -66,13 +70,25 @@ def main():
         else:
             assert False, "Unhandled option"
             sys.exit()
+
+    #Check all required inputs are sane
+    if not os.path.isfile(ephemFile) or not os.access(cfgFile, R_OK):
+        raise IOError("Can not read ephemeris file: %s" %(ephemFile))
+
+    if not os.access(os.path.basename(output), W_OK):
+        raise IOError("Can not create output file: %s" %(output))
+
+    if not os.path.isfile(cfgFile) or not os.access(cfgFile, R_OK):
+        raise IOError("Can not read config file: %s" %(cfgFile))
+    
+    
             
     cfg=loadConfigInput(cfgFile)
     cfg['detrendType']=detrendType
      
     cfg=suppConfiguration(cfg)
     #print cfg 
-    
+
     for i,epic in enumerate(data[:,0]):
         cfg['campaign']=int(data[i,1])
         try:

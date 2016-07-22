@@ -348,7 +348,7 @@ class VanderburgArchive(KeplerAbstractClass):
         kidStr = "%09i" % (k2id)
         subdir1 = "c%02i" %(campaign)
         subdir2 = "%i" %(1e5*math.floor( int(k2id)/1e5))
-        subdir3 = int(kidStr[-5:])
+        subdir3 = "%05i" %(int(kidStr[-5:]))
 
         #Note sure this is necessary
         if int(campaign) < 3:
