@@ -37,9 +37,6 @@ def loadMyConfiguration():
         dpp.lppMetricTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveClip""".split()
 
-#    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
-#        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-#        newDetrendDataTask dpp.saveClip""".split()
 
     cfg['taskList'] = tasks
 
@@ -64,7 +61,7 @@ def runAll(func, iterable, config):
     ----------
     func
 	(A function) The top level function, e.g runOne(), below
-1
+
     iterable
 	(list, array, etc.) A list of values to operate on.
 
@@ -115,21 +112,17 @@ def runOne(k2id, config, returnClip=False):
     clip['value'] = k2id
 
     #Check that all the tasks are properly defined
+    print "Checking tasks exist"
     for t in taskList:
         f = eval(t)
 
     #Now run them.
     for t in taskList:
+        print "Running %s" %(t)
         f = eval(t)
         clip = f(clip)
 
     gc.collect()
-
-    import psutil
-    import os
-    p = psutil.Process(os.getpid())
-    print "open files:", p.open_files()
-    clip['open_files'] = p.open_files()
     if returnClip:
         return clip
 

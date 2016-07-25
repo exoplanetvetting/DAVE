@@ -31,7 +31,7 @@ def plot_multipages(outfile,clip,intext):
     put these plots all into one multi paged document
     specifieed by outfile
     """
-    
+    plt.ioff()
     dotperinch=120    
     figuresize=(11,8)
     # The PDF document

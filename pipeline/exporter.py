@@ -41,6 +41,7 @@ def createExportString(clip, delimiter=" ", badValue="nan"):
                         ('stellar.dis', '%6.1f'),\
                         ('planet.rad_earth', '%6.2f'),\
                         ('planet.sma_au','%6.3f'),\
+                        ('config.detrendType','%8s'),\
                         ('disposition.fluxVet.not_trans_like', '\t%1i'), \
                         ('disposition.fluxVet.sig_sec', ' %1i'),\
                         ('disposition.centroidVet.isCentroidFail', ' %1i'),\

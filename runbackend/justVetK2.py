@@ -30,9 +30,13 @@ import dave.stellar.readStellarTable as stel
 def main():
     """A bare bones main program"""
     
-
+    print len(sys.argv)
+    if len(sys.argv) < 2:
+        usage()
+        sys.exit()
+        
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:c:o:", ["help", "output=","config=","file="])
+        opts, args = getopt.getopt(sys.argv[1:], "hf:c:o:1:l:", ["help", "output=","config=","file=","one=","lc="])
     except getopt.GetoptError as err:
         # print help information and exit:
         usage()
@@ -41,11 +45,15 @@ def main():
     cfgFile=""
     ephemFile=""
     output=""
+    detrendType="pdc"
+    data=np.zeros((1,5),dtype=float)  
+    print np.shape(data)    
         
     for o, a in opts:
         if o in ("-f","--file"):
             ephemFile = a
             print "Ephemeris File is: %s" % ephemFile
+            data=loadEphemFile(ephemFile)
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
@@ -55,17 +63,33 @@ def main():
         elif o in ("-c", "--config"):
             cfgFile= a
             print "Config File is: %s\n" % cfgFile
+        elif o in ("-1", "--one"):
+            data[0,:]=np.transpose(np.array(a.split(),dtype=float))
+        elif o in  ("-l", "--lc"):
+			detrendType=a
         else:
             assert False, "Unhandled option"
             sys.exit()
+
+    #Check all required inputs are sane
+    if np.sum(np.fabs(data)) == 0:
+        raise IOError("No empheris file loaded. Use --file or --one")
+
+    outputPath = os.path.split( os.path.realpath(output) )[0]
+    if not os.access(outputPath, os.W_OK):
+        raise IOError("Can not create output file: %s" %(output))
+
+    if not os.path.isfile(cfgFile) or not os.access(cfgFile, os.R_OK):
+        raise IOError("Can not read config file: %s" %(cfgFile))
+    
+    
             
     cfg=loadConfigInput(cfgFile)
+    cfg['detrendType']=detrendType
      
     cfg=suppConfiguration(cfg)
     #print cfg 
-    
-    data=loadEphemFile(ephemFile)
-    
+
     for i,epic in enumerate(data[:,0]):
         cfg['campaign']=int(data[i,1])
         try:
@@ -95,10 +119,15 @@ def usage():
     """Help message
     """
     
-    print "justVet -f input ephem file -c config file -o output directory\n"
+    print "justVet -f input ephem file -c config file -o output filename\n"
     print "writes stuff to current directory\n\n"
     print "Format of the input ephem file is\n"
-    print "epic campaign period_days epoch depth"
+    print "epic campaign period_days epoch_bkjd depth_ppm"
+    print "To run just one, use -1 \"epic campaign period epoch depth(ppm)\""
+    print "You still need -c and -o"
+    print "Use -l or --lc to pick your light curve"
+    print "The names of the light curve choices are pdc,everest,sff,agp,varcat (not yet)"
+    print "Default is the PDC light curves."
 
 
 def loadEphemFile(ephemFile):
@@ -236,7 +265,7 @@ def runExport(clip,output):
     fid.write("%s\n" % outstr)
     fid.close()    
 
-    tag="%i-%02i-%04i" % (clip.value,per,epoch)
+    tag="%i-%02i-%04i-%s" % (clip.value,per,epoch,clip.config.detrendType)
     outfile="%09i/jvet%s.pdf" % (int(clip.value),tag)
 
     thedir=str(int(clip.value))
