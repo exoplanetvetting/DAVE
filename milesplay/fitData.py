@@ -3,7 +3,7 @@
 # Author: Miles Currie
 # Created: 06/21/2016
 #
-# Currently working on cleaning up the nasty code
+# Cleaned up a little
 #
 #
 #==============================================================================
@@ -44,7 +44,7 @@ def normalize(lcvMatrix):
     return np.array(lcvMatrixNorm)
     
 def getPrinComps(lcvMatrixNorm):
-    return np.linalg.svd(lcvMatrixNorm, full_matrices=0,compute_uv = 1)[2]
+    return np.linalg.svd(lcvMatrixNorm, full_matrices=0,compute_uv = 1)
     
 def make_plot(x, y, new=True, show=True, title=None, marker=".", label=None):
     if new == True:
@@ -58,7 +58,8 @@ def make_plot(x, y, new=True, show=True, title=None, marker=".", label=None):
 
 def curveFit(pcaMatrix, cadenceSum, numPrinComps, plotPC=False):
     pcaMatrixNorm = normalize(pcaMatrix)
-    prinComps = getPrinComps(pcaMatrixNorm)
+    prinComps = getPrinComps(pcaMatrixNorm)[2]
+    
     n = 0
     x = []
     while n < numPrinComps:
@@ -200,6 +201,37 @@ def trapFit(time_days, flux_frac, period_days, phase_bkjd, duration_hrs, depth_p
      #print trapFit
     return trapFit
        
+       
+def doBeforeAnything(epic, campaign, plotMask):
+    # get the data
+    getData_return = getData(epic, campaign)
+    data = getData_return[0]
+    inds_to_eliminate = getData_return[1].astype(bool)
+    
+    # plot the image
+    #plotCadence(data[0], axis='relative')    
+    
+    # create a mask for the light curve
+    mask = createMask(data[0], thresh=100, title="Light Curve Mask", plotMask=plotMask)
+    lcvMatrix = reduceAperture(mask, data)
+    
+    # create a mask for PCA
+    pca_mask = createMask(data[0], thresh=100, title="PCA Mask", plotMask=plotMask)
+    pcaMatrix = reduceAperture(pca_mask, data)
+
+    # take out data points with thruster firings
+    lcvMatrix = lcvMatrix[:,~inds_to_eliminate]
+    pcaMatrix = pcaMatrix[:,~inds_to_eliminate]
+    
+    #get rid of nans in matrices
+    lcvMatrix = noMoreNaN(lcvMatrix)
+    assert checkNaN(lcvMatrix)
+    pcaMatrix = noMoreNaN(pcaMatrix)
+    assert checkNaN(pcaMatrix)
+    
+    # make the raw light curve
+    cadenceSum = np.sum(lcvMatrix, axis=0)
+    return cadenceSum, lcvMatrix, pcaMatrix, mask, pca_mask
 
 def varylcvMask(epic, campaign, plotMask):
     # get the data
@@ -230,11 +262,9 @@ def varylcvMask(epic, campaign, plotMask):
     
 
 
-    offset = 5000
     
     print "\n#pixels_lcv\tdiff_std"
     print "-----------------"
-    n = 0
     corrected_list = []
     results_list = []
     for thresh in thresh_list:
@@ -254,7 +284,6 @@ def varylcvMask(epic, campaign, plotMask):
         print np.sum(mask), np.std(np.diff(corrected))
         corrected_list.append(corrected)
         
-    dataPoints = range(len(lcvMatrix[0]))
    
    #plt.figure()
     
@@ -326,34 +355,10 @@ def varypcaMask(epic, campaign, plotMask):
     plt.show()
     
 def varyNumPieces(epic, campaign, plotMask):
-    # get the data
-    getData_return = getData(epic, campaign)
-    data = getData_return[0]
-    inds_to_eliminate = getData_return[1].astype(bool)
     
-    numPrinComps = 25
-    thresh = 100
+    cadenceSum, lcvMatrix, pcaMatrix, lcvMask, pcaMask = doBeforeAnything(epic, campaign, plotMask)
     
-    # plot the image
-    plotCadence(data[0], axis='relative')            
-    
-    # create a mask for matrices
-    lcv_mask = createMask(data[0], thresh=100, title="Light Curve Mask", plotMask=plotMask)
-    lcvMatrix = reduceAperture(lcv_mask, data)
-    pca_mask = createMask(data[0], thresh=100, title="PCA Mask", plotMask=plotMask)
-    pcaMatrix = reduceAperture(pca_mask, data)
-    
-
-    # take out data points with thruster firings
-    lcvMatrix = lcvMatrix[:,~inds_to_eliminate]
-    pcaMatrix = pcaMatrix[:,~inds_to_eliminate]
-    
-    #get rid of nans in matrices
-    lcvMatrix = noMoreNaN(lcvMatrix)
-    assert checkNaN(lcvMatrix)
-    pcaMatrix = noMoreNaN(pcaMatrix)
-    assert checkNaN(pcaMatrix)
-    
+    numPrinComps = 10
 
     numPieces_list = range(1,11)
     plt.figure()
@@ -392,72 +397,107 @@ def getStarz(txtFile):
             campaign_list.append(line[1])
     return epic_list, campaign_list
 
+def makeMeanZero(corrected):
+    """input: 1d light curve array 
+        output: 1d array scaled so the mean is zero"""
+    corrected /= np.mean(corrected)
+    corrected -= 1
+    return corrected
 
+def getNoiseParams(lcv):
+    # sigma clip it
+    sigmaClip_tf = noise.sigmaClip(lcv, 5.)
+    lcv = lcv[~sigmaClip_tf]
+    
+    # get params
+    rta = noise.computeRollTweakAmplitude(lcv)
+    sgcdpp = noise.computeSgCdpp_ppm(lcv)
+    scatter = noise.estimateScatterWithMarshallMethod(lcv)
+    
+    return rta, sgcdpp, scatter
+    
+def paramSubplot(cadenceSum, numPrinCompList, results_list):
+    y = cadenceSum/np.mean(cadenceSum) - 1
+    raw_rta = noise.computeRollTweakAmplitude(y)  
+    raw_sgcdpp = noise.computeSgCdpp_ppm(noise.sigmaClip(y,5.))
+    raw_scatter = noise.estimateScatterWithMarshallMethod(y)
+    f, axarr = plt.subplots(3, sharex=True)    
+    axarr[0].axhline(raw_rta, label="RTA for raw light curve")
+    axarr[1].axhline(raw_sgcdpp, label="sgcdpp for raw light curve")
+    axarr[2].axhline(raw_scatter, label="scatter for raw light curve")
+    axarr[0].plot(numPrinCompList, results_list.T[1], ".", color="green")
+    axarr[1].plot(numPrinCompList, results_list.T[2], ".", color="green")
+    axarr[2].plot(numPrinCompList, results_list.T[3], ".", color="green")
+    plt.xlabel("Number of Principal Components")
+    axarr[0].set_ylabel("Roll Tweak Amplitude")
+    axarr[1].set_ylabel("sgcdpp")
+    axarr[2].set_ylabel("scatter")
+    plt.show()
+    
+def plotOptimalPCforParam(n, results_list, t, cadenceSum, fittedCurve, numPrinCompList, pcaMatrix):
+    if n == 1:
+        param = "rta"
+    elif n == 2:
+        param = "sgcdpp"
+    elif n == 3:
+        param = "MM scatter"
+    
+    plt.figure()
+    # plot lowest value of param on top of raw lcv
+    plt.plot(t, cadenceSum, ".")
+    optimalPC = numPrinCompList[np.argmin(results_list.T[n])]
+    fittedCurve = curveFit(pcaMatrix, cadenceSum, optimalPC)[0]
+    optimal_lcv = correctedCurve(cadenceSum, fittedCurve)
+    plt.plot(t, optimal_lcv, ".")
+    plt.title("lowest %s, PC=%i"%(param, optimalPC))
+    plt.show()
+    
+    # plot lowest slope between params on top of raw lcv
+    plt.figure()
+    smallest_slope = np.argmin(np.abs(np.diff(results_list.T[n])))
+    plt.plot(t, cadenceSum, ".")
+    optimalPC = numPrinCompList[smallest_slope]
+    fittedCurve = curveFit(pcaMatrix, cadenceSum, optimalPC)[0]
+    optimal_lcv = correctedCurve(cadenceSum, fittedCurve)
+    plt.plot(t, optimal_lcv, ".")
+    plt.title("smallest slope %s, PC=%i"%(param, optimalPC))
+    plt.show()
+
+def foldLightcurve(t, period, lcv):
+    phase = np.fmod(t, period)
+    plt.figure()
+    plt.plot(phase, lcv)
+    plt.show()
+    
+    
 def varyPrinComp(epic, campaign, plotMask):
-    # get the data
-    getData_return = getData(epic, campaign)
-    data = getData_return[0]
-    inds_to_eliminate = getData_return[1].astype(bool)
     
-    # plot the image
-    #plotCadence(data[0], axis='relative')    
-    
-    # create a mask for the light curve
-    mask = createMask(data[0], thresh=0, title="Light Curve Mask", plotMask=plotMask)
-    lcvMatrix = reduceAperture(mask, data)     
-    
-    # create a mask for PCA
-    pca_mask = createMask(data[0], thresh=0, title="PCA Mask", plotMask=plotMask)
-    pcaMatrix = reduceAperture(pca_mask, data)
-
-    # take out data points with thruster firings
-    lcvMatrix = lcvMatrix[:,~inds_to_eliminate]
-    pcaMatrix = pcaMatrix[:,~inds_to_eliminate]
-    
-    #get rid of nans in matrices
-    lcvMatrix = noMoreNaN(lcvMatrix)
-    assert checkNaN(lcvMatrix)
-    pcaMatrix = noMoreNaN(pcaMatrix)
-    assert checkNaN(pcaMatrix)
-    
-    # make the raw light curve
-    cadenceSum = np.sum(lcvMatrix, axis=0)
-    
+    cadenceSum, lcvMatrix, pcaMatrix, lcvMask, pcaMask = doBeforeAnything(epic, campaign, plotMask)
     t = np.arange(len(cadenceSum))
     
     # plot the raw light curve
-    make_plot(t, cadenceSum, title="Raw Light Curve, e: %s, c: %s"%(epic, campaign))
+    make_plot(t,  cadenceSum,show=False, title="Raw Light Curve, e: %s, c: %s"%(epic, campaign))
     
     # make a list of number of principal comps to try
-    numPrinCompList = np.arange(2,np.sum(mask), 2)
-    
+    numPrinCompList = np.arange(2,np.sum(lcvMask), 2)
 
-    rta_list = []
-    sgcdpp_list = []
-    scatter_list = []
+
     results_list = []
     n = 0
-    offset = 0.1
     
     #plt.figure()
     for numPrinComps in numPrinCompList:
         curveFit_return = curveFit(pcaMatrix, cadenceSum, numPrinComps)
         fittedCurve = curveFit_return[0]
         
-        # make the mean zero
+        # correct curve for PC's
         corrected = correctedCurve(cadenceSum, fittedCurve)
-        corrected /= np.mean(corrected)
-        corrected -= 1
         
-        sigmaClip_tf = noise.sigmaClip(corrected, 5.)
-        corrected = corrected[~sigmaClip_tf]
-        rta = noise.computeRollTweakAmplitude(corrected)
-        sgcdpp = noise.computeSgCdpp_ppm(corrected)
-        scatter = noise.estimateScatterWithMarshallMethod(corrected)
+        # make the mean zero
+        correctedMeanZero = makeMeanZero(corrected)
         
-        rta_list.append(rta)
-        sgcdpp_list.append(sgcdpp)
-        scatter_list.append(scatter)
+        # get rta, sgcdpp, MM scatter parameters:
+        rta, sgcdpp, scatter = getNoiseParams(correctedMeanZero)
 
         results_list.append([numPrinComps,rta, sgcdpp, scatter])
         #plt.plot(range(len(corrected)), corrected+ n*offset, ".", markersize=4, label = "%f,%i"%(sgcdpp, int(numPrinComps)))
@@ -466,67 +506,95 @@ def varyPrinComp(epic, campaign, plotMask):
     #plt.legend()
     #plt.show()
     
+    results_list = np.array(results_list)
     
     # plot the three params wrt the raw values
     if plotMask==True:
-        y = cadenceSum/np.mean(cadenceSum) - 1
-        raw_rta = noise.computeRollTweakAmplitude(y)  
-        raw_sgcdpp = noise.computeSgCdpp_ppm(noise.sigmaClip(y,5.))
-        raw_scatter = noise.estimateScatterWithMarshallMethod(y)
-        f, axarr = plt.subplots(3, sharex=True)    
-        axarr[0].axhline(raw_rta, label="RTA for raw light curve")
-        axarr[1].axhline(raw_sgcdpp, label="sgcdpp for raw light curve")
-        axarr[2].axhline(raw_scatter, label="scatter for raw light curve")
-        axarr[0].plot(numPrinCompList, rta_list, ".", color="green")
-        axarr[1].plot(numPrinCompList, sgcdpp_list, ".", color="green")
-        axarr[2].plot(numPrinCompList, scatter_list, ".", color="green")
-        plt.xlabel("Number of Principal Components")
-        axarr[0].set_ylabel("Roll Tweak Amplitude")
-        axarr[1].set_ylabel("sgcdpp")
-        axarr[2].set_ylabel("scatter")
-        plt.show()
+        paramSubplot(cadenceSum, numPrinCompList, results_list)
     
-    # plot the corrected light curve with the lowest sgcdpp
-#==============================================================================
-#     optimalPC = numPrinCompList[np.argmin(sgcdpp_list)]
-#     fittedCurve = curveFit(pcaMatrix, cadenceSum, optimalPC)[0]
-#     optimal_lcv = correctedCurve(cadenceSum, fittedCurve)
-#     make_plot(t, optimal_lcv, title="e: %s, c: %s,sgcdpp=%s PC=%s"%(epic, campaign, 
-#                                                             str(np.min(sgcdpp_list)), 
-#                                                             numPrinCompList[np.argmin(sgcdpp_list)]))
-#==============================================================================
-    
-    # plot the corrected light curve with the smallest slope between sgcdpp values
-    smallest_slope = np.argmin(np.abs(np.diff(sgcdpp_list)))
-    optimalPC = numPrinCompList[smallest_slope]
-    fittedCurve = curveFit(pcaMatrix, cadenceSum, optimalPC)[0]
-    optimal_lcv = correctedCurve(cadenceSum, fittedCurve)
-    sigmaClip_tf = noise.sigmaClip(optimal_lcv, 5.)
-    make_plot(t, optimal_lcv, show=False)
-    make_plot(t[sigmaClip_tf], optimal_lcv[sigmaClip_tf], new=False,title="e:%s, c:%s, smallest slope, PC=%s"%(epic, campaign,numPrinCompList[smallest_slope]), marker='ro')
-    
-    folded = np.fmod(t, 4.16)
-    make_plot(t, folded)
-    
-
-#==============================================================================
-#     # plot the corrected light curve with the lowest rta
-#     plt.figure()
-#     plt.title("epic %s campaign %s lowest rta=%s PC=%s"%(epic, campaign, 
-#                                                             str(np.min(rta_list)), 
-#                                                             numPrinCompList[np.argmin(rta_list)]))
-#     optimalPC = numPrinCompList[np.argmin(rta_list)]
-#     fittedCurve = curveFit(pcaMatrix, cadenceSum, optimalPC)[0]
-#     optimal_lcv = correctedCurve(cadenceSum, fittedCurve)
-#     plt.plot(range(len(optimal_lcv)), optimal_lcv, ".")
-#==============================================================================
-    #plt.show()
+    # plot results
+    n = 1
+    numParams = 3
+    while n < numParams + 1:
+        plotOptimalPCforParam(n,results_list, t, cadenceSum, fittedCurve, numPrinCompList, pcaMatrix)
+        n += 1
 
     return np.array(results_list).T
     
     
+
+def plotCumSumPCA(epic, campaign,n):
+    dimReturnCutoff_diff = 0.01
+    dimReturnCutoff_dec = 0.99
+    method = "dec"
+    cadenceSum, lcvMatrix, pcaMatrix = doBeforeAnything(epic, campaign, False)[:3]
+    t = np.arange(len(cadenceSum))
+
+    lcvMatrixNorm = normalize(lcvMatrix)
+    U, s, V = getPrinComps(lcvMatrixNorm)
+    prinComps = V
+    numPrinComps = np.arange(len(prinComps))
+    evalues = np.square(s)
+    cumSum = np.cumsum(evalues)
+    totSum = np.sum(evalues)
+    diff =  np.diff(cumSum/totSum)
+    if method == "diff":
+        for element in diff:
+            if element < dimReturnCutoff_diff:
+                idx = np.where(diff == element)[0][0]
+                break
+    elif method == "dec":
+        for element in cumSum/totSum:
+            if element > dimReturnCutoff_dec:
+                idx = np.where((cumSum/totSum) == element)[0][0]
+                break
+    plt.plot(numPrinComps,cumSum/totSum, label="e:%i"%epic)
+    plt.legend(loc=4)
+    plt.show()
+    optimalPC= idx + 1
+    
+    # fit the curve
+    curveFit_return = curveFit(pcaMatrix, cadenceSum, optimalPC)
+    fittedCurve = curveFit_return[0]
+        
+    # correct curve for PC's
+    corrected = correctedCurve(cadenceSum, fittedCurve)
+    plt.figure()
+    plt.title("e:%i PC=%i"%(epic, optimalPC))
+    plt.plot(t, cadenceSum, ".", label = "raw")
+    plt.plot(t, corrected, ".", label = "corrected")
+    plt.legend()
+    plt.show()
+        
+
+def cumSumPCA():
+    txtFile = "k2goodTransits.txt"
+    #txtFile = "k2_targets_sorted.txt"
+    getList = getStarz(txtFile)
+    epic_list = getList[0]
+    campaign_list = getList[1]
+    
+    print len(epic_list)
+    n = 0
+    plt.figure()
+    plt.title("Cumulative Sum of Eigenvalues")
+    plt.xlabel("Number of Principal Components")
+    plt.ylabel("Cumulative Sum of Eigenvalues / Total Sum")
+    plt.ylim(0.5, 1.1)
+    plt.xlim(0,20)
+    for epic, campaign in zip(epic_list[12:22], campaign_list[12:22]):
+        print n
+        plotCumSumPCA(int(epic), int(campaign), n)
+        n += 1
+
+        
+        
+        
 def main():
     
+    # EPICS AND CAMPAIGNS TO TRY
+#==============================================================================
+    txtFile = "k2goodTransits.txt"
     txtFile = "k2_targets_sorted.txt"
     getList = getStarz(txtFile)
 
@@ -541,47 +609,30 @@ def main():
     #epic = 211351816
     #campaign = 5
     
-    epicsGoodTransits = [206103150,205996447,205947214,210789323,
-                         210744674,211418729,211399359,212351405]
-    campaignsGoodTransits = [3,3,3,4,4,5,5,6]
-    
+#==============================================================================
+#     epicsGoodTransits = [206103150,205996447,205947214,210789323,
+#                          210744674,211418729,211399359,212351405,
+#                          201182911,201488265,202843107,]
+#     campaignsGoodTransits = [3,3,3,4,4,5,5,6,1,]
+#==============================================================================
+#==============================================================================    
     plotMask=False
     
     results_list = []
     n = 1
-    for epic, campaign in zip(epicsGoodTransits[:1], campaignsGoodTransits[:1]):
+    #for epic, campaign in zip(epic_list, campaign_list):
+    for epic, campaign in zip(epic_list, campaign_list):
         print "\nCOUNTER: %s"%str(n)
         print "epic, campaign = ",epic, campaign
         results = varyPrinComp(int(epic), int(campaign), plotMask)
         results_list.append(results)
+        answer = raw_input("Finished with epic %s. Want to move on to the next one (y or n)? "%epic)
         n += 1
-    lowest_rta_list = []
-    lowest_sgcdpp_list = []
-    lowest_scatter_list = []
-    for result in results_list:
-        lowest_rta_list.append(result[0][np.argmin(result[1])])
-        lowest_sgcdpp_list.append(result[0][np.argmin(result[2])])
-        lowest_scatter_list.append(result[0][np.argmin(result[3])])
+        if answer == "n":
+            break
+        else:
+            continue
 
-    #plt.plot(rta_list, range(len(rta_list)))
-    #plt.show()
-#==============================================================================
-#     plt.figure()
-#     plt.title("Most popular PC's: RTA")
-#     plt.hist(lowest_rta_list, bins=np.arange(2, 32, 2))
-#     plt.show()
-#     plt.figure()
-#     plt.title("Most popular PC's: sgcdpp")
-#     plt.hist(lowest_sgcdpp_list, bins=np.arange(2, 32, 2))
-#     plt.show()
-#     plt.figure()
-#     plt.title("Most popular PC's: scatter")
-#     plt.hist(lowest_scatter_list, bins=np.arange(2, 32, 2))
-#     plt.show()
-#   #  plt.show()
-#   #  varylcvMask(epic, campaign, plotMask)
-#   #  varypcaMask(epic, campaign, plotMask)
-#   #  varyNumPieces(epic, campaign, plotMask)
-#==============================================================================
-
-main()
+#main()
+cumSumPCA()
+    
