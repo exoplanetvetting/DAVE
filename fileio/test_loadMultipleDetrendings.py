@@ -8,25 +8,17 @@ $Id$
 $URL$
 """
 
-__version__ = "$Id$"
-__URL__ = "$URL$"
 
-
-
-import matplotlib.pyplot as mp
-import numpy as np
+import loadMultipleDetrendings as lmd
 import os
 
-import dave.pipeline.clipboard as dpc
-import loadMultipleDetrendings as lmd
+def test_smoke():
 
-def main():
-
-    cfg = dpc.Clipboard()
-    cfg['value']  = 211816003
-    cfg['campaign'] = 5
-    cfg['dataStorePath'] = os.path.join(os.environ['HOME'], ",mastio")
-    cfg['detrendTypes'] = ["PDC", "Everest", "Agp", "sff"]
+    epic  = 211816003
+    campaign = 5
+    dataStorePath = os.path.join(os.environ['HOME'], ",mastio")
+    detrendTypes = ["PDC", "Everest", "Agp", "sff"]
 
     #If this doesn't crash, then all detrendings were loaded.
-    return lmd.loadMultipleDetrendings(cfg)
+    return lmd.loadMultipleDetrendings(epic, campaign, dataStorePath,
+                                       detrendTypes)

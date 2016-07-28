@@ -24,20 +24,28 @@ import dave.fileio.tpf as tpf
 BAD_FLUX_VALUE = np.nan
 
 
-def loadMultipleDetrendings(cfg):
+#def loadMultipleDetrendings(cfg):
+#
+#
+#    epic = cfg['value']  #Is this right
+#    campaign = cfg['campaign']
+#    dataStorePath = cfg['dataStorePath']
+#    detrendTypes = cfg['detrendTypes']
 
-
-    epic = cfg['value']  #Is this right
-    campaign = cfg['campaign']
-    dataStorePath = cfg['dataStorePath']
-    detrendTypes = cfg['detrendTypes']
+def loadMultipleDetrendings(epic, campaign, dataStorePath, detrendTypes):
+    #Definition of the different kinds of detrendings and how to
+    #parse the output of their archive class
+    dTypeDict = dict()
+    dTypeDict['PDC'] = (mastio.K2Archive(), pdcParser, "PDC")
+    dTypeDict['AGP'] = (mastio.K2SCArchive(), agpParser, "K2SC")
+    dTypeDict['EVEREST'] = (mastio.EverestArchive(), everestParser, "Everest")
+    dTypeDict['SFF'] = (mastio.VanderburgArchive(), sffParser,
+                        "Vanderburg SFF")
 
     out = dpc.Clipboard()
 
-
-    ar = mastio.K2Archive(dataStorePath)
-
     #Load the TPF data cube
+    ar = mastio.K2Archive(dataStorePath)
     fits, hdr = ar.getLongTpf(epic, campaign, header=True, mmap=False)
     hdr0 = ar.getLongTpf(epic, campaign, ext=0, mmap=False)
     cube = tpf.getTargetPixelArrayFromFits(fits, hdr)
@@ -51,13 +59,6 @@ def loadMultipleDetrendings(cfg):
     fits = ar.getLongCadence(epic, campaign)
     out['rawFlux'] = fits['SAP_FLUX']
 
-    #Load as many kinds of detrendings as user requested
-    dTypeDict = dict()
-    dTypeDict['PDC'] = (mastio.K2Archive(), pdcParser, "PDC")
-    dTypeDict['AGP'] = (mastio.K2SCArchive(), agpParser, "K2SC")
-    dTypeDict['EVEREST'] = (mastio.EverestArchive(), everestParser, "Everest")
-    dTypeDict['SFF'] = (mastio.VanderburgArchive(), sffParser,
-                        "Vanderburg SFF")
 
     #Load lightcurves from a specific detrending, and replace
     #the pdc time series with the new detrending
