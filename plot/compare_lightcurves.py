@@ -15,7 +15,8 @@ import numpy as np
 
 
 def plot_multiple_lightcurves(time, fluxes=(), labels=None,
-                              offset_sigma=7., title='', markersize=2):
+                              offset_sigma=7., title='', markersize=2,
+                              epoch=None, period=None):
     """Returns a figure showing multiple lightcurves separated by an offset.
 
     Parameters
@@ -35,6 +36,15 @@ def plot_multiple_lightcurves(time, fluxes=(), labels=None,
 
     title : str
         Title to show at the top of the figure.
+
+    markersize : float
+        Size of the symbols in the plot.
+
+    epoch : float
+        If `epoch` and `period` are set, the lightcurves will be folded.
+
+    period : float
+        If `epoch` and `period` are set, the lightcurves will be folded.
     """
     fig, ax = pl.subplots()
     # Input validation
@@ -46,6 +56,9 @@ def plot_multiple_lightcurves(time, fluxes=(), labels=None,
     normalized_fluxes = []
     for f in fluxes:
         normalized_fluxes.append(f / np.median(f))
+    # Did the user request a folded plot?
+    if epoch is not None and period is not None:
+        time = np.fmod(time - epoch + .25*period, period)
     # How big should the spacing be between lightcurves?
     sampling_size = 20  # speedup
     std = np.std(np.array(normalized_fluxes)[::sampling_size].flatten())
@@ -72,7 +85,9 @@ def plot_multiple_lightcurves(time, fluxes=(), labels=None,
 
 
 def save_multiple_lightcurves_plot(output_fn='plot.png', **kwargs):
-    plot_multiple_lightcurves(**kwargs).savefig(output_fn)
+    fig = plot_multiple_lightcurves(**kwargs)
+    fig.savefig(output_fn)
+    pl.close(fig)
 
 
 # Demo
@@ -88,4 +103,13 @@ if __name__ == '__main__':
                                     labels=('Smith', 'Jones', 'Williams'),
                                     title='Comparison of lightcurves')
     fig.savefig('lightcurves.png')
+    pl.close(fig)
+
+    fig = plot_multiple_lightcurves(time=time,
+                                    epoch=20.,
+                                    period=100.,
+                                    fluxes=(flux1, flux2, flux3),
+                                    labels=('Smith', 'Jones', 'Williams'),
+                                    title='Comparison of lightcurves')
+    fig.savefig('lightcurves-folded.png')
     pl.close(fig)
