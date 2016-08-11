@@ -262,6 +262,7 @@ def runExport(clip,output):
     outstr,header=ex.createExportString(clip, delimiter=" ", badValue="nan")
 
     fid=open(output,'a') 
+    fid.write("%s\n" % header)
     fid.write("%s\n" % outstr)
     fid.close()    
 
