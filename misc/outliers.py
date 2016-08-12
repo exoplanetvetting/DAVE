@@ -29,7 +29,7 @@ def indexOfOutliers(a, threshold_sigma=4, normFreq=.45):
     if numPointsInFilter % 2 == 1:
         numPointsInFilter += 1
 
-    filt = sincfilter.highPass(a.asarray(), normFreq, numPointsInFilter)
+    filt = sincfilter.highPass(np.asarray(a), normFreq, numPointsInFilter)
 
     rms = np.std(filt)
     idx = np.abs(filt) > threshold_sigma*rms

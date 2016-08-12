@@ -70,7 +70,7 @@ def loadDefaultConfig():
     cfg['debug'] = True
     cfg['campaign'] = 3
     cfg['timeout_sec'] = 120
-    cfg['nPointsForMedianSmooth'] = 26
+    cfg['nPointsForMedianSmooth'] = 48
     cfg['blsMinPeriod'] = 0.5
     cfg['blsMaxPeriod'] = 30
 
@@ -271,6 +271,7 @@ def cotrendDataTask(clip):
 
 
 from dave.blsCode import outlier_detection
+import dave.misc.noise as noise
 @task.task
 def detrendDataTask(clip):
     """
@@ -291,37 +292,26 @@ def detrendDataTask(clip):
     #This is the simplest possible thing. Replace all bad/missing data with
     #zeros. This is a placehold. Bad data inside a transit is replaced with
     #a zero.
-    flux[flags] = 0
-
+    #flux[flags] = 0
     #Flag the outliers in the data
-    singleOutlierIndices = outlier_detection.outlierRemoval(time, flux)
-
-
-    notSingleOutlierIndices = np.delete(np.arange(len(flux)),singleOutlierIndices)
+    #singleOutlierIndices = outlier_detection.outlierRemoval(time, flux)
+    flags |= noise.singlePointDifferenceSigmaClip(flux, initialClip=flags)
 
     #do a simple detrend with the outliers not included
-    fluxprime = flux[notSingleOutlierIndices]
-    medianVector = outlier_detection.medianDetrend(fluxprime, nPoints)
+    trend = outlier_detection.medianDetrend(flux[~flags], nPoints)
+    medianDetrend = np.zeros_like(flux)
+    medianDetrend[~flags] = flux[~flags] - trend
+    
 
-    #put everything back together
-    #with outliers filled
-    detrendedFlux = np.zeros_like(flux)
-    detrendedFlux[notSingleOutlierIndices] = fluxprime - medianVector
-
-    for cad in singleOutlierIndices:
-        fillval = detrendedFlux[cad-3:cad+3]
-        detrendedFlux[cad] = flux[cad] - np.mean(fillval[fillval != 0])
-    outlierflag = np.zeros_like(flux,dtype=bool)
-    outlierflag[singleOutlierIndices] = 1
-    outlierflag[detrendedFlux<-1] = 1  #Added by SET so TrapFit will work
+    flags |= (medianDetrend < -1)    
 
     clip['detrend'] = dict()
-    clip['detrend.flux_frac'] = detrendedFlux
-    clip['detrend.flags'] = flags | outlierflag
+    clip['detrend.flux_frac'] = medianDetrend
+    clip['detrend.flags'] = flags
     clip['detrend.source'] = "Simple Median detrend"
-
-    assert(detrendedFlux is not None)
+    
     return clip
+
 
 
 @task.task
@@ -429,7 +419,7 @@ import dave.blsCode.fbls as fbls
 import dave.misc.noise as noise
 @task.task
 def fblsTask(clip):
-    time_days = clip['serve.time']
+    time_days = clip['extract.time']
     flux_norm = clip['detrend.flux_frac']
     flags = clip['detrend.flags']
     minPeriod = clip['config.blsMinPeriod']
@@ -458,6 +448,7 @@ def fblsTask(clip):
     out['snr'] = snr
     out['bls_search_periods'] = spectrum[:,0]
     out['convolved_bls'] = spectrum[:,1]
+    #out['obj'] = blsObj
 #    out['bls'] = bls  #bls array is extremely big
     clip['bls'] = out
 
@@ -880,8 +871,11 @@ def saveClip(clip):
         fn = "c%09i-%02i-%02i-%04i-%s.clip" %(value,campaign,np.round(clip.bls.period*10),np.round(clip.bls.epoch),clip.config.detrendType)
         fn = os.path.join(path, fn)
 
-        if os.path.exists(fn):
-            os.remove(fn)
+        #Remove old clip files and any clip.db, clip.bak etc.
+        import glob
+        fList = glob.glob("%s*" %(fn))
+        for f in fList:
+            os.remove(f)
 
         sh = shelve.open(fn)
         for k in clip.keys():
@@ -890,6 +884,7 @@ def saveClip(clip):
             else:
                 sh[k] = clip[k]
         sh.close()
+    
     except Exception, e:
         print "WARN: Error in saveClip: %s" %(e)
         clip['exception'] = str(e)
@@ -1133,3 +1128,72 @@ def extractLightcurveFromTpfTask(clip):
     clip['extract.flags']
     return clip
 
+import dave.milesplay.productionPCA2 as milesPCA
+@task.task
+def getMilesLightcurveTask(clip):
+    
+    # get input data from clip
+    cube = clip['serve.cube']
+    time = clip['serve.time']
+    flags = clip['serve.flags'] > 0
+    flags |= ~np.isfinite(time)
+
+    nt, nr, nc = cube.shape
+    pixSeries, pixSeriesNorm = milesPCA.pixSeriesPrep(cube, flags)
+    
+    totLightcurve = milesPCA.getRawLightcurve(pixSeries)
+    
+    # package results
+    out = clipboard.Clipboard()
+    out['rawLightcurve'] = totLightcurve
+    out['time'] = time
+    out['pixSeries'] = pixSeries
+    out['pixSeriesNorm'] = pixSeriesNorm
+    out['flags'] = flags
+    
+    clip['extract'] = out
+    
+    #Enforce contract
+    clip['extract.rawLightcurve']
+    clip['extract.time']
+    clip['extract.pixSeries']
+    clip['extract.pixSeriesNorm']
+    clip['extract.flags']
+    return clip
+    
+@task.task    
+def milesCotrendDataTask(clip):
+    
+    #pixSeries = clip['extract.pixSeries']
+    pixSeriesNorm = clip['extract.pixSeriesNorm']
+    rawLightcurve = clip['extract.rawLightcurve']
+    flags = clip['extract.flags']
+    numPixels = pixSeriesNorm.shape[0]
+    evalues, prinComps = milesPCA.performSVD(pixSeriesNorm)
+    optimalNumPC = milesPCA.chooseNumPrinComps(prinComps, rawLightcurve, numPixels, evalues)
+    bestFit = milesPCA.curveFit(prinComps[:optimalNumPC], rawLightcurve)
+    print  optimalNumPC
+    
+    bestCorrectedLightcurve = rawLightcurve - bestFit
+    flux_frac = bestCorrectedLightcurve
+    #flux_frac = flux_frac - np.mean(flux_frac)
+    flux = flux_frac/np.mean(flux_frac) - 1
+    flux -= np.mean(flux)
+    #flux = flux[~flags]
+    #Remove dc offset
+    #dcOffset = np.mean( flux_frac)
+    #flux = (flux_frac/ dcOffset) - 1
+    clip['cotrend'] = {'flux_frac': flux}
+    #clip['cotrend.dcOffset'] = dcOffset
+    clip['cotrend.flags'] = flags
+    clip['cotrend.source'] = "Pixel Level PCA"
+    clip['cotrend.correctedCurve'] = bestCorrectedLightcurve
+    clip['cotrend.numPC'] = optimalNumPC
+    
+    
+    # Enforce Contract
+    clip['cotrend.flux_frac']
+    clip['cotrend.correctedCurve']
+    clip['cotrend.numPC']
+    
+    return clip

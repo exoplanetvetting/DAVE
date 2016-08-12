@@ -91,9 +91,10 @@ def plotTransitRegions(time, period_days, epoch_bkjd, duration_days, **kwargs):
         plt.axvspan(lwr, upr, color=color, alpha=alpha)
 
 def plotFolded(clip, doublePeriod = False, modelOn = True):
+    plt.figure()
     fl = clip['detrend.flags']
-    time = clip['serve.time']
-
+    time = clip['extract.time']
+    numPC = clip['cotrend.numPC']
 #    tce = clip['eventList'][0]
     tce = clip  #In prepartion for the multi-search pipeline
     flux = clip['detrend.flux_frac']
@@ -115,7 +116,7 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
 #    phi = np.fmod(time, period)
     plt.plot(phi[~fl], 1e6*flux[~fl], 'ko', ms=4)
     plt.plot(period+ phi[~fl], 1e6*flux[~fl], 'o', color='#888888', ms=4, mec="none")
-
+    plt.title("PC:%i"%numPC)
     if modelOn:
         model = tce['trapFit.bestFitModel']
         x = phi[~fl]
@@ -130,7 +131,7 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
 
     plt.ylabel("Fractional Amplitude (ppm)")
     plt.xlabel("Phase (days)")
-
+    plt.show()
 
 def summaryPlot1(output):
     """
