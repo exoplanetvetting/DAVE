@@ -7,17 +7,47 @@ This is a template top level script.
 
 import dave.pipeline.pipeline as dpp
 import dave.pipeline.clipboard as clipboard
-
+import numpy as np
 import gc
 
 def main():
     """A bare bones main program"""
     cfg = loadMyConfiguration()
-
-    epicList = [206103150]
-
-    for epic in epicList:
+#==============================================================================
+#     campaignList = [3,5,3,3,3,3,3,3,3,3]
+#     epicList = [206103150, 211351816, 206348688, 206268299, 206247743, 206245553
+#                 ,206192813,206181769 , 206162305 , 206159027    ]
+#     
+#     candInfo = []
+#     with open('/Users/Miles/seti/candidates_to_run.tsv') as file:
+#         for line in file:
+#             line = line.strip("\n")
+#             line = line.split("\t")
+#             line[1]  = line[1].strip("EPIC ")
+#             candInfo.append(line)
+#     candInfo = np.array(candInfo)
+#     epicList = candInfo.T[1][1:].astype(int)
+#     campaignList = candInfo.T[2][1:].astype(int)
+#==============================================================================
+    file = '/Users/Miles/seti/c8_stars.csv'
+    with open(file) as f:
+        infoMatrix = []
+        for l in f:
+            l = l.strip('\n')
+            l = l.split(',')
+            infoMatrix.append(l)
+    infoMatrix = np.array(infoMatrix)[1:]
+    epics_mags = np.column_stack((infoMatrix.T[0,:].astype(int), infoMatrix.T[3,:].astype(float)))    
+    sorted_epicsMags =  epics_mags[epics_mags[:,1].argsort()]
+    epicList = sorted_epicsMags.T[0]
+    campaignList = np.ones_like(epicList)*8
+    n=0
+    for epic, campaign in zip(epicList[:10], campaignList[:10]):
+        print '\nCOUNTER:',n
+        print "EPIC: %i CAMPAIGN: %i"%(epic, campaign)
+        cfg['campaign'] = campaign
         runOne(epic, cfg)
+        n+=1
 
 
 def loadMyConfiguration():
@@ -26,20 +56,27 @@ def loadMyConfiguration():
 
     cfg = dpp.loadDefaultConfig()
 
+    cfg['lppMapFilePath'] = '/Users/Miles/seti/dave/lpp/octave/maps/mapQ1Q17DR24-DVMed6084.mat'
+
+    cfg['detrendType'] = 'PDC'    
     #Edit the default configuration to your taste.
     #Change anything else you don't like about the default config here.
-    cfg['debug'] = True
+    cfg['debug'] = False
     cfg['timeout_sec'] = 0
 
-    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
-        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-        dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask dpp.modshiftTask
-        dpp.lppMetricTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
-        dpp.saveClip""".split()
-
-
+    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.getMilesLightcurveTask
+        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.milesCotrendDataTask
+        dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask  dpp.saveClip""".split()
+        
+#==============================================================================
+#         dpp.modshiftTask
+#         dpp.lppMetricTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
+#         
+#==============================================================================
+        
+    #tasks = ["dpp.getMilesLightcurveTask"]
     cfg['taskList'] = tasks
-
+    cfg['numInitialCadencesToIgnore'] = 100
 
 #    searchTaskList = """placeholderBls trapezoidFitTask modshiftTask
 #    measureDiffImgCentroidsTask dispositionTask""".split()
@@ -106,7 +143,7 @@ def runOne(k2id, config, returnClip=False):
     """
 
     taskList = config['taskList']
-
+    
     clip = clipboard.Clipboard()
     clip['config'] = config
     clip['value'] = k2id
@@ -164,3 +201,5 @@ def newDetrendDataTask(clip):
 
     assert(detrend is not None)
     return clip
+
+main()

@@ -123,6 +123,9 @@ def computeSgCdpp_ppm(y, transitDuration_cadences=13, plot=False):
     if cadencesPerTransit < 4:
         raise ValueError("Cadences per transit must be >= 4")
 
+    if len(y) < window:
+        raise ValueError("Can't compute CDPP for timeseries with fewer points than defined window (%i points)" %(window))
+
     trend = savgol_filter(y, window_length=window, polyorder=polyorder)
     detrend = y-trend
 
@@ -196,6 +199,70 @@ def estimateScatterWithMarshallMethod(flux, plot=False):
     return float(std/np.sqrt(2))
 
 
+
+def singlePointDifferenceSigmaClip(a, nSigma=4, maxIter=1e4, initialClip=None):
+    """Iteratively find and remove outliers in first derivative
+
+    If a dataset can be modeled as a constant offset + noise + outliers,
+    those outliers can be found and rejected with a sigma-clipping approach.
+    
+    If the data contains some time-varying signal, this signal must be removed
+    before applying a sigma clip. This function removes the signal by applying
+    a single point difference.
+    
+    The function computes a[i+1] - a[i], and sigma clips the result. Slowly
+    varying trends will have single point differences that are dominated by noise,
+    but outliers have strong first derivatives and will show up strongly in this
+    metric.
+    
+    Inputs:
+    ----------
+    y
+        (1d numpy array) Array to be cleaned
+    nSigma
+        (float) Threshold to cut at. 5 is typically a good value for
+        most arrays found in practice.
+
+    Optional Inputs:
+    -------------------
+    maxIter
+        (int) Maximum number of iterations
+
+    initialClip
+        (1d boolean array) If an element of initialClip is set to True,
+        that value is treated as a bad value in the first iteration, and
+        not included in the computation of the mean and std.
+
+    Returns:
+    ------------
+    1d numpy array. Where set to True, the corresponding element of y
+    is an outlier.
+    """
+   
+    #Scatter in single point difference is root 2 time larger
+    #than in initial lightcurve
+    threshold = nSigma/np.sqrt(2)
+    
+    diff1 = np.roll(a, -1) - a
+    diff1[-1] = 0  #Don't trust the last value because a[-1] not necessarily equal to a
+    idx1 = sigmaClip(diff1, nSigma, maxIter, initialClip)
+    
+    diff2 = np.roll(a, 1) - a
+    diff2[0] = 0  
+    idx2 = sigmaClip(diff2, nSigma, maxIter, initialClip)
+
+    flags = idx1 & idx2
+    
+    #This bit of magic ensures only single point outliers are marked, 
+    #not strong trends in the data. It insists that the previous point 
+    #in difference time series is an outlier in the opposite direction, otherwise
+    #the point is considered unflagged. This prevents marking transits as bad data.
+    outlierIdx = flags
+    outlierIdx &= np.roll(idx1, 1)
+    outlierIdx &= (np.roll(diff1, 1) * diff1 < 0)
+    return outlierIdx
+
+
 def sigmaClip(y, nSigma, maxIter=1e4, initialClip=None):
     """Iteratively find and remove outliers
 
@@ -238,8 +305,8 @@ def sigmaClip(y, nSigma, maxIter=1e4, initialClip=None):
 
     oldNumClipped = np.sum(idx)
     for i in range(int(maxIter)):
-        mean = np.mean(y[~idx])
-        std = np.std(y[~idx])
+        mean = np.nanmean(y[~idx])
+        std = np.nanstd(y[~idx])
 
         newIdx = np.fabs(y-mean) > nSigma*std
         newIdx = np.logical_or(idx, newIdx)

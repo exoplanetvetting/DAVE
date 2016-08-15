@@ -141,7 +141,8 @@ def optimalAperture(t_time, t_fluxarr, t_quality, qual_cut=False, return_qual=Fa
     #find pixels that are X MAD above the median
     vals = flatim[np.isfinite(flatim)].flatten()
     mad_cut = 1.4826 * MAD(vals) * bg_cut
-
+    
+    flatim[np.isnan(flatim)] = 0.
     region = np.where(flatim > mad_cut,1,0)
     lab = label(region)[0]
 

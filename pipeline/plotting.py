@@ -91,15 +91,18 @@ def plotTransitRegions(time, period_days, epoch_bkjd, duration_days, **kwargs):
         plt.axvspan(lwr, upr, color=color, alpha=alpha)
 
 def plotFolded(clip, doublePeriod = False, modelOn = True):
+    plt.figure()
     fl = clip['detrend.flags']
-    time = clip['serve.time']
-
+    time = clip['extract.time']
+    numPC = clip['cotrend.numPC']
 #    tce = clip['eventList'][0]
     tce = clip  #In prepartion for the multi-search pipeline
     flux = clip['detrend.flux_frac']
-    period = tce['trapFit.period_days']
-    epoch = tce['trapFit.epoch_bkjd']
-    model = tce['trapFit.bestFitModel']
+#    period = tce['trapFit.period_days']
+#    epoch = tce['trapFit.epoch_bkjd']
+#    model = tce['trapFit.bestFitModel']
+    period = tce['bls.period']
+    epoch = tce['bls.epoch']
 
     if doublePeriod:
         period *= 2
@@ -113,7 +116,7 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
 #    phi = np.fmod(time, period)
     plt.plot(phi[~fl], 1e6*flux[~fl], 'ko', ms=4)
     plt.plot(period+ phi[~fl], 1e6*flux[~fl], 'o', color='#888888', ms=4, mec="none")
-
+    plt.title("PC:%i"%numPC)
     if modelOn:
         model = tce['trapFit.bestFitModel']
         x = phi[~fl]
@@ -128,7 +131,7 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
 
     plt.ylabel("Fractional Amplitude (ppm)")
     plt.xlabel("Phase (days)")
-
+    plt.show()
 
 def summaryPlot1(output):
     """
@@ -138,7 +141,7 @@ def summaryPlot1(output):
     epicid=str(output['value'])
     trapsnr=output['trapFit.snr']
     trapper=output['trapFit.period_days']
-    trapdur=output['trapFit.duration_hrs']
+    trapdur=output['trapFit.duration_hrs']/24.0
     trapdepth=output['trapFit.depth_frac']*1.0e6;
     centroids =output['diffImg.centroid_timeseries']
 
@@ -164,8 +167,8 @@ def summaryPlot1(output):
 
     plt.subplot(224)
     plotFolded(output)
-    if trapdur*3 < trapper:
-        plt.xlim(trapper*.25-trapdur*1.5,trapper*.25+trapdur*1.5)
+    if trapdur*1.5 < trapper:
+        plt.xlim(trapper*.25-trapdur*1.9,trapper*.25+trapdur*1.9)
     else:
         plt.xlim(trapper*.15, trapper*.35)
 
@@ -237,7 +240,7 @@ def indivTransitPlot(clip,ndur):
     desat=2**5
     therms=np.bitwise_and(qflag,thr+safe+desat) != 0;
     print len(therms[therms])
-    
+
     plt.clf()
     #Plot first six
     c=1;

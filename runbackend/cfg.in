@@ -1,0 +1,20 @@
+#Createaconfigfromatextfile
+blsMaxPeriod:30
+blsMinPeriod:0.5
+campaign:6
+clipSavePath:/home/sthomp/daveOutput/
+dataStorePath:/home/sthomp/.mastio/k2
+debug:False
+keysToIgnoreWhenSaving:serve
+lppMapFilePath:/home/sthomp/DAVE/dave/lpp/octave/maps/mapQ1Q17DR24-DVMed6084.mat
+maxLppForTransit:0.007943282347242814
+minProbDiffImgCentroidForFail:0.99
+minSnrForDetection:10.0
+modshiftBasename:/home/sthomp/DAVE/playK2/justvet
+nPointsForMedianSmooth:26
+numInitialCadencesToIgnore:50
+onepageBasename:/home/sthomp/daveOutput/
+prfPath:/home/sthomp/.mastio/keplerprf
+taskList:dpp.checkDirExistTask, dpp.serveTask,dpp.extractLightcurveFromTpfTask,dpp.computeCentroidsTask,dpp.rollPhaseTask,dpp.cotrendSffDataTask,dpp.detrendDataTask,dpp.fblsTask,dpp.trapezoidFitTask,dpp.lppMetricTask,dpp.modshiftTask,dpp.measureDiffImgCentroidsTask,dpp.dispositionTask, dpp.saveClip
+stellarFile:/home/sthomp/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt
+timeout_sec:120

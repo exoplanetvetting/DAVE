@@ -292,7 +292,7 @@ def computePeriodList(Plwr, Pupr, time, duration, overres=2):
 
 
     assert(Pupr > Plwr)
-    timespan = np.max(time) - np.min(time)
+    timespan = np.nanmax(time) - np.nanmin(time)
     q = duration/timespan/float(overres)
 
     nStep = int(np.ceil(np.log(Pupr/Plwr) / np.log(1+q)))+2
@@ -327,7 +327,7 @@ def computeBlsForManyPeriods(t, y, durationList, periodList, minNumBinsPerTransi
         raise ValueError("Periods must be > 0")
 
     maxNumBins = minNumBinsPerTransit * max(periodList) / min(durationList)
-    out = np.zeros((len(periodList), len(durationList), maxNumBins))
+    out = np.zeros((len(periodList), len(durationList), int(maxNumBins)))
     dt = t - np.min(t)
 
     for i,period in enumerate(periodList):

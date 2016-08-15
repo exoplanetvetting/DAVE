@@ -31,7 +31,7 @@ def plot_multipages(outfile,clip,intext):
     put these plots all into one multi paged document
     specifieed by outfile
     """
-    
+    plt.ioff()
     dotperinch=120    
     figuresize=(11,8)
     # The PDF document
@@ -50,6 +50,8 @@ def plot_multipages(outfile,clip,intext):
          plantxt=clip.get('planet',defaultValue='No Planet Param. Avail.')
          plt.figtext(0.7,0.2,plantxt)
 
+    fig.patch.set_visible(False)
+    plt.gca().axis('off')
     plt.savefig(pdf_pages,format='pdf')
     plt.close(1)
     

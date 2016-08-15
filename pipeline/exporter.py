@@ -9,8 +9,6 @@ import dave.pipeline.multiPagePlot as mpp
 import dave.pipeline.pipeline as dpp
 import dave.stellar.readStellarTable as stel
 import os
-import dave.pipeline.plotting as pp
-import dave.diffimg.plot as dip 
 from pdb import set_trace as db
 #%%
 def createExportString(clip, delimiter=" ", badValue="nan"):
@@ -33,18 +31,21 @@ def createExportString(clip, delimiter=" ", badValue="nan"):
     Two strings. The first is the text to be exported. The second is the 
     list of keys that were exported
     """
-    keysForExport = (   ('value' , '%10i'), \
+    keysForExport = (   ('value' , '%09i'), \
                         ('trapFit.period_days', '%7.3f'), \
                         ('trapFit.epoch_bkjd', '%12.6f'), \
                         ('trapFit.duration_hrs', '%7.3f'), \
                         ('trapFit.snr', '%6.2f'), \
-                        ('stellar.Teff', '%4.1f'),\
+                        ('stellar.Teff', '%6.1f'),\
                         ('stellar.Rad', '%5.3f'),\
-                        ('stellar.dis', '%5.1f'),\
-                        ('planet.rad_earth', '%5.2f'),\
-                        ('planet.sma_au','%6.4f'),\
-                        ('disposition.isSignificantEvent', ' %1i'), \
-                        ('disposition.isCandidate', ' %i'), \
+                        ('stellar.dis', '%6.1f'),\
+                        ('planet.rad_earth', '%6.2f'),\
+                        ('planet.sma_au','%6.3f'),\
+                        ('config.detrendType','%8s'),\
+                        ('disposition.fluxVet.not_trans_like', '\t%1i'), \
+                        ('disposition.fluxVet.sig_sec', ' %1i'),\
+                        ('disposition.centroidVet.isCentroidFail', ' %1i'),\
+                        ('disposition.isCandidate', ' %1i'), \
                         ('disposition.reasonForFail', ' %s'), \
                     )
                     
@@ -70,16 +71,19 @@ def createOutputs(clip):
     and appends results to a table (logTableFile)
     """
     #Some of this needs to not be hardwired here.  This is ugly.
-    clip['config']['exportLoc']='/soc/nfs/so-nfs/dave/c6-v2'
+    clip['config']['exportLoc']='/soc/nfs/so-nfs/dave/c7-pdc/'
     clip['config']['onepageBasename']=clip['config']['exportLoc']
     clip['config']['dataStorePath']='/home/smullall/Science/datastore'
     epic=str(int(clip.value))
     
     #print clip.serve
 
-    clip=dpp.serveTask(clip)    
-    print 'hi serve'        
-    print clip.serve
+    try:
+        clip.serve.time
+    except AttributeError:
+        clip=dpp.serveLocalTask(clip)    
+        print 'hi serve'        
+        print clip.serve
     try:
         print clip.exception
     except AttributeError:
@@ -97,15 +101,15 @@ def createOutputs(clip):
             clip=stel.estimatePlanetProp(clip)
             
             outfile="%s/%s/epic%s-mp.pdf" % (clip.config['exportLoc'],epic,epic)
-            mpp.plot_multipages(outfile, clip, clip.config.clipSavePath)
+            mpp.plot_multipages(outfile, clip, outfile)
             
             #fig = plt.figure(1, figsize=figuresize, dpi=dotperinch)
             #pp.summaryPlot1(clip)
             
-            file2="%s/%s/%s-modshift.pdf" % (clip.config.exportLoc,epic,epic)
+            #file2="%s/%s/%s-modshift.pdf" % (clip.config.exportLoc,epic,epic)
             #file3="%s/%s/%s-onepage.pdf" % (clip.config.onepageBasename,epic,epic)
-            
-            cmd="gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s/%s/%s-all.pdf %s  %s" % (clip.config.exportLoc,epic,epic, outfile,file2)
+            cmd=''
+            #cmd="gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s/%s/%s-all.pdf %s  %s" % (clip.config.exportLoc,epic,epic, outfile,file2)
             #cmd="pdftk %s %s %s output %s/%s/%s-all.pdf" % (outfile,file2,file3,clip.config['exportLoc'],epic,epic)
             print cmd
             os.system(cmd)     

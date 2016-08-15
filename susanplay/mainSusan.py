@@ -31,8 +31,8 @@ def loadMyConfiguration():
     cfg['debug'] = False
 
 
-    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
-        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
+    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveFromTpfTask
+        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendSffDataTask
         dpp.detrendDataTask dpp.fblsTask dpp.trapezoidFitTask dpp.lppMetricTask dpp.modshiftTask
         dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveClip""".split()   
@@ -105,12 +105,11 @@ def runOneEphem(k2id,period,epoch,config,duration=2,depth=.0001):
        
     """
     
-    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
-        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
+    tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveFromTpfTask
+        dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendSffDataTask
         dpp.detrendDataTask dpp.trapezoidFitTask dpp.lppMetricTask 
         dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
-        dpp.plotTask dpp.saveOnError""".split()  
-    
+        dpp.saveOnError""".split()  
     
     taskList = tasks;
 
