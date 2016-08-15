@@ -105,6 +105,8 @@ class BlsSearch(object):
         if np.min(self.durations) > 1:
             print "WARN: All durations longer than 1 day. Did you input hours?"
 
+        if lwr < np.max(self.durations):
+            raise ValueError("Shortest period less than longest duration")
         if not debug:
             self.run()
 
