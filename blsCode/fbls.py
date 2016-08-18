@@ -53,7 +53,8 @@ class BlsSearch(object):
     to carry around. If you don't like object orientation, call fbls()
     yourself directly"""
 
-    def __init__(self, time, flux, periodRange, durations_days, debug=False):
+    def __init__(self, time, flux, periodRange, durations_days,
+                 periodOverResolution=2, binsPerTransit=10, debug=False):
         """
 
         Initialise variables and run the bls search
@@ -88,13 +89,20 @@ class BlsSearch(object):
 
         """
 
-        self.minBinsPerTransit = 10
+        self.periodOverResolution = periodOverResolution
+        #@TODO, just call this binsPerTransit
+        self.minBinsPerTransit = binsPerTransit
         self.time = time
         self.flux = flux
         self.periodRange = periodRange
 
+        if len(time) < 2:
+            raise ValueError("Time array must have at least two elements")
+
+
         lwr, upr = periodRange
-        self.periods = computePeriodList(lwr, upr, time, min(durations_days))
+        self.periods = computePeriodList(lwr, upr, time, min(durations_days),
+                                         self.periodOverResolution)
 
         #Allow durations to be a single value
         if not hasattr(durations_days, "__len__"):
@@ -325,6 +333,8 @@ def computeBlsForManyPeriods(t, y, durationList, periodList, minNumBinsPerTransi
         raise ValueError("Periods must be > 0")
 
     maxNumBins = minNumBinsPerTransit * max(periodList) / min(durationList)
+    maxNumBins = int(np.ceil(maxNumBins))
+
     out = np.zeros((len(periodList), len(durationList), int(maxNumBins)))
     dt = t - np.min(t)
 
@@ -342,16 +352,62 @@ def computeBlsForManyPeriods(t, y, durationList, periodList, minNumBinsPerTransi
             binned = kplrfits.foldAndBinData(dt, y, period, 0, expTime, nBins)
             binned = binned[:,1]
         else:
-            binned = fastFoldAndBin(dt, y, period, nBins)
+            binned, counts = fastFoldAndBin(dt, y, period, nBins)
+            binned /= counts
 
+#        import ipdb; ipdb.set_trace()
+#        mp.clf()
+#        mp.plot(binned, 'bo-')
 
         for j,duration in enumerate(durationList):
-            transitWidth = int(np.round(duration/period * nBins))
+            #This line is wrong!
+            #should be? overRed*duration/min(duration)
+            #transitWidth = int(np.round(duration/period * nBins))
+            transitWidth = minNumBinsPerTransit*duration/np.min(duration)
 
             if transitWidth > 0 and transitWidth < len(binned):
                 bls = computeBlsForOnePeriod(binned, transitWidth)
+#                mp.plot(bls, 'ro-')
+#                mp.pause(1)
                 out[i,j, :nBins] = bls
     return out
+
+"""
+def computeBlsForOnePeriod(y, transitWidth):
+
+    if transitWidth <= 0:
+        raise ValueError("Transit width must be at least 1 cadence")
+
+    if transitWidth >= len(y):
+        raise ValueError("Transit width must be shorter than length of binned lightcurve")
+
+    template = np.ones(transitWidth)
+    bls = -np.convolve(y, template, mode='same')
+    assert(len(bls) == len(y))
+
+    return bls
+"""
+
+def computeBlsForOnePeriod(y, transitWidth):
+
+    if transitWidth <= 0:
+        raise ValueError("Transit width must be at least 1 cadence")
+
+    if transitWidth >= len(y):
+        raise ValueError("Transit width must be shorter than length of binned lightcurve")
+
+    #If y has weights, s[], r = \Sigma s_i
+    r = float(transitWidth)
+
+    #if y has weights, s is the convolution of y*s by signal
+    signal = np.ones(transitWidth)
+    s = np.convolve(y, signal, mode='same')
+    assert(len(s) == len(y))
+    bls = -s/np.sqrt(r)
+    assert(len(bls) == len(y))
+
+    return bls
+
 
 
 #def computeTransitWidth(duration, period, nBins):
@@ -397,31 +453,34 @@ def fastFoldAndBin(t, y, period, nBins):
     phi = np.fmod(t, period)
 
     eps = 1e-10  #To prevent division by zero
-    weights = np.histogram(phi, nBins, normed=False)[0] + eps
+    counts = np.histogram(phi, nBins, normed=False)[0] + eps
     binned = np.histogram(phi, nBins, weights=y, normed=False)[0]
-    return binned/weights
+
+    return binned, counts
 
 
-#@profile
-def computeBlsForOnePeriod(y, transitWidth):
+##@profile
+#def Old_computeBlsForOnePeriod(y, transitWidth):
 
-    if transitWidth <= 0:
-        raise ValueError("Transit width must be at least 1 cadence")
+    #if transitWidth <= 0:
+        #raise ValueError("Transit width must be at least 1 cadence")
 
-    if transitWidth >= len(y):
-        raise ValueError("Transit width must be shorter than length of binned lightcurve")
+    #if transitWidth >= len(y):
+        #raise ValueError("Transit width must be shorter than length of binned lightcurve")
 
-    #If y has weights, s[], r = \Sigma s_i
-    r = float(transitWidth)
+    ##If y has weights, s[], r = \Sigma s_i
+    #r = float(transitWidth)
 
-    #if y has weights, s is the convolution of y*s by signal
-    signal = np.ones(transitWidth)
-    s = np.convolve(y, signal, mode='same')
-    assert(len(s) == len(y))
-    bls = -s/np.sqrt(r)
-    assert(len(bls) == len(y))
+    ##if y has weights, s is the convolution of y*s by signal
+    #signal = np.ones(transitWidth)
+    #s = np.convolve(y, signal, mode='same')
+    #assert(len(s) == len(y))
+    #bls = -s/np.sqrt(r)
+    #assert(len(bls) == len(y))
 
-    return bls
+    #return bls
+
+
 
 
 #def getParamsOfDetection(blsArray, indices, duration_daysList, periodList):
