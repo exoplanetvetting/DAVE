@@ -77,6 +77,8 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch,modplotint):
 
 
     timeout_sec = 10
+    objectname = objectname.replace(" ", "_")
+
     # Write data to a tempoary file so it can be read by model-shift
     # compiled C code. mkstemp ensures the file is written to a random
     # location so the code can be run in parallel.

@@ -298,7 +298,7 @@ def computePeriodList(Plwr, Pupr, time, duration, overres=2):
 
 
     assert(Pupr > Plwr)
-    timespan = np.max(time) - np.min(time)
+    timespan = np.nanmax(time) - np.nanmin(time)
     q = duration/timespan/float(overres)
 
     nStep = int(np.ceil(np.log(Pupr/Plwr) / np.log(1+q)))+2
