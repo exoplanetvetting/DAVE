@@ -89,7 +89,7 @@ def estimatePlanetProp(clip):
 
     new=dict()
     
-    prad_km=solarR_km*srad*(depth**(1/2))
+    prad_km=solarR_km*srad*(depth**(0.5))
 
     new['rad_earth']=prad_km/earthR_km;
     
