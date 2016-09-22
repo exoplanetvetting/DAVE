@@ -91,10 +91,13 @@ def plotTransitRegions(time, period_days, epoch_bkjd, duration_days, **kwargs):
         plt.axvspan(lwr, upr, color=color, alpha=alpha)
 
 def plotFolded(clip, doublePeriod = False, modelOn = True):
-    plt.figure()
+    #plt.figure()  #Does not belong here. Remove from this function!
     fl = clip['detrend.flags']
     time = clip['extract.time']
-    numPC = clip['cotrend.numPC']
+    try:
+        numPC = clip['cotrend.numPC']
+    except KeyError:
+        numPC = 1
 #    tce = clip['eventList'][0]
     tce = clip  #In prepartion for the multi-search pipeline
     flux = clip['detrend.flux_frac']

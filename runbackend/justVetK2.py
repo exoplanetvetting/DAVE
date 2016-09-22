@@ -268,6 +268,9 @@ def runExport(clip,output):
 
     tag="%i-%02i-%04i-%s" % (clip.value,per,epoch,clip.config.detrendType)
     outfile="%09i/jvet%s" % (int(clip.value),tag)
+    
+    print outfile
+    print clip
 
     thedir=str(int(clip.value))
     print thedir
@@ -283,7 +286,7 @@ def runExport(clip,output):
         clip['disposition'] = 'No Disposition Determined'
         clip.disposition.isCandidate = 0
         clip.disposition.isSignificantEvent = 0
-        
+       
     mpp.plot_multipages(outfile, clip, date)
 
         

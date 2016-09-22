@@ -36,7 +36,7 @@ def plot_multipages(outfile,clip,intext,figtype="png"):
     dotperinch=120    
     figuresize=(11,8)
     # The PDF document
-    pdfout=outfile % '.pdf'
+    pdfout=outfile + '.pdf'
     pdf_pages = PdfPages(pdfout)
       # Create a figure instance (ie. a new page) 
     #pdf_pages.attach_note(('KIC %u   [%u]' % (clip.value, clip.disposition.isCandidate)),positionRect=[100,200,10,400])
@@ -58,32 +58,33 @@ def plot_multipages(outfile,clip,intext,figtype="png"):
     fig.patch.set_visible(False)
     plt.gca().axis('off')
     plt.savefig(pdf_pages,format='pdf')
-    outname="%s-%s.%s",(outfile,"info",figtype)
+    outname="%s-%s.%s" %(outfile,"info",figtype)
+    
     plt.savefig(outname)
-    plt.close(fig)
+    plt.close()
     
     fig = plt.figure(1, figsize=figuresize, dpi=dotperinch)
     # Plot whatever you wish to plot
     pp.summaryPlot1(clip)
     # Done with the page
-    pdf_pages.savefig(1)
-    outname="%s-%s.%s",(outfile,"summary",figtype)
-    plt.savefig(outname)
-    plt.close(fig)
+    pdf_pages.savefig()
+    outname="%s-%s.%s" %(outfile,"summary",figtype)
+    fig.savefig(outname)
+    plt.close()
 
     fig = plt.figure(figsize=figuresize, dpi=dotperinch)
     # Plot whatever you wish to plot
     pp.plotData(clip, nPanel=3)
     pdf_pages.savefig()
-    outname="%s-%s.%s",(outfile,"data",figtype)
-    plt.savefig(outname)
-    plt.close(fig)
+    outname="%s-%s.%s" % (outfile,"data",figtype)
+    fig.savefig(outname)
+    plt.close()
 
  
     fig = plt.figure(figsize=figuresize, dpi=dotperinch)
     pp.indivTransitPlot(clip,6)    
     pdf_pages.savefig()
-    outname="%s-%s.%s",(outfile,"indiv",figtype)
+    outname="%s-%s.%s" %(outfile,"indiv",figtype)
     plt.savefig(outname)
     plt.close()
 
@@ -91,7 +92,7 @@ def plot_multipages(outfile,clip,intext,figtype="png"):
         fig = plt.figure(figsize=figuresize, dpi=dotperinch)
         pp.blsPlot(clip)    
         pdf_pages.savefig()
-        outname="%s-%s.%s",(outfile,"bls",figtype)
+        outname="%s-%s.%s" % (outfile,"bls",figtype)
         plt.savefig(outname)
         plt.close()
     except AttributeError:
@@ -105,20 +106,20 @@ def plot_multipages(outfile,clip,intext,figtype="png"):
         fig2=plt.plot()
 
     fig1.set_size_inches(figuresize)
-    pdf_pages.savefig(fig2, dpi=dotperinch)
-    outname="%s-%s.%s",(outfile,"cent1",figtype)
-    plt.savefig(outname)
-    fig2.set_size_inches(figuresize)        
     pdf_pages.savefig(fig1, dpi=dotperinch)
-    outname="%s-%s.%s",(outfile,"cent2",figtype)
-    plt.savefig(outname)
+    outname="%s-%s.%s" % (outfile,"cent1",figtype)
+    fig1.savefig(outname)
+    fig2.set_size_inches(figuresize)        
+    pdf_pages.savefig(fig2, dpi=dotperinch)
+    outname="%s-%s.%s" % (outfile,"cent2",figtype)
+    fig2.savefig(outname)
     plt.close()
-    plt.close()
+
 
     fig=plt.figure(figsize=figuresize,dpi=dotperinch)
     pp.lppDiagnostic(clip)
     pdf_pages.savefig()
-    outname="%s-%s.%s",(outfile,"lpp",figtype)
+    outname="%s-%s.%s" % (outfile,"lpp",figtype)
     plt.savefig(outname)
     plt.close()    
         
