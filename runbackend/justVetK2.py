@@ -267,7 +267,7 @@ def runExport(clip,output):
     fid.close()    
 
     tag="%i-%02i-%04i-%s" % (clip.value,per,epoch,clip.config.detrendType)
-    outfile="%09i/jvet%s.pdf" % (int(clip.value),tag)
+    outfile="%09i/jvet%s" % (int(clip.value),tag)
 
     thedir=str(int(clip.value))
     print thedir

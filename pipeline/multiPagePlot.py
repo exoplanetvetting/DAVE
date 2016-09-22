@@ -14,7 +14,7 @@ import dave.diffimg.plot as dip
 import dave.stellar.readStellarTable as stel
 from pdb import set_trace as bp
  
-def plot_multipages(outfile,clip,intext):
+def plot_multipages(outfile,clip,intext,figtype="png"):
     """Create a line of text for the exporter
     
     Inputs:
@@ -31,15 +31,20 @@ def plot_multipages(outfile,clip,intext):
     put these plots all into one multi paged document
     specifieed by outfile
     """
+
     plt.ioff()
     dotperinch=120    
     figuresize=(11,8)
     # The PDF document
-    pdf_pages = PdfPages(outfile)
+    pdfout=outfile % '.pdf'
+    pdf_pages = PdfPages(pdfout)
       # Create a figure instance (ie. a new page) 
     #pdf_pages.attach_note(('KIC %u   [%u]' % (clip.value, clip.disposition.isCandidate)),positionRect=[100,200,10,400])
+    
+    
 
     fig =  plt.figure(1, figsize=figuresize, dpi=dotperinch)  
+   
     plt.figtext(0.2,0.85,intext,color='r',fontsize=15)
     plt.figtext(0.15,0.2,clip.disposition,color='b',fontsize=14)
     plt.title('Disposition Information for EPIC %u' % clip['value'])
@@ -53,31 +58,41 @@ def plot_multipages(outfile,clip,intext):
     fig.patch.set_visible(False)
     plt.gca().axis('off')
     plt.savefig(pdf_pages,format='pdf')
-    plt.close(1)
+    outname="%s-%s.%s",(outfile,"info",figtype)
+    plt.savefig(outname)
+    plt.close(fig)
     
     fig = plt.figure(1, figsize=figuresize, dpi=dotperinch)
     # Plot whatever you wish to plot
     pp.summaryPlot1(clip)
     # Done with the page
     pdf_pages.savefig(1)
-    plt.close(1)
+    outname="%s-%s.%s",(outfile,"summary",figtype)
+    plt.savefig(outname)
+    plt.close(fig)
 
     fig = plt.figure(figsize=figuresize, dpi=dotperinch)
     # Plot whatever you wish to plot
     pp.plotData(clip, nPanel=3)
     pdf_pages.savefig()
-    plt.close()
+    outname="%s-%s.%s",(outfile,"data",figtype)
+    plt.savefig(outname)
+    plt.close(fig)
 
  
     fig = plt.figure(figsize=figuresize, dpi=dotperinch)
     pp.indivTransitPlot(clip,6)    
     pdf_pages.savefig()
+    outname="%s-%s.%s",(outfile,"indiv",figtype)
+    plt.savefig(outname)
     plt.close()
 
     try:
         fig = plt.figure(figsize=figuresize, dpi=dotperinch)
         pp.blsPlot(clip)    
         pdf_pages.savefig()
+        outname="%s-%s.%s",(outfile,"bls",figtype)
+        plt.savefig(outname)
         plt.close()
     except AttributeError:
         pass
@@ -91,14 +106,20 @@ def plot_multipages(outfile,clip,intext):
 
     fig1.set_size_inches(figuresize)
     pdf_pages.savefig(fig2, dpi=dotperinch)
+    outname="%s-%s.%s",(outfile,"cent1",figtype)
+    plt.savefig(outname)
     fig2.set_size_inches(figuresize)        
     pdf_pages.savefig(fig1, dpi=dotperinch)
+    outname="%s-%s.%s",(outfile,"cent2",figtype)
+    plt.savefig(outname)
     plt.close()
     plt.close()
 
     fig=plt.figure(figsize=figuresize,dpi=dotperinch)
     pp.lppDiagnostic(clip)
     pdf_pages.savefig()
+    outname="%s-%s.%s",(outfile,"lpp",figtype)
+    plt.savefig(outname)
     plt.close()    
         
     
