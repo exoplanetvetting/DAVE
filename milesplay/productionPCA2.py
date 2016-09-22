@@ -11,7 +11,7 @@ import dave.fileio.mastio as mastio
 import dave.fileio.tpf as tpf
 import dave.fileio.kplrfits as kplrfits
 import dave.misc.noise as noise
-import dave.misc.gapfill
+import gapfill
 import pdb
 
 def getData(epic, campaign):

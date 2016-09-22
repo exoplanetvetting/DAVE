@@ -7,6 +7,7 @@ This is a template top level script.
 
 import dave.pipeline.pipeline as dpp
 import dave.pipeline.clipboard as clipboard
+import dave.pipeline.task as task
 import numpy as np
 import gc
 
@@ -89,7 +90,7 @@ def loadMyConfiguration():
 
 import multiprocessing
 import contextlib
-import parmap
+import dave.pipeline.parmap as parmap
 from multiprocessing import pool
 def runAll(func, iterable, config):
     """Run func over every element on iterable in parallel.
@@ -168,7 +169,6 @@ def runOne(k2id, config, returnClip=False):
 
 import dave.misc.noise as noise
 import dave.fileio.kplrfits as kplrfits
-import task
 @task.task
 def newDetrendDataTask(clip):
     flux = clip['cotrend.flux_frac']
