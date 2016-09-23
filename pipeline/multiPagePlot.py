@@ -100,7 +100,7 @@ def plot_multipages(outfile,clip,intext,figtype="png"):
 
     try:    
         #Plot centroid plots
-        (fig1,fig2)=dip.plotWrapper(clip)
+        (fig2,fig1)=dip.plotWrapper(clip)
     except:
         fig1=plt.plot()
         fig2=plt.plot()

@@ -114,7 +114,7 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
         epoch -= period*np.ceil(diff/period)
         print "Reducing epoch"
 
-    plt.cla()
+    #plt.cla()
     phi = np.fmod(time-epoch + .25*period, period)
 #    phi = np.fmod(time, period)
     plt.plot(phi[~fl], 1e6*flux[~fl], 'ko', ms=4)
@@ -134,7 +134,7 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
 
     plt.ylabel("Fractional Amplitude (ppm)")
     plt.xlabel("Phase (days)")
-    plt.show()
+    #plt.show()
 
 def summaryPlot1(output):
     """
