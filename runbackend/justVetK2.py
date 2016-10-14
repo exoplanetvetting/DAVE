@@ -124,10 +124,11 @@ def usage():
     print "Format of the input ephem file is\n"
     print "epic campaign period_days epoch_bkjd depth_ppm"
     print "To run just one, use -1 \"epic campaign period epoch depth(ppm)\""
-    print "You still need -c and -o"
+    print "You still need -c cfg.in and -o output.txt"
     print "Use -l or --lc to pick your light curve"
     print "The names of the light curve choices are pdc,everest,sff,agp,varcat (not yet)"
     print "Default is the PDC light curves."
+    print "Chose the same top directory for onepageBasename and modshiftBasename for all images to end up in same directory."
 
 
 def loadEphemFile(ephemFile):
@@ -270,12 +271,7 @@ def runExport(clip,output):
     outfile="%09i/jvet%s" % (int(clip.value),tag)
     
     thedir=str(int(clip.value))
-    print thedir
-    if ~(os.path.isdir(thedir)):
-        try:
-            os.makedirs(thedir)
-        except:
-            print 'Error making directory %s' % clip.value
+    #print thedir
     
     date=datetime.datetime.now()
     
