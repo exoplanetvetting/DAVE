@@ -95,7 +95,7 @@ def createOutputs(clip):
     try:
         if clip.disposition.isSignificantEvent:
             clip['config']['stellarPar']=['Mass','Rad','Teff','dis','rho','prov','logg'] 
-            clip['config']['stellarFile']='/home/smullall/Science/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt' 
+            #clip['config']['stellarFile']='/home/smullall/Science/DAVE/dave/etc/k2EpicCatalogStellarTable5.txt' 
 
             clip=stel.addStellarToClip(clip)
             clip=stel.estimatePlanetProp(clip)
