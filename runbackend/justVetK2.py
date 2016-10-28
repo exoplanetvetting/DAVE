@@ -263,14 +263,18 @@ def runExport(clip,output):
     outstr,header=ex.createExportString(clip, delimiter=" ", badValue="nan")
 
     fid=open(output,'a') 
-    fid.write("%s\n" % header)
+    #fid.write("%s\n" % header)
     fid.write("%s\n" % outstr)
     fid.close()    
 
     tag="%i-%02i-%04i-%s" % (clip.value,per,epoch,clip.config.detrendType)
-    outfile="%09i/jvet%s" % (int(clip.value),tag)
+    outfile="%s/%09i/jvet%s" % (clip.config.onepageBasename,int(clip.value),tag)
     
-    thedir=str(int(clip.value))
+    thedir=clip.config.onpageBasename + str(int(clip.value))
+    try:
+        os.mkdir(thedir)
+    except OSError:
+        print "Cannot create directory " + thedir
     #print thedir
     
     date=datetime.datetime.now()
