@@ -252,7 +252,7 @@ def runExport(clip,output):
     """
     per=np.round(clip.bls.period*10)
     epoch=np.round(clip.bls.epoch)
-    
+    basedir=clip.config['onepageBasename']
     try:
         clip['config']['stellarPar']=['Mass','Rad','Teff','dis','rho','prov','logg']
         clip=stel.addStellarToClip(clip)
@@ -268,9 +268,9 @@ def runExport(clip,output):
     fid.close()    
 
     tag="%i-%02i-%04i-%s" % (clip.value,per,epoch,clip.config.detrendType)
-    outfile="%s/%09i/jvet%s" % (clip.config.onepageBasename,int(clip.value),tag)
+    outfile="%s/%09i/jvet%s" % (basedir,int(clip.value),tag)
     
-    thedir=clip.config.onpageBasename + str(int(clip.value))
+    thedir=basedir + str(int(clip.value))
     try:
         os.mkdir(thedir)
     except OSError:
