@@ -7,6 +7,8 @@ Created on Fri Jan 29 09:55:11 2016
 A multi plot creator to create Vetting type documents for our 
 detected signals.
 """
+import matplotlib as mpl
+mpl.use('Agg')  #Use Agg backend to prevent X server use when headless
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import dave.pipeline.plotting as pp
