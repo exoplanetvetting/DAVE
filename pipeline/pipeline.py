@@ -73,7 +73,7 @@ def loadDefaultConfig():
     cfg['nPointsForMedianSmooth'] = 48
     cfg['blsMinPeriod'] = 0.5
     cfg['blsMaxPeriod'] = 30
-
+    cfg['detrendType'] = 'PDC'
 
     #Thermal resettling tends to bugger up the first day or so of K2 data
     #It seems best to just cut out a chunk.
@@ -572,12 +572,13 @@ def trapezoidFitTask(clip):
 import dave.vetting.ModShift as ModShift
 @task.task
 def modshiftTask(clip):
-
+    
     time = clip['serve.time']
     flux = clip['detrend.flux_frac']
     fl = clip['detrend.flags']
     period_days = clip['trapFit.period_days']
     epoch_bkjd = clip['trapFit.epoch_bkjd']
+    detrendType = clip.config.detrendType
     #dur_hrs =  clip['trapFit.duration_hrs']
     #ingress_hrs = clip['trapFit.ingress_hrs']
     #depth_ppm = 1e6*clip['trapFit.depth_frac']
