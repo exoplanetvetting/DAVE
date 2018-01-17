@@ -107,7 +107,7 @@ def loadDefaultConfig():
 
     #My front end
     tasks = """checkDirExistTask serveTask extractLightcurveTask
-        computeCentroidsTask rollPhaseTask cotrendSffDataTask detrendDataTask'
+        computeCentroidsTask rollPhaseTask cotrendSffDataTask detrendDataTask
         fblsTask trapezoidFitTask vetTask plotTask saveClip""".split()   # Jeff added plotTask
     cfg['taskList'] = tasks
 
