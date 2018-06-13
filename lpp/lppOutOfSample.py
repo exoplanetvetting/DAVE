@@ -3,6 +3,7 @@
 Created on Thu Sep 10 20:47:49 2015
 
 @author: sthomp
+
 """
 
 #Port Out of Sample LPP Code from Matlab
