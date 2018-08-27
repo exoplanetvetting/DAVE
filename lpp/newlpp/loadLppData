@@ -1,0 +1,59 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Aug 24 11:58:23 2018
+
+Classes to read in data files containing either the 
+light curve containing the transit (Timeseries) or
+the information about the mapping (MapInfo)
+These are used by lpp_transform
+
+@author: smullally
+"""
+
+import scipy.io as spio
+from astropy.io import fits
+
+
+class Timeseries(object):
+    
+    def __init__(self, filename, ext=1):
+        self.filename = filename
+        #self.readDV(filename,ext)
+        
+        
+    def readDV(self,filename,ext=1):
+        
+        hdu=fits.open(filename)
+        self.time=hdu[ext].data['TIME']
+        self.flux=hdu[ext].data['LC_DETREND']
+        self.period=hdu[ext].header['TPERIOD']
+        self.tzero=hdu[ext].header['TEPOCH']
+        self.dur=hdu[ext].header['TDUR']
+        self.depth=hdu[ext].header['TDEPTH']
+        
+        hdu.close()
+
+class MapInfo(object):
+    
+    def readMatlabBlob(self,filename):
+        """
+        read in matlab blob
+        Using the DV trained one.
+        """      
+
+        mat=spio.loadmat(filename,matlab_compatable=True)
+        
+        #Pull out the information we need.
+        
+        self.n_dim = mat['mapInfoDV']['nDim'][0][0][0][0]
+        self.Ymap = mat['mapInfoDV']['Ymap'][0][0][0][0]
+        self.YmapMapping = self.Ymap['mapping'][0][0][0]
+        self.YmapMapped = self.Ymap['mapped']
+        self.knn=mat['mapInfoDV']['knn'][0][0][0][0]
+        self.knnGood=mat['mapInfoDV']['knnGood'][0][0]
+        self.mappedPeriods=mat['mapInfoDV']['periods'][0][0][0]
+        self.nPsample=mat['mapInfoDV']['nPsample'][0][0][0][0]  #number to sample
+        self.nPercentil=mat['mapInfoDV']['npercentilTM'][0][0][0][0]
+        self.dymean=mat['mapInfoDV']['dymean'][0][0][0]
+    
