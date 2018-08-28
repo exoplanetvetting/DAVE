@@ -30,6 +30,7 @@ import numpy as np
 import scipy.signal as signal
 from sklearn.neighbors import NearestNeighbors
 from lpproj import LocalityPreservingProjection
+import matplotlib.pyplot as plt
 
 def computeLPPTransitMetric(data,mapInfo):
     """
@@ -40,13 +41,17 @@ def computeLPPTransitMetric(data,mapInfo):
     
     binFlux, binPhase=foldBinLightCurve(data,mapInfo.ntrfr,mapInfo.npts)
     
+    #plt.figure()
+    #plt.plot(binPhase,binFlux,'.--')
+    
+    
     #Dimensionality Reduction and knn parts
-    rawTLpp=computeRawLPPTransitMetric(binFlux,mapInfo)
+    rawTLpp,transformedTransit=computeRawLPPTransitMetric(binFlux,mapInfo)
     
     #Normalize by Period Dependence
-    normTLpp=periodNormalLPPTransitMetric(rawTLpp,data.period, mapInfo)
+    normTLpp=periodNormalLPPTransitMetric(rawTLpp,np.array([data.period,data.mes]), mapInfo)
     
-    return normTLpp,rawTLpp
+    return normTLpp,rawTLpp,transformedTransit
     
     
     
@@ -113,17 +118,18 @@ def foldBinLightCurve (data, ntrfr, npts):
         
     endfr = .03
     midfr= .11
-    ovsamp=4.0
     a = np.concatenate((np.arange(endfr,.5-midfr,1/npts) , \
                         np.arange((0.5+midfr),(1-endfr),1/npts)), axis=None)
-    bstep=(ovsamp*ntrfr*transit_fr)/npts
-    b =np.arange((0.5-ntrfr*transit_fr),\
-                                (0.5+ntrfr*transit_fr),bstep)
-    
+    ovsamp=4.0
+    #bstep=(ovsamp*ntrfr*transit_fr)/npts
+    b_num=41
+    b =np.linspace((0.5-ntrfr*transit_fr),(0.5+ntrfr*transit_fr),b_num)
+
     print "length a: %u " % len(a)
     print "length b: %u" % len(b)
     [runta,runya] = runningMedian(phaselc,flux,binover/npts,a)
-    [runtb,runyb] = runningMedian(phaselc,flux,(5*ntrfr*transit_fr)/npts,b)
+    [runtb,runyb] = runningMedian(phaselc,flux,\
+                    (binover*ovsamp*ntrfr*transit_fr)/npts,b)
 
     #Combine the two sets of bins
     runymess=np.array(runya + runyb)
@@ -155,9 +161,12 @@ def computeRawLPPTransitMetric(binFlux,mapInfo):
     
     Yorig=mapInfo.YmapMapped
     lpp=LocalityPreservingProjection(n_components=mapInfo.n_dim)
-    lpp.projection_=mapInfo.YmapMapping
+    lpp.projection_=mapInfo.YmapM
     
-    inputY=lpp.transform(binFlux.reshape(1,-1))
+    #To equate to Matlab LPP methods, we need to remove mean of transform.
+    normBinFlux=binFlux-mapInfo.YmapMean
+    
+    inputY=lpp.transform(normBinFlux.reshape(1,-1))
     
     knownTransitsY=Yorig[mapInfo.knnGood,:]
     
@@ -165,7 +174,7 @@ def computeRawLPPTransitMetric(binFlux,mapInfo):
     
     rawLppTrMetric=np.mean(dist)
     
-    return rawLppTrMetric
+    return rawLppTrMetric,inputY
     
 def knnDistance_fromKnown(knownTransits,new,knn):
     """
@@ -185,22 +194,30 @@ def knnDistance_fromKnown(knownTransits,new,knn):
     
       
     
-def periodNormalLPPTransitMetric(rawTLpp,newPeriod, mapInfo):
+def periodNormalLPPTransitMetric(rawTLpp,newPerMes, mapInfo):
     """
     Normalize the rawTransitMetric value by those with the closest period.
     This part removes the period dependence of the metric at short periods.
     Plus it makes a value near one be the threshold between good and bad.
+    
+    newPerMes is the np.array([period, mes]) of the new sample
     """
     knownTrPeriods=mapInfo.mappedPeriods[mapInfo.knnGood]
+    knownTrMes=mapInfo.mappedMes[mapInfo.knnGood]
     knownTrrawLpp=mapInfo.dymeans[mapInfo.knnGood]
     nPercentil=mapInfo.nPercentil
     nPsample=mapInfo.nPsample
     
     #Find the those with the nearest periods  Npsample-nneighbors
-    logPeriods=np.log10(knownTrPeriods.reshape(-1,1))
-    logNew=np.array([np.log10(newPeriod)]).reshape(1,1)
+    logPeriods=np.log10(knownTrPeriods)
+    logMes=np.log10(knownTrMes)
+    knownPerMes=np.stack((logPeriods, logMes), axis=-1)
 
-    dist,ind = knnDistance_fromKnown(logPeriods,logNew,nPsample)
+    np.shape(knownPerMes)
+    logNew=np.log10(newPerMes).reshape(1,-1)
+    #logNew=np.array([np.log10(newPeriod)]).reshape(1,1)
+
+    dist,ind = knnDistance_fromKnown(knownPerMes,logNew,nPsample)
     
     #Find the nthPercentile of the rawLpp of these indicies
     nearPeriodLpp=knownTrrawLpp[ind]
@@ -212,9 +229,7 @@ def periodNormalLPPTransitMetric(rawTLpp,newPeriod, mapInfo):
     return NormLppTransitMetric
     
     
-    
-    
-    
+
     
     
     
