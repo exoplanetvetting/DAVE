@@ -36,10 +36,18 @@ class TCE(object):
         self.tzero=hdu[ext].header['TEPOCH']
         self.dur=hdu[ext].header['TDUR']
         self.depth=hdu[ext].header['TDEPTH']
+        self.mes=hdu[ext].header['MAXMES']
         
         hdu.close()
 
 class MapInfo(object):
+    
+    def __init__(self,filename):
+        
+        self.filename=filename
+        
+        self.readMatlabBlob(filename)
+
     
     def readMatlabBlob(self,filename):
         """
@@ -47,7 +55,7 @@ class MapInfo(object):
         Using the DV trained one.
         """      
 
-        mat=spio.loadmat(filename,matlab_compatable=True)
+        mat=spio.loadmat(filename,matlab_compatible=True)
         
         #Pull out the information we need.
         
@@ -56,9 +64,10 @@ class MapInfo(object):
         self.YmapMapping = self.Ymap['mapping'][0][0][0]
         self.YmapMapped = self.Ymap['mapped']
         self.knn=mat['mapInfoDV']['knn'][0][0][0][0]
-        self.knnGood=mat['mapInfoDV']['knnGood'][0][0]
+        self.knnGood=mat['mapInfoDV']['knnGood'][0][0][:,0]
         self.mappedPeriods=mat['mapInfoDV']['periods'][0][0][0]
         self.nPsample=mat['mapInfoDV']['nPsample'][0][0][0][0]  #number to sample
         self.nPercentil=mat['mapInfoDV']['npercentilTM'][0][0][0][0]
-        self.dymean=mat['mapInfoDV']['dymean'][0][0][0]
-    
+        self.dymeans=mat['mapInfoDV']['dymean'][0][0][0]
+        self.ntrfr= 2.0
+        self.npts=80.0

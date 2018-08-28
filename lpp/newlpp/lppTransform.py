@@ -29,7 +29,7 @@ from __future__ import division
 import numpy as np
 import scipy.signal as signal
 from sklearn.neighbors import NearestNeighbors
-
+from lpproj import LocalityPreservingProjection
 
 def computeLPPTransitMetric(data,mapInfo):
     """
@@ -44,9 +44,9 @@ def computeLPPTransitMetric(data,mapInfo):
     rawTLpp=computeRawLPPTransitMetric(binFlux,mapInfo)
     
     #Normalize by Period Dependence
-    normTLpp=periodNormalLPPTransitMetric(rawTLPP,mapInfo)
+    normTLpp=periodNormalLPPTransitMetric(rawTLpp,data.period, mapInfo)
     
-    return normTLpp
+    return normTLpp,rawTLpp
     
     
     
@@ -84,7 +84,7 @@ def foldBinLightCurve (data, ntrfr, npts):
     """
     Fold and bin light curve for input to LPP metric calculation
     
-    data contains time, tzero, dur, priod and flux (around zero)
+    data contains time, tzero, dur, priod,mes and flux (centered around zero)
     
     ntrfr -- number of transit fraction for binning around transit ~1.5
     npts -- number of points in the final binning.
@@ -94,6 +94,7 @@ def foldBinLightCurve (data, ntrfr, npts):
     #Create phase light curve
     phaselc =np.mod((data.time-(data.tzero-0.5*data.period))/data.period,1)
     flux=data.flux
+    mes=data.mes
     #Determine the fraction of the time the planet transits the star.
     #Insist that ntrfr * transit fraction
     if ~np.isnan(data.dur) & (data.dur >0):
@@ -106,13 +107,22 @@ def foldBinLightCurve (data, ntrfr, npts):
         transit_fr = 0.5/ntrfr
         
     #Specify the out of transit (a) and the in transit regions
+    binover=1.3
+    if mes <= 20:
+        binover=-(1/8.0)*mes + 3.8
+        
     endfr = .03
-    a = np.concatenate((np.arange(endfr,(0.5-endfr),1/npts) , \
-                        np.arange((0.5+endfr),(1-endfr),1/npts)), axis=None)
-    b =np.concatenate((np.arange((0.5-ntrfr*transit_fr),\
-                                (0.5+ntrfr*transit_fr),(4*ntrfr*transit_fr)/npts)),axis=None)
+    midfr= .11
+    ovsamp=4.0
+    a = np.concatenate((np.arange(endfr,.5-midfr,1/npts) , \
+                        np.arange((0.5+midfr),(1-endfr),1/npts)), axis=None)
+    bstep=(ovsamp*ntrfr*transit_fr)/npts
+    b =np.arange((0.5-ntrfr*transit_fr),\
+                                (0.5+ntrfr*transit_fr),bstep)
     
-    [runta,runya] = runningMedian(phaselc,flux,1.5/npts,a)
+    print "length a: %u " % len(a)
+    print "length b: %u" % len(b)
+    [runta,runya] = runningMedian(phaselc,flux,binover/npts,a)
     [runtb,runyb] = runningMedian(phaselc,flux,(5*ntrfr*transit_fr)/npts,b)
 
     #Combine the two sets of bins
@@ -142,6 +152,71 @@ def computeRawLPPTransitMetric(binFlux,mapInfo):
     Perform the matrix transformation with LPP
     Do the knn test to get a raw LPP transit metric number.
     """
+    
+    Yorig=mapInfo.YmapMapped
+    lpp=LocalityPreservingProjection(n_components=mapInfo.n_dim)
+    lpp.projection_=mapInfo.YmapMapping
+    
+    inputY=lpp.transform(binFlux.reshape(1,-1))
+    
+    knownTransitsY=Yorig[mapInfo.knnGood,:]
+    
+    dist,ind = knnDistance_fromKnown(knownTransitsY,inputY,mapInfo.knn)
+    
+    rawLppTrMetric=np.mean(dist)
+    
+    return rawLppTrMetric
+    
+def knnDistance_fromKnown(knownTransits,new,knn):
+    """
+    For a group of known transits and a new one.
+    Use knn to determine how close the new one is to the known transits
+    using knn minkowski p = 3 ()
+    Using scipy signal to do this.
+    """
+    #p=3 sets a minkowski distance of 3. #Check that you really used 3 for matlab.
+    nbrs=NearestNeighbors(n_neighbors=int(knn), algorithm='kd_tree', p=2)
+    nbrs.fit(knownTransits)
+    
+    distances,indices = nbrs.kneighbors(new)
+    
+    
+    return distances, indices
+    
+      
+    
+def periodNormalLPPTransitMetric(rawTLpp,newPeriod, mapInfo):
+    """
+    Normalize the rawTransitMetric value by those with the closest period.
+    This part removes the period dependence of the metric at short periods.
+    Plus it makes a value near one be the threshold between good and bad.
+    """
+    knownTrPeriods=mapInfo.mappedPeriods[mapInfo.knnGood]
+    knownTrrawLpp=mapInfo.dymeans[mapInfo.knnGood]
+    nPercentil=mapInfo.nPercentil
+    nPsample=mapInfo.nPsample
+    
+    #Find the those with the nearest periods  Npsample-nneighbors
+    logPeriods=np.log10(knownTrPeriods.reshape(-1,1))
+    logNew=np.array([np.log10(newPeriod)]).reshape(1,1)
+
+    dist,ind = knnDistance_fromKnown(logPeriods,logNew,nPsample)
+    
+    #Find the nthPercentile of the rawLpp of these indicies
+    nearPeriodLpp=knownTrrawLpp[ind]
+    
+    LppNPercentile = np.percentile(nearPeriodLpp,nPercentil)
+    
+    NormLppTransitMetric=rawTLpp/LppNPercentile
+    
+    return NormLppTransitMetric
+    
+    
+    
+    
+    
+    
+    
     
     
     

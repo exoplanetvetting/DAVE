@@ -1,0 +1,32 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Aug 27 12:34:01 2018
+
+@author: smullally
+"""
+
+import numpy as np
+from loadLppData import TCE
+from loadLppData import MapInfo
+import lppTransform as lppt
+
+datafile='/Users/smullally/Kepler/Borucki-62f/kplr009002278_lc_Q011111111111111111/kplr009002278-20160128150956_dvt.fits'
+mapfilename='/Users/smullally/Code/lpptransitlikemetric/data/maps/combMapDR25AugustMapDV_6574.mat'
+
+
+tcedata=TCE(datafile,1)
+tcedata.readDV()
+print "TCE Data Period: %f" % tcedata.period
+print "TCE Data MES: %f" % tcedata.mes
+
+
+mapInfo=MapInfo(mapfilename)
+
+#%%
+normTLpp, rawTLpp=lppt.computeLPPTransitMetric(tcedata,mapInfo)
+
+
+print "Normalized Lpp: %f" % normTLpp
+
+ 
