@@ -27,10 +27,9 @@ data.lpp_transform
 """
 from __future__ import division
 import numpy as np
-import scipy.signal as signal
 from sklearn.neighbors import NearestNeighbors
 from lpproj import LocalityPreservingProjection
-import matplotlib.pyplot as plt
+import copy
 
 def computeLPPTransitMetric(data,mapInfo):
     """
@@ -125,8 +124,8 @@ def foldBinLightCurve (data, ntrfr, npts):
     b_num=41
     b =np.linspace((0.5-ntrfr*transit_fr),(0.5+ntrfr*transit_fr),b_num)
 
-    print "length a: %u " % len(a)
-    print "length b: %u" % len(b)
+    #print "length a: %u " % len(a)
+    #print "length b: %u" % len(b)
     [runta,runya] = runningMedian(phaselc,flux,binover/npts,a)
     [runtb,runyb] = runningMedian(phaselc,flux,\
                     (binover*ovsamp*ntrfr*transit_fr)/npts,b)
@@ -230,7 +229,63 @@ def periodNormalLPPTransitMetric(rawTLpp,newPerMes, mapInfo):
     
     
 
+def lpp_onetransit(tcedata,mapInfo,ntransit):
+    """
+    Chop down the full time series to one orbital period.
+    Then gather the lpp value for that one transit.
+    """
     
+    startTime=tcedata.time[0]+ntransit*tcedata.period
+    endTime=tcedata.time[0]+(ntransit+1)*tcedata.period + 3/24.0  #A few cadences of overlap
+    
+    want=(tcedata.time>=startTime) & (tcedata.time<=endTime)
+    newtime=tcedata.time[want]
+    newflux=tcedata.flux[want]
+    
+    nExpCad=(tcedata.time[-1]-tcedata.time[0])/tcedata.period
+    
+    if len(newtime>nExpCad*0.75):
+        onetransit=copy.deepcopy(tcedata)
+        onetransit.time=newtime
+        onetransit.flux=newflux
+        normTLpp, rawTLpp, transformedTr=computeLPPTransitMetric(onetransit,mapInfo)
+    else:
+        normTLpp=np.nan
+        rawTLpp=np.nan
+        
+    return normTLpp,rawTLpp
+
+
+def lpp_averageIndivTransit(tcedata,mapInfo):
+    """
+    
+    Create the loop over individual transits and return 
+    array normalized lpp values, mean and std.
+    Input TCE object and mapInfo object.
+    
+    It is unclear that this individual transit approach
+    separates out several new false positives.
+    It probably would require retuning for low SNR signals.
+    
+    """    
+    length=tcedata.time[-1]-tcedata.time[0]
+    ntransits=int(np.floor(length/tcedata.period))
+    
+    lppNorms=np.ones(ntransits)
+    lppRaws=np.ones(ntransits)
+    
+    nExpCad=(tcedata.time[-1]-tcedata.time[0])/tcedata.period
+    
+    
+    
+    for i in range(ntransits):
+        lppNorms[i],lppRaws[i] = lpp_onetransit(tcedata,mapInfo,i)
+    
+    lppMed=np.nanmedian(lppNorms)
+    lppStd=np.nanstd(lppNorms)
+    
+    return lppNorms,lppMed, lppStd, ntransits
+
     
     
     

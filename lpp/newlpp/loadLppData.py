@@ -3,10 +3,13 @@
 """
 Created on Fri Aug 24 11:58:23 2018
 
-Classes to read in data files containing either the 
-light curve containing the transit (Timeseries) or
-the information about the mapping (MapInfo)
-These are used by lpp_transform
+Classes to define the TCE and MapInfo.
+TCE includes functions to read a DV time series file.
+For Kepler this can be downloaded via API.
+MapInfo is stored as a Maplab Blob, so that
+information can be gathered using readMatlabBlob
+
+These  classes are used by lpp_transform
 
 @author: smullally
 """
@@ -14,25 +17,31 @@ These are used by lpp_transform
 import scipy.io as spio
 from astropy.io import fits
 import requests
+import numpy as np
 
 class TCE(object):
     
-    def __init__(self, starid, ext=1,ddir=""):
+    def __init__(self, starid, ext=1,mission="Kepler",ddir=""):
         """
         starid is integer id, usually kicid
         """
         self.starid=starid
-        self.filename = "%skplr%09u-20160128150956_dvt.fits" % (ddir,int(starid))
+        if mission == "Kepler":    
+            self.filename = "%skplr%09u-20160128150956_dvt.fits" % (ddir,int(starid))
+        elif mission == "TESS":
+            self.filename = "%stess2019128220341-%016u-00011_dvt.fits" % (ddir,int(starid))
         self.ext=ext
+
+        print self.filename    
         
-        print self.filename        
         
     def readDV(self):
 
         try:
             hdu=fits.open(self.filename)
         except IOError:
-            print "Filename not found."
+            print "Filename not found: %s" % self.filename
+            raise
             
         ext=self.ext
         
@@ -47,26 +56,39 @@ class TCE(object):
         
         hdu.close()
     
-    def tceAPI(self):
+    def mastAPI(self):
         """
         Get all the data via the MAST API
         """
-        url = "https://mastdev.stsci.edu"
-        loc = 'api/v0.1/dvdata/%u/table/?tce=%u' % (self.starid,self.ext)
+        url = "https://mast.stsci.edu"
+        loc = '/api/v0.1/dvdata/%u/table/?tce=%u' % (self.starid,self.ext)
         getRequest= url + loc
+        print getRequest
         r=requests.get(url=getRequest)
         tce=r.json()
         
-        self.time=getColumn(tce,'TIME')
-        self.phase=getColumn(tce,'PHASE')
-        self.flux=getColumn(tce,'LC_DETREND')
-        self.period=
+        self.time=self.getColumn(tce,'TIME')
+        self.phase=self.getColumn(tce,'PHASE')
+        self.flux=self.getColumn(tce,'LC_DETREND')
+        
+        loc='/api/v0.1/dvdata/%u/info/?tce=%u' % (self.starid,self.ext)
+        getRequest=url + loc
+        print getRequest
+        r=requests.get(url=getRequest)
+        tce=r.json()
+        self.period=tce['DV Data Header']['TPERIOD']
+        self.tzero=tce['DV Data Header']['TEPOCH']
+        self.depth=tce['DV Data Header']['TDEPTH']
+        self.dur=tce['DV Data Header']['TDUR']
+        self.mes=tce['DV Data Header']['MAXMES']
+        
     
     def getColumn(self,tce,colname):
         data=np.array(map( lambda x : tce['data'][x][colname],\
-                          np.arange(0,len(tce2['data']),1)))
+                          np.arange(0,len(tce['data']),1))).astype(float)
         return data
 
+#%---------
 class MapInfo(object):
     
     def __init__(self,filename):
