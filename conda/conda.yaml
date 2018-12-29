@@ -1,0 +1,27 @@
+
+package:
+  name: dave
+  version: "0.1.0"
+
+source:
+    git_url: git@github.com:exoplanetvetting/DAVE.git 
+    git_tag: conda_install
+
+channels:
+    - bioconda
+    
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python 2.7
+    - numpy >=1.11
+    - scipy >=1.1
+    - Gnuplot >=5.0
+    
+about:
+  home: https://github.com/exoplanetvetting/DAVE
+  license: MIT
+  summary: 'Vetting of Transits from Kepler, K2, and TESS'
+

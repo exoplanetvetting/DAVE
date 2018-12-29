@@ -51,8 +51,8 @@ def main():
 
     isOk = True
     isOk &= checkInstalled("python2.7 --version")
+    isOk &= checkInstalled("make --version")
     isOk &= checkInstalled("g++ -dumpversion")
-    isOk &= checkInstalled("octave --version")
     isOk &= checkInstalled("gnuplot --version")
     isOk &= checkInstalled("gfortran --version")
 
@@ -61,11 +61,8 @@ def main():
     isOk &= checkImport("numpy")
     isOk &= checkImport("scipy")
     isOk &= checkImport("matplotlib")
-    isOk &= checkImport("oct2py")
     isOk &= checkImport("Gnuplot")
 
-    #This is specialised code.
-    isOk &= checkImport("bls", False)
 
     print("*****************\n")
     if isOk:

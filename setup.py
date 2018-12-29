@@ -10,6 +10,5 @@ setup(
     author_email = 'author@gmail.com',
     description = 'Detection and Vetting of Exoplanets',
 
-    #packages=find_packages('./src/py', exclude=["*.tests", "*.tests.*", "tests.*", "tests"])
     package_dir={'': 'dave'},
 )

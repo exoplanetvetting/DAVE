@@ -1,0 +1,254 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Aug 27 12:34:01 2018
+
+@author: smullally
+"""
+
+import numpy as np
+from loadLppData import TCE
+from loadLppData import MapInfo
+import lppTransform as lppt
+from datetime import date
+
+#%%
+
+datafile='/Users/smullally/Kepler/Borucki-62f/kplr009002278_lc_Q011111111111111111/kplr009002278-20160128150956_dvt.fits'
+ddir='/Users/smullally/Kepler/Borucki-62f/kplr009002278_lc_Q011111111111111111/'
+kicid=9002278
+mapfilename='/Users/smullally/Code/lpptransitlikemetric/data/maps/combMapDR25AugustMapDV_6574.mat'
+
+
+tcedata=TCE(kicid,3,ddir=ddir)
+tcedata.readDV()
+print "TCE Data Period: %f" % tcedata.period
+print "TCE Data MES: %f" % tcedata.mes
+
+
+mapInfo=MapInfo(mapfilename)
+
+#%%
+normTLpp, rawTLpp, transformedTr=lppt.computeLPPTransitMetric(tcedata,mapInfo)
+
+
+print "Normalized Lpp: %f" % normTLpp
+print "Raw Lpp: %f" % rawTLpp
+
+print transformedTr
+print mapInfo.YmapMapped[117788]
+print mapInfo.dymeans[117788]
+
+#%%
+##  --- ETE6 Run --- 
+#Run through the 1900 ETE6 files for TESS and determine a normLPP for them all.
+#Write those results to a file
+#File format should be 
+#TIC  PN Period MES  LPPNorm rawTLpp
+
+outputfile="/Users/smullally/TESS/ete6/dv/medNormLPP_tess_ete6_dvt.txt"
+ofo=open(outputfile,'w')
+ofo.write("#Pyton Normalized LPP Transit Metric Results\n")
+ofo.write("#Uses median for ave_tlpp")
+ofo.write("#Date: %s\n" % str(date.today()) )
+ofo.write("#     TCEID    PN    Period     MES       Depth         Dur    LPPNorm    rawLPP  ave_tlpp  std_tlpp ntrans\n")
+         
+
+ddir='/Users/smullally/TESS/ete6/dv/timeseries/'
+mapfilename='/Users/smullally/Code/lpptransitlikemetric/data/maps/combMapDR25AugustMapDV_6574.mat'
+
+mapInfo=MapInfo(mapfilename)
+
+for filename in os.listdir(ddir):
+    hdu=fits.open(ddir+filename)
+    starid=hdu[0].header['TICID']
+    
+    for ext in hdu:
+        if ext.header['EXTNAME'][0:3] == 'TCE':
+            pn=int(ext.header['EXTNAME'][-1])
+            
+            tcedata=TCE(starid,ext=pn,ddir=ddir, mission='TESS')
+            tcedata.readDV()
+            
+            normTLpp, rawTLpp, transformedTr=lppt.computeLPPTransitMetric(tcedata,mapInfo)
+            lppNorms,lppMed, lppStd, ntransits = lppt.lpp_averageIndivTransit(tcedata,mapInfo)
+            
+            textstring = "%13u  %02u %11.6f %5.3f   %12.4f   %6.2f   %6.3f  %7.5f  %6.3f  %6.3f  %3u\n" % \
+                    (tcedata.starid, tcedata.ext, tcedata.period, tcedata.mes, \
+                     tcedata.depth, tcedata.dur, normTLpp, rawTLpp, lppMed, lppStd, int(ntransits))
+            ofo.write(textstring)
+    hdu.close()
+
+ofo.close()
+                    
+                    
+                    
+                    
+#%%
+#Now read in the results and match with list of planets
+#Need to match by period and TICID with those in the known lists.
+import pandas as p
+ldir='/Users/smullally/TESs/ete6/'
+planetlistfile=ldir+'ete6_planet_data.txt'
+eblistfile=ldir+'ete6_eb_data.txt'
+beblistfile=ldir+'ete6_backeb_data.txt'
+
+columns=['ticid','pn','period','epoch','rprs','rp','b','ars','dur',\
+         'depth','insol','rstar','mstar','teff','logg','feh']
+
+planetlist=p.read_csv(planetlistfile,comment='#',delim_whitespace=True,names=columns)
+eblist=p.read_csv(eblistfile,comment='#',delim_whitespace=True,names=columns)
+beblist=p.read_csv(beblistfile,comment='#',delim_whitespace=True,names=['ticid','pn','period','epoch','b'],usecols=[0,1,2,3,4])
+ 
+lppcolumns=['tceid','pn','period','mes','depth','dur','lppnorm','rawlpp',\
+             'ave_tlpp',  'std_tlpp', 'ntrans']                  
+lpplist=p.read_csv(outputfile,comment='#',delim_whitespace=True,names=lppcolumns)
+lpplist.ave_tlpp[np.isnan(lpplist.ave_tlpp)]=99  #If both transits lack enough points returns nans
+
+#%%       
+#Need to match each lpplist against all three lists to see if it matchies ticid and period
+fracmatch = .05  #Fractional match of two periods to call it a match.
+lpplist=lpplist.assign(isplanet=np.zeros(len(lpplist)))
+lpplist=lpplist.assign(iseb=np.zeros(len(lpplist)))
+lpplist=lpplist.assign(isbeb=np.zeros(len(lpplist)))         
+
+         
+for ix in lpplist.index:
+    tceid=lpplist.loc[ix].tceid
+    pn = lpplist.loc[ix].pn
+    period = lpplist.loc[ix].period
+    
+    #Try planetlist              
+    df=planetlist 
+    matchticid=df[df['ticid']==int(tceid)]
+    if len(matchticid)>0:
+        permatch=np.abs((matchticid.period/period -1))
+        for m in np.arange(2,5):
+            permatch=permatch.append(np.abs((matchticid.period/(m*period) -1)))
+            permatch=permatch.append(np.abs((matchticid.period/(period/m) -1)))
+        for pm in permatch:
+            if (pm < fracmatch):
+                lpplist.loc[ix,'isplanet']=1
+        
+
+    #Try eblist              
+    df=eblist 
+    matchticid=df[df['ticid']==int(tceid)]
+    if len(matchticid)>0:
+        permatch=np.abs((matchticid.period/period -1))
+        for m in np.arange(2,5):
+            permatch=permatch.append(np.abs((matchticid.period/(m*period) -1)))
+            permatch=permatch.append(np.abs((matchticid.period/(period/m) -1)))
+        for pm in permatch:
+            if pm < fracmatch:
+                lpplist.loc[ix,'iseb']=1               
+                       
+                   
+    #Try beblist              
+    df=beblist 
+    matchticid=df[df['ticid']==int(tceid)]
+    if len(matchticid)>0:
+        permatch=np.abs((matchticid.period/period -1))
+        for m in np.arange(2,5):
+            permatch=permatch.append(np.abs((matchticid.period/(m*period) -1)))
+            permatch=permatch.append(np.abs((matchticid.period/(period/m) -1)))
+        for pm in permatch:
+            if pm < fracmatch:
+                lpplist.loc[ix,'isbeb']=1               
+                                      
+                   
+
+print len(lpplist[lpplist.isplanet==1])   
+print len(lpplist[lpplist.iseb==1])    
+print len(lpplist[lpplist.isbeb==1])              
+#%%             
+#Plot distributions
+import matplotlib.pyplot as plt
+df=lpplist
+
+none=(df.isbeb!=1) & (df.iseb!=1) & (df.isplanet!=1)
+bins=np.arange(0,10,.15)
+plt.figure()
+
+#alldata=plt.hist(df.lppnorm,bins,histtype='step',label='everything') 
+planets=plt.hist(df[df.isplanet==1].lppnorm,bins,histtype='step',label='planets')
+ebs=plt.hist(df[df.iseb==1].lppnorm,bins,histtype='step',label='eb')
+bebs=plt.hist(df[df.isbeb==1].lppnorm,bins,histtype='step',label='beb')
+rest=plt.hist(df[none].lppnorm,bins,histtype='step',label='not Labeled',color='grey',lw=2)
+plt.legend()
+                
+#%%
+#Plot Distributions for higher MES
+
+want=lpplist.ntrans<=3
+
+df=lpplist[want]
+
+none=(df.isbeb!=1) & (df.iseb!=1) & (df.isplanet!=1)
+twoweek=(df.period>13) & (df.period<15)
+bins=np.arange(0,10,.15)
+plt.figure()
+
+#alldata=plt.hist(df.lppnorm,bins,histtype='step',label='everything') 
+planets=plt.hist(df[df.isplanet==1].lppnorm,bins,histtype='step',label='planets')
+ebs=plt.hist(df[df.iseb==1].lppnorm,bins,histtype='step',label='eb')
+bebs=plt.hist(df[df.isbeb==1].lppnorm,bins,histtype='step',label='beb')
+rest=plt.hist(df[none].lppnorm,bins,histtype='step',label='not Labeled',color='grey',lw=2)
+#two=plt.hist(df[twoweek].lppnorm,bins,histtype='step',label='~14days',color='blue')
+plt.legend()
+
+#%%
+#For the ave_tlpp
+
+want=(lpplist.std_tlpp)/lpplist.ave_tlpp <.5
+
+df=lpplist[want]
+
+none=(df.isbeb!=1) & (df.iseb!=1) & (df.isplanet!=1)
+twoweek=(df.period>13) & (df.period<15)
+bins=np.arange(0,10,.15)
+plt.figure()
+
+#alldata=plt.hist(df.lppnorm,bins,histtype='step',label='everything') 
+planets=plt.hist(df[df.isplanet==1].ave_tlpp,bins,histtype='step',label='planets')
+ebs=plt.hist(df[df.iseb==1].ave_tlpp,bins,histtype='step',label='eb')
+bebs=plt.hist(df[df.isbeb==1].ave_tlpp,bins,histtype='step',label='beb')
+rest=plt.hist(df[none].ave_tlpp,bins,histtype='step',label='not Labeled',color='grey',lw=2)
+#two=plt.hist(df[twoweek].lppnorm,bins,histtype='step',label='~14days',color='blue')
+plt.xlabel('Average Norm LPP per transit')
+plt.legend()
+
+#%%
+#Plot the ones near 14 day artifacts.
+want=(lpplist.period>13.1) & (lpplist.period<14.9)
+
+df=lpplist[want]
+
+none=(df.isbeb!=1) & (df.iseb!=1) & (df.isplanet!=1)
+bins=np.arange(0,10,.15)
+plt.figure()
+
+#alldata=plt.hist(df.lppnorm,bins,histtype='step',label='everything') 
+planets=plt.hist(df[df.isplanet==1].lppnorm,bins,histtype='step',label='planets')
+ebs=plt.hist(df[df.iseb==1].lppnorm,bins,histtype='step',label='eb')
+bebs=plt.hist(df[df.isbeb==1].lppnorm,bins,histtype='step',label='beb')
+rest=plt.hist(df[none].lppnorm,bins,histtype='step',label='not Labeled',color='grey',lw=2)
+plt.legend()
+
+#%%
+#Those with planet numbers that are one.
+
+want=lpplist.pn==1
+df=lpplist[want]
+
+none=(df.isbeb!=1) & (df.iseb!=1) & (df.isplanet!=1)
+bins=np.arange(0,10,.15)
+plt.figure()
+
+#alldata=plt.hist(df.lppnorm,bins,histtype='step',label='everything') 
+planets=plt.hist(df[df.isplanet==1].lppnorm,bins,histtype='step',label='planets')
+ebs=plt.hist(df[df.iseb==1].lppnorm,bins,histtype='step',label='eb')
+bebs=plt.hist(df[df.isbeb==1].lppnorm,bins,histtype='step',label='beb')
+rest=plt.hist(df[none].lppnorm,bins,histtype='step',label='not Labeled',color='grey',lw=2)
+plt.legend()
+             

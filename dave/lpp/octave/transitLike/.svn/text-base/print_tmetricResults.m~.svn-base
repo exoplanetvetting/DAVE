@@ -1,0 +1,25 @@
+function [ output_args ] = print_tmetricResults( decision,d,label)
+%Print the results of the LPP test
+%Run lpp_similar_testsample or something that gives a decison for each
+%object.
+%d is an integer type for the objects.
+
+opts=[0,1,2,3,4,5,6,7,8,9,10];
+
+disp(label)
+disp('--Percent Kept --')
+
+for i=1:length(opts)
+
+    per=100*length(decision(decision' & d==opts(i)))/length(decision(d==opts(i)));
+    n=length(decision(d==opts(i)));
+    
+    s=sprintf('%i | %4.1f   | %i \n',opts(i),per,n);
+    disp(s)
+
+end
+disp('----------')
+
+
+end
+

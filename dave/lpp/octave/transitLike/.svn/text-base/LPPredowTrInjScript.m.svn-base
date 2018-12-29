@@ -1,0 +1,179 @@
+%Use transit injection restuls to try to cause more discrimination with LPP
+%
+
+load('/home/sethomps/Kepler/RoboVetter/Q1Q17knnlpp/mappingQ1Q17DR24tps_6001.mat')
+
+dvInfoReal=outputInfo;
+
+load('/home/sethomps/Kepler/RoboVetter/Q1Q17knnlpp/TrInjection/TrInQ1Q17DR24_TransitinessDVMedDet6025.mat')
+
+dvInfoTrIn=trInInfoDV;
+
+
+savefile='redo_2015Mar11.dat';
+
+model=dvInfoTrIn;
+model.Ymap.mapped=model.Ymap;
+model.Ymap.mapping=dvInfoReal.Ymap.mapping;
+model.Zmap.mapped=model.Zmap;
+model.Zmap.mapping=dvInfoReal.Zmap.mapping;
+model.knnGood=dvInfoTrIn.d==2 & dvInfoTrIn.mes>8;
+
+RealInfoDV=computeTransitinessKnownMap(dvInfoReal,model, savefile);
+
+outputInfo=RealInfoDV;
+y=log10(outputInfo.transitMetric);
+x=log10(outputInfo.periods);
+interactive_plotting(x,y,outputInfo);
+
+nsig=4;
+decision=outputInfo.transitMetric > nsig* outputInfo.transit1sigmacut;
+
+print_tmetricResults(decision,outputInfo.d','Test Results for 4 sigma cut DV')
+%%
+outputInfo=dvInfoReal;
+nsig=4;
+decision=outputInfo.transitMetric > nsig* outputInfo.transit1sigmacut;
+d=outputInfo.d';
+print_tmetricResults(decision,d,'Test Results for 4 sigma cut TPS')
+y=log10(outputInfo.transitMetric);
+x=log10(outputInfo.periods);
+interactive_plotting(x,y,outputInfo);
+
+%%
+%Truly start over here.
+%Read in the transit injected transits.
+%Plus read in the TCEs.
+%Train on the high snr stuff between both sets.
+%Then use the injected transits to say what's good.
+
+%Load the TPS/DV detrended matrix of folded light curves.
+load('/home/sethomps/Kepler/RoboVetter/Q1Q17knnlpp/mappingQ1Q17DR24tps_6001.mat')
+
+dvInfoReal=outputInfo;
+
+load('/home/sethomps/Kepler/RoboVetter/Q1Q17knnlpp/TrInjection/TrInQ1Q17DR24_TransitinessDVMedDet6025.mat')
+
+dvInfoTrIn=trInInfoDV;
+infoComb={};
+infoComb.X=[dvInfoReal.X;dvInfoTrIn.X];
+infoComb.Xa=[dvInfoReal.Xa;dvInfoTrIn.Xa];
+infoComb.Xb=[dvInfoReal.Xb;dvInfoTrIn.Xb];
+infoComb.kics=[dvInfoReal.kics,dvInfoTrIn.kics];
+infoComb.snrs=[dvInfoReal.snrs,dvInfoTrIn.snrs];
+infoComb.pulse=[dvInfoReal.pulse,dvInfoTrIn.pulse];
+infoComb.mes=[dvInfoReal.mes,dvInfoTrIn.mes];
+infoComb.d=[dvInfoReal.d,zeros(1,length(dvInfoTrIn.d))+10];
+infoComb.realfake=[zeros(length(dvInfoReal.snrs),1)',ones(length(dvInfoTrIn.snrs),1)'];
+infoComb.periods=[dvInfoReal.periods,dvInfoTrIn.periods];
+infoComb.ses=[dvInfoReal.mes,dvInfoTrIn.ses];
+infoComb.wsmes=[dvInfoReal.mes,dvInfoTrIn.wsmes];
+infoComb.tce=[dvInfoReal.tce,dvInfoTrIn.tce];
+infoComb.dettype='DvMedDet';
+
+%%
+info=infoComb;
+%info.X=info.Xb;
+nDim=20;
+knn=15;
+types=info.d;
+%Pick those things to do the clustering dimension reduction with.
+want=(types<9) & info.mes>8;
+%want=(types==2 | types==3 | types==4 | types==5 | types==7) & info.mes>7.8;
+%want=info.mes>9; %info.periods<15;% & info.mes<30;
+length(want(want))
+
+savefile=['mappingQ1Q17dr24wTrInTps_',num2str(datenum(date)-730000),'.mat'];
+
+%Pick those things that are KOI like to decide whether an object is in the
+%right space of the lower dimensions
+%koilike=types==10;
+koilike=(types==2 | types==3 | types==4 | types==5 | types==7 );
+%koilike=types==3;
+
+outfile=['lppknnDistanceTpsWTrIntps_',info.dettype,num2str(datenum(date)-730000),'.dat'];
+
+[ outputInfo ] = compute_Transitiness( info,want,koilike,nDim,knn,outfile );
+ouputInfo.svnVersion='$Id$';
+save(savefile,'outputInfo')
+%
+%Set limit and run test
+%nsig=4;
+decision=outputInfo.transitMetric > nsig* outputInfo.transit1sigmacut;
+d=outputInfo.d';
+%decision=decision(want);
+%d=d(want);
+print_tmetricResults(decision,d,'Test Results for 4 sigma cut TPS')
+
+%Create a plot of mapping and transitMetric
+y=log10(outputInfo.transitMetric);
+x=log10(outputInfo.mes);
+interactive_plotting(x,y,outputInfo)
+xlabel('log(MES)')
+%figure
+y=log10(outputInfo.transitMetric);
+x=log10(outputInfo.periods);
+interactive_plotting(x,y,outputInfo)
+xlabel('log(Period)')
+%%
+%Load the TPS/DV detrended matrix of folded light curves.
+load('/home/sethomps/Kepler/RoboVetter/Q1Q17knnlpp/mappingQ1Q17DR24trap.mat')
+
+trapInfoReal=outputInfo;
+
+load('/home/sethomps/Kepler/RoboVetter/Q1Q17knnlpp/TrInjection/TrInQ1Q17DR24_TransitinessTrapDet6025.mat')
+
+trapInfoTrIn=trInInfoTrap;
+infoCombt={};
+infoCombt.X=[trapInfoReal.X;trapInfoTrIn.X];
+infoCombt.Xa=[trapInfoReal.Xa;trapInfoTrIn.Xa];
+infoCombt.kics=[trapInfoReal.kics,trapInfoTrIn.kics];
+infoCombt.snrs=[trapInfoReal.snrs,trapInfoTrIn.snrs];
+infoCombt.pulse=[trapInfoReal.pulse,trapInfoTrIn.pulse];
+infoCombt.mes=[trapInfoReal.mes,trapInfoTrIn.mes];
+infoCombt.d=[trapInfoReal.d,trapInfoTrIn.d];
+infoCombt.realfake=[zeros(length(trapInfoReal.snrs),1)',ones(length(trapInfoTrIn.snrs),1)'];
+infoCombt.periods=[trapInfoReal.periods,trapInfoTrIn.periods];
+infoCombt.ses=[trapInfoReal.mes,trapInfoTrIn.ses];
+infoCombt.wsmes=[trapInfoReal.mes,trapInfoTrIn.wsmes];
+infoCombt.tce=[trapInfoReal.tce,trapInfoTrIn.tce];
+infoCombt.dettype='TrapDet';
+%%
+info=infoCombt;
+%info.X=info.Xb;
+nDim=20;
+knn=15;
+types=info.d;
+%want=(types==2 | types==3 | types==4 | types==5 | types==7) & info.mes>7.8;
+want=info.mes>9; %info.periods<15;% & info.mes<30;
+length(want(want))
+
+savefile=['mappingQ1Q17dr24wTrInTrap_',num2str(datenum(date)-730000),'.mat'];
+
+koilike=(types==2 | types==3 | types==4 | types==5 | types==7 );
+%koilike=types==3;
+
+outfile=['lppknnDistanceTpsWTrIntrap_',info.dettype,num2str(datenum(date)-730000),'.dat'];
+
+[ outputInfo ] = compute_Transitiness( info,want,koilike,nDim,knn,outfile );
+
+save(savefile,'outputInfo')
+%
+%Set limit and run test
+nsig=4;
+decision=outputInfo.transitMetric > nsig* outputInfo.transit1sigmacut;
+d=outputInfo.d';
+%decision=decision(want);
+%d=d(want);
+print_tmetricResults(decision,d,'Test Results for 4 sigma cut Trap')
+
+%Create a plot of mapping and transitMetric
+y=log10(outputInfo.transitMetric);
+x=log10(outputInfo.mes);
+interactive_plotting(x,y,outputInfo)
+xlabel('log(MES)')
+%figure
+y=log10(outputInfo.transitMetric);
+x=log10(outputInfo.periods);
+interactive_plotting(x,y,outputInfo)
+xlabel('log(Period)')

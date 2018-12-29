@@ -1,0 +1,106 @@
+# -*- coding: utf-8 -*-
+from __future__ import division, print_function
+import logging, os
+import numpy as np
+import matplotlib.pyplot as plt
+from martinsff import martinsff
+import extract_lc
+extract_lc = reload(extract_lc)
+from astropy.stats import median_absolute_deviation as MAD
+import astropy
+from astropy.table import Table
+import glob
+from numpy import transpose
+import astropy.io.ascii as ascii
+
+def K2_DetrendRev4(filename, ap=4.0):
+
+    lcs = ascii.read(filename)
+    outfilename = filename.split("/")[-1][:-4]
+    logging.info(outfilename)
+
+    time = lcs["t"]
+    x_pos = lcs["x"]
+    y_pos = lcs["y"]
+    qual_flux = np.zeros_like(time)
+    unc_flux = np.ones_like(time)
+
+    best_col = "flux_{0:.1f}".format(ap)
+    flux = lcs[best_col]
+
+    m1 = np.isfinite(flux)
+    
+    time = time[m1]
+    flux = flux[m1]
+    xbar = x_pos[m1]
+    ybar = y_pos[m1]
+    
+    flatlc = extract_lc.medfilt(time,flux,window=3)
+    n_chunks = 6
+    cadstep = np.int(np.floor(len(time) / n_chunks)) #600
+    zpt = len(time) % cadstep
+    if zpt==cadstep:
+        zpt = 0
+    logging.info("%d pts %d chunks step=%d zpt=%d ap=%f ", 
+                 len(time), n_chunks, cadstep, zpt, ap)
+
+    
+    outflux, correction, thr_cad = extract_lc.run_C0_detrend(
+        time, flatlc, xbar, ybar, cadstep=cadstep, skip=None)
+    
+    not_thr = ~thr_cad
+    corflux = (flux[zpt:][not_thr]/
+        np.median(flux[zpt:][not_thr])/
+        correction[not_thr])
+
+    corflatflux = (flatlc[zpt:][not_thr]/
+        np.median(flatlc[zpt:][not_thr])/
+        correction[not_thr])
+
+# The 1.4826 and *4 factors make this similar to a 4-sigma cut.    
+    mad_cut = 1.4826*MAD(corflatflux-1.)*4
+    keep = np.abs(corflatflux-1.) < mad_cut
+
+    # Adds the detrended data to an ascii table.
+    newtable = {'Dates': time[zpt:][not_thr], 'Flux': flux[zpt:][not_thr], 'Corrflux': corflux, 'Xpos': xbar[zpt:][not_thr], 'Ypos': ybar[zpt:][not_thr]}
+    ascii.write(newtable, "output_lcs/{0}_detrended.dat".format(outfilename), 
+                names=['Dates','Flux', 'Corrflux','Xpos','Ypos'])
+
+# Create some plots
+    plt.clf()
+    plt.subplot(211)
+    plt.plot(time[zpt:][not_thr], flux[zpt:][not_thr]/np.median(flux[zpt:][not_thr]), 'bo', markersize=2)
+    plt.xlabel('Time [d]')
+    plt.ylabel('Flux/Median flux')
+    plt.ylim((np.median(flux[zpt:][not_thr]/np.median(flux[zpt:][not_thr]))-4.5*np.std(flux[zpt:][not_thr]/np.median(flux[zpt:][not_thr])),np.median(flux[zpt:][not_thr]/np.median(flux[zpt:][not_thr]))+
+      4.5*np.std(flux[zpt:][not_thr]/np.median(flux[zpt:][not_thr]))))
+
+    plt.subplot(212)
+    plt.plot(time[zpt:][not_thr], corflux/np.median(corflux), 'bo', markersize=2)
+    plt.xlabel('Time [d]')
+    plt.ylabel('Flux/Median flux')
+    plt.ylim((np.median(corflux/np.median(corflux))-4.5*np.std(corflux/np.median(corflux)),np.median(corflux/np.median(corflux))+4.5*np.std(corflux/np.median(corflux))))
+ 
+    plt.savefig("plot_outputs/{0}_detrended.png".format(outfilename))
+    
+def run_list(listname, lc_dir):
+    
+    lcs = ascii.read(listname)
+
+    for i, filename in enumerate(lcs["filename"]):
+        logging.debug("starting %d %s",i,filename)
+        if os.path.exists(filename):
+            K2_DetrendRev4(lc_dir+filename, ap=lcs["ap"][i])
+            logging.debug("done %d %s",i,filename)
+
+if __name__=="__main__":
+
+    logging.basicConfig(level=logging.INFO)
+
+    lc_dir = "/home/stephanie/code/python/k2phot/lcs/"
+
+    lc_file = "ktwo210359769-c04.csv"
+
+#    K2_DetrendRev4(lc_dir+lc_file)
+
+    run_list("../k2spin/c4_lcs_results_2015-09-02.csv", lc_dir = "")
