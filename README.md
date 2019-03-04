@@ -12,6 +12,8 @@ The pipeline performs the following steps:
 2. Light Curve Generation, cotrend, detrend
 	K2: Remove instrumental effects e.g. PDC light curves Dan Foreman-Mackey's method
 	TESS: Savitzky-Golay filter
+	
+	
 3. Search for planets -- BLS
 4. Fitting a planetary model
 5. Produce vetting Metrics
