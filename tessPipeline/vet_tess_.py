@@ -51,13 +51,13 @@ def createConfig(detrendType, sector, tic, planetNum, period, tepoch, tdepth, td
 
 
     #TODO This shouldn't be hardcoded, but passed as a parameter
-    cfg['dvtLocalPath'] = "/Users/vkostov/.eleanor/"
+    cfg['dvtLocalPath'] = "/Users/.eleanor/"
     
     #TODO Need modshift paths
-    cfg['lppMapFile'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/LPP_map/combMapDR25AugustMapDV_6574.mat"
+    cfg['lppMapFile'] = "/Users/LPP_map/combMapDR25AugustMapDV_6574.mat"
 
-    cfg['modshiftBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"      
-    cfg['onepageBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"
+    cfg['modshiftBasename'] = "/Users/justVet/"      
+    cfg['onepageBasename'] = "/Users/justVet/"
 
     if detrendType == 'tess':
 	cfg['taskList'] = ['serveTask', 'trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
