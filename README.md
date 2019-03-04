@@ -9,11 +9,7 @@ using data from [NASA's K2](http://keplerscience.arc.nasa.gov), and [TESS](https
 The pipeline performs the following steps:
 
 1. Create a subset of targets for testing
-2. Light Curve Generation, cotrend, detrend
-	K2: Remove instrumental effects e.g. PDC light curves Dan Foreman-Mackey's method
-	TESS: Savitzky-Golay filter
-	
-	
+2. Light Curve Generation, cotrend, detrend. For K2, removing instrumental effects e.g. PDC light curves Dan Foreman-Mackey's method; For TESS using Savitzky-Golay filter
 3. Search for planets -- BLS
 4. Fitting a planetary model
 5. Produce vetting Metrics
