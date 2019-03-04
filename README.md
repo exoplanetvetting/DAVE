@@ -4,7 +4,7 @@
 ## Summary
 
 This repository implements a pipeline to find and vet planets planets
-using data from [NASA's K2 mission](http://keplerscience.arc.nasa.gov).
+using data from [NASA's K2 and TESS missions](http://keplerscience.arc.nasa.gov).
 
 The pipeline performs the following steps:
 
@@ -29,21 +29,18 @@ python checkRequirements.py
 You will almost certainly need to install @dfm's [python-bls](https://github.com/dfm/python-bls) package.
 
 
-## Example use
+## Example use for K2
 from dave.pipeline import main
 cfg=main.loadMyConfiguration()
 clip = main.runOne(206103150,cfg)
 
-
-# Deprecated use w
-```
-from dave.pipeline import pipeline
-cfg = pipeline.loadDefaultConfig()
-pipeline.runOne(206103150, cfg)
-```
+## Example use for TESS
+Run "runOneTESS"
 
 To get this to work, you will have to create a directory called `.mastio/k2` in your home directory.
 
-You will also need to download and extract
+For K2, you will also need to download and extract
 [kplr2011265_prf.tar.gz](https://archive.stsci.edu/pub/kepler/fpc/kplr2011265_prf.tar.gz)
-into `.mastio/keplerprf`.
+into `.mastio/keplerprf`. 
+
+For TESS, you will need to download the TESS PRF Matlab files (https://archive.stsci.edu/tess/all_products.html). For more information, see designnote.pdf (Copyright Fergal Mullally).
