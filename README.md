@@ -10,7 +10,7 @@ The pipeline performs the following steps:
 
 1. Create a subset of targets for testing
 2. Light Curve Generation, cotrend, detrend. For K2, removing instrumental effects e.g. PDC light curves Dan Foreman-Mackey's method; For TESS using Savitzky-Golay filter
-3. Search for planets -- BLS
+3. Search for planets -- BLS (WIP)
 4. Fitting a planetary model
 5. Produce vetting Metrics
 6. Output useful data products
@@ -24,7 +24,7 @@ To check if you have all the dependencies, run:
 python checkRequirements.py
 ```
 
-You will almost certainly need to install @dfm's [python-bls](https://github.com/dfm/python-bls) package.
+For BLS you need to install @dfm's [python-bls](https://github.com/dfm/python-bls) package or the [astropy BLS package](http://docs.astropy.org/en/stable/api/astropy.stats.BoxLeastSquares.html)
 
 
 ## Example use for K2
