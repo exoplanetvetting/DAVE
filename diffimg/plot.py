@@ -263,12 +263,12 @@ def multiPanelPlotDiffImgCentroidsDiagnostic(time, flux, flags, rollPhase, \
     colour = ["#FFDDDD", "#DDFFDD", "#DDDDFF"]
 
     for i in range(nPanel):
-        ax = mp.subplot(2*nPanel, 1, 2*i+1, axisbg=colour[i])
+        ax = mp.subplot(2*nPanel, 1, 2*i+1, facecolor=colour[i])
         plotTimeseries(time, 1e3*flux, flags, inTransitIndices, \
             goodCentroidIndices, qFlags)
         mp.ylabel("Frac Flux (ppk)")
 
-        mp.subplot(2*nPanel, 1, 2*i+2, sharex=ax, axisbg=colour[i])
+        mp.subplot(2*nPanel, 1, 2*i+2, sharex=ax, facecolor=colour[i])
         plotTimeseries(time, rollPhase, flags, inTransitIndices, \
             goodCentroidIndices, qFlags)
         mp.ylim(-1.5,1.5)
