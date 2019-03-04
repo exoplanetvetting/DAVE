@@ -30,7 +30,7 @@ def serve(sector, tic, planetNum, localPath):
 #    dvt, hdr = ar.getLightcurve(tic, sector, ext=planetNum, header=True)
       
     if planetNum > 1:
-	planetNum = 1
+	planetNum = 1 # bug associted with TESS DVT files. needs fixing
 
     tpf, hdr_tpf = ar.getTPF(tic, sector, ext=planetNum, header=True)
 
