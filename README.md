@@ -18,14 +18,10 @@ The pipeline performs the following steps:
 
 ## Installation
 
-*dave* depends on a few packages including numpy, scipy, matplotlib, and octave.
-To check if you have all the dependencies, run:
+*dave* depends on a few packages including numpy, scipy, matplotlib, and octave. You will also need to install @dfm's [python-bls](https://github.com/dfm/python-bls) package or the [astropy BLS package](http://docs.astropy.org/en/stable/api/astropy.stats.BoxLeastSquares.html). To check if you have all the dependencies, run:
 ```
 python checkRequirements.py
 ```
-
-For BLS you need to install @dfm's [python-bls](https://github.com/dfm/python-bls) package or the [astropy BLS package](http://docs.astropy.org/en/stable/api/astropy.stats.BoxLeastSquares.html)
-
 
 ## Example use for K2
 1. from dave.pipeline import main
