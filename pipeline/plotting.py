@@ -1,7 +1,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import dave.diffimg.plot as dip
+import dave.diffimg.plot_vbk as dip
 import dave.fileio.kplrfits as kplrfits
 
 def plotDiagnosticLightcurves(time, rawLc, cotrendLc, detrendLc, path="."):
@@ -41,6 +41,7 @@ def plotData(clip, nPanel=3):
         markTransits = False
 
     fig = plt.gcf()
+    plt.rcParams.update({'font.size': 16})
     #fig.set_size_inches(11, 8.5)
 
     colour = ["#FFF8F8", "#F8FFF8", "#F4F4FF"]
@@ -48,31 +49,49 @@ def plotData(clip, nPanel=3):
     deltaT = np.max(time[~fl]) - start
     deltaT /= float(nPanel)
 
-    rawRange = np.percentile(raw[~fl], [1,99])
+    rawRange = np.percentile(raw[~fl], [1.,99.])#[1,99])
 
-    for i in range(nPanel):
-        ax = plt.subplot(2*nPanel, 1, 2*i+1, axisbg=colour[i])
-        plt.plot(time[~fl], raw[~fl], 'ko', ms=2, alpha=.8)
-        plt.ylim(rawRange)
-        plt.ylabel("Raw flux/1000")
+    if (clip['config.detrendType'] != "tess"):# and (clip['config.detrendType'] != "eleanor") :
 
-        if markTransits:
-            plotTransitRegions(time[~fl], per, epc, dur_days)
+    	for i in range(nPanel):
+        	ax = plt.subplot(2*nPanel, 1, 2*i+1, facecolor=colour[i])
+        	plt.plot(time[~fl], raw[~fl], 'ko', ms=1, alpha=.8)
+        	plt.ylim(rawRange)
+        	plt.ylabel("Raw flux/1000")
+		plt.xticks(color= 'w')
 
-        plt.subplot(2*nPanel, 1, 2*i+2, sharex=ax, axisbg=colour[i])
+        	if markTransits:
+            		plotTransitRegions(time[~fl], per, epc, dur_days)
+
+        	plt.subplot(2*nPanel, 1, 2*i+2, sharex=ax, facecolor=colour[i])
         #Plotting bad data cadences turned off
 #        plt.plot(time[fl], 0*time[fl], 'mo', ms=8, mec="none")
-        plt.plot(time[~fl], flux[~fl], 'ko', ms=2, alpha=.8)
-        plt.ylabel("Detrended")
+        	plt.plot(time[~fl], flux[~fl], 'ko', ms=1, alpha=.8)
+        	plt.ylabel("Detrended")
 
+        	if markTransits:
+            		plotTransitRegions(time[~fl], per, epc, dur_days)
 
-        if markTransits:
-            plotTransitRegions(time[~fl], per, epc, dur_days)
+        	plt.xlim(start + i*deltaT, start + (i+1)*deltaT)
+		if i == 2:
+			plt.xlabel("Time (BTJD)")
 
-        plt.xlim(start + i*deltaT, start + (i+1)*deltaT)
-        plt.xlabel("Time (BKJD)")
+#    	fig.tight_layout(pad=0)
 
-    plt.suptitle("EPIC %i    Campaign %i" %(epic, campaign))
+    elif clip['config.detrendType'] == "tess":
+	for i in range(nPanel):
+		ax = plt.subplot(nPanel, 1, i+1)#, facecolor=colour[i+3])
+		plt.plot(time[~fl], flux[~fl], 'ko', ms=1, alpha=.8)
+		plt.ylabel("PDC SAP FLUX")
+		plt.ylim(-0.005, 0.005)
+		if markTransits:
+            		plotTransitRegions(time[~fl], per, epc, dur_days)
+        	plt.xlim(start + i*deltaT, start + (i+1)*deltaT)
+		if i == 2:
+			plt.xlabel("Time (BTJD)")
+#	fig.tight_layout(pad=0)
+
+    plt.suptitle("TIC %i    Sector %i" %(epic, campaign))
 
 
 def plotTransitRegions(time, period_days, epoch_bkjd, duration_days, **kwargs):
@@ -82,7 +101,7 @@ def plotTransitRegions(time, period_days, epoch_bkjd, duration_days, **kwargs):
     n1 = int(np.floor( (tmin-epoch_bkjd)/period_days) )
     n2 = int(np.ceil(  (tmax-epoch_bkjd)/period_days) )
     color = kwargs.pop('color','#888888')
-    alpha = kwargs.pop('alpha', 1)
+    alpha = kwargs.pop('alpha', 0.5)
 
     for n in range(n1, n2+1):
         t0 = epoch_bkjd + n*period_days
@@ -112,7 +131,7 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
     if epoch > time[0]:
         diff = epoch-time[0]
         epoch -= period*np.ceil(diff/period)
-        print "Reducing epoch"
+#        print "Reducing epoch"
 
     #plt.cla()
     phi = np.fmod(time-epoch + .25*period, period)
@@ -146,23 +165,35 @@ def summaryPlot1(output):
     trapper=output['trapFit.period_days']
     trapdur=output['trapFit.duration_hrs']/24.0
     trapdepth=output['trapFit.depth_frac']*1.0e6;
-    centroids =output['diffImg.centroid_timeseries']
 
 
+    if (output.config.detrendType != "tess") and (output.config.detrendType != "eleanor"):
+        centroids =output['diffImg.centroid_timeseries']
+    else:
+        centroids = np.zeros((10,5))
+        centroids[:,0] = np.linspace(0,9,10)
+    
     plt.clf()
 
     plt.subplot(2,2,(1,2))
-    plotFolded(output, modelOn=False)
-    titlewords="EPIC=%s P=%.2f d Dur=%.2f h dep=%.1f ppm (snr=%.1f) " \
-        % (epicid, trapper, trapdur,trapdepth,trapsnr)
+    plotFolded(output)#, modelOn=False)
+
+    titlewords="EPIC=%s P=%.2f d Dur=%.2f d dep=%.1f ppm (snr=%.1f) " \
+        % (int(float(epicid)), trapper, trapdur,trapdepth,trapsnr)
     plt.title(titlewords)
     plt.xlim((0,trapper))
 
     plt.subplot(223)
     try:
-        titleStr = dip.plotCentroidOffsets(centroids)
-        titleStr = "%s" %(titleStr)
-        plt.title(titleStr)
+	if (output['config.detrendType'] != "tess") & (output['config.detrendType'] != "eleanor"):
+        	titleStr = dip.plotCentroidOffsets(centroids)
+        	titleStr = "%s" %(titleStr)
+        	plt.title(titleStr)
+	else:
+
+		titleStr = dip.plotCentroidOffsets_TESS(output)
+        	titleStr = "%s" %(titleStr)
+        	plt.title(titleStr)		
     except ValueError, e:
         titleStr = "Error: %s" %(e)
         plt.axis([-1,1,-1,1])
@@ -242,7 +273,7 @@ def indivTransitPlot(clip,ndur):
     safe=2**1;
     desat=2**5
     therms=np.bitwise_and(qflag,thr+safe+desat) != 0;
-    print len(therms[therms])
+#    print len(therms[therms])
 
     plt.clf()
     #Plot first six
