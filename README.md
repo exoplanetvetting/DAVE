@@ -4,7 +4,7 @@
 ## Summary
 
 This repository implements a pipeline to find and vet planets planets
-using data from [NASA's K2 and TESS missions](http://keplerscience.arc.nasa.gov), (https://www.nasa.gov/tess-transiting-exoplanet-survey-satellite/).
+using data from [NASA's K2](http://keplerscience.arc.nasa.gov), and [TESS](https://www.nasa.gov/tess-transiting-exoplanet-survey-satellite/) missions.
 
 The pipeline performs the following steps:
 
