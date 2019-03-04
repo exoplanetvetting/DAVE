@@ -35,12 +35,18 @@ cfg=main.loadMyConfiguration()
 clip = main.runOne(206103150,cfg)
 
 ## Example use for TESS
-Run "runOneTESS"
+from dave.tessPipeline import vet_tess_ as pp_tess
+detrendType_ = "eleanor"#"tess"#
+#clip = pp_tess.runOneDv(detrendType_, 5, 307210830, 2, 2.2533, 1438.26950, 787, 1.7)
+clip = pp_tess.runOneDv(detrendType, 1,271893367,1,5.8707,1326.2738,5338.0,2.4)
 
-To get this to work, you will have to create a directory called `.mastio/k2` in your home directory.
+outfile_ = 'tmp.txt'
+aa = pp_tess.runExport(clip,outfile_)
+
+To get DAVE to work for K2, you will have to create a directory called `.mastio/k2` in your home directory.
 
 For K2, you will also need to download and extract
 [kplr2011265_prf.tar.gz](https://archive.stsci.edu/pub/kepler/fpc/kplr2011265_prf.tar.gz)
 into `.mastio/keplerprf`. 
 
-For TESS, you will need to download the TESS PRF Matlab files (https://archive.stsci.edu/tess/all_products.html). For more information, see designnote.pdf (Copyright Fergal Mullally).
+For TESS, you will also need to download the TESS PRF Matlab files (https://archive.stsci.edu/tess/all_products.html). For more information, see designnote.pdf (Copyright Fergal Mullally).
