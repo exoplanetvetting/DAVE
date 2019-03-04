@@ -21,10 +21,12 @@ import dave.fileio.kplrfits as kplrfits
 
 try:
     import dave.lpp.calcLPPoctave as lpp
-except ImportError:
+except (ImportError, OSError):
     print "Warn: LPP can't be imported"
 
 import dave.fileio.mastio as mastio
+import dave.fileio.tessmastio as tessmastio
+import dave.pipeline.tessfunc as tessfunc
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
 import task
@@ -185,7 +187,11 @@ def serveTask(clip):
     storeDir = clip['config.dataStorePath']
     detrendType = clip.get('config.detrendType', 'PDC')
 
-    ar = mastio.K2Archive(storeDir)
+    ar = mastio.K2Archive(storeDir) if detrendType != 'tess' else mastio.TESSArchive_AllData(storeDir)
+
+    if (detrendType != 'tess' and int(campaign) == 10):
+        campaign = 102
+
     clip['serve'] = loadTpfAndLc(k2id, campaign, ar, detrendType)
 
     #Enforce contract. (Make sure expected keys are in place)
@@ -218,13 +224,13 @@ def serveLocalTask(clip):
 def extractLightcurveTask(clip):
     time = clip['serve.time']
     data = clip['serve.socData']
-    numInitialCadencesToIgnore = clip['config.numInitialCadencesToIgnore']
+    numInitialCadencesToIgnore = int(clip['config.numInitialCadencesToIgnore'])
     flagValues = clip.get('serve.flags', data[:, 'SAP_QUALITY'])
     flux = data[:, 'SAP_FLUX'].copy()
 
-    #Convert flags to a boolean, and flag other bad data
     mask = kplrfits.getMaskForBadK2Data()
-    flags = (flagValues & mask).astype(bool)
+    flags = (flagValues & mask).astype(bool) if clip.config.detrendType != "tess" else flagValues.astype(bool)
+    
     flags |= ~np.isfinite(time)
     flags |= ~np.isfinite(flux)
     #flags[flux<1] = True
@@ -256,19 +262,17 @@ def cotrendDataTask(clip):
     flags |= ~np.isfinite(flux)
 
     #Remove dc offset
-    dcOffset = np.median( flux[~flags])
-    flux = (flux/ dcOffset) - 1
+    dcOffset = np.median(flux[~flags])
+    flux = (flux/ dcOffset) - 1.
     clip['cotrend'] = {'flux_frac': flux}
-    clip['cotrend.dcOffset'] = dcOffset
+    #clip['cotrend.dcOffset'] = dcOffset
     clip['cotrend.flags'] = flags
     clip['cotrend.dcOffset'] = dcOffset
     clip['cotrend.source'] = "SOC PDC Pipeline"
-
     #Enforce contract
     clip['cotrend.flux_frac']
+
     return clip
-
-
 
 from dave.blsCode import outlier_detection
 import dave.misc.noise as noise
@@ -280,7 +284,6 @@ def detrendDataTask(clip):
     This code could be considerably simplified if we set flux[singleOutlierIndices]
     ==0. Would this produce the same results?
     """
-
 
     flux = clip['cotrend.flux_frac']
     time = clip['serve.time']
@@ -300,8 +303,7 @@ def detrendDataTask(clip):
     #do a simple detrend with the outliers not included
     trend = outlier_detection.medianDetrend(flux[~flags], nPoints)
     medianDetrend = np.zeros_like(flux)
-    medianDetrend[~flags] = flux[~flags] - trend
-    
+    medianDetrend[~flags] = flux[~flags] - trend if clip.config.detrendType != "tess" else flux[~flags]
 
     flags |= (medianDetrend < -1)    
 
@@ -311,8 +313,6 @@ def detrendDataTask(clip):
     clip['detrend.source'] = "Simple Median detrend"
     
     return clip
-
-
 
 @task.task
 def computeCentroidsTask(clip):
@@ -343,12 +343,8 @@ def rollPhaseTask(clip):
     return clip
 
 
-
-
-
 @task.task
 def singleEventSearchTask(clip):
-
 
     clip['eventList'] = []
     subClip = searchForEvent(clip)
@@ -547,7 +543,6 @@ def trapezoidFitTask(clip):
     unc[flags] = 1e99
     flux_norm[flags] = 0
 
-
     assert(np.all(np.isfinite(time_days[~flags])))
     assert(np.all(np.isfinite(flux_norm[~flags])))
     out = tf.getSnrOfTransit(time_days, flux_norm,\
@@ -598,7 +593,7 @@ def modshiftTask(clip):
 #    model = ioBlock.modellc -1   #Want mean of zero
 #    #model *= -1  #Invert for testing
     model = clip['trapFit.bestFitModel']
-    modplotint=1  # Change to 0 or anything besides 1 to not have modshift produce plot
+    modplotint=int(1)  # Change to 0 or anything besides 1 to not have modshift produce plot
     plotname = "%s-%02i-%04i-%s" % (basename,np.round(clip.bls.period*10),np.round(clip.bls.epoch),clip.config.detrendType)
     out = ModShift.runModShift(time[~fl], flux[~fl], model[~fl], \
         plotname, objectname, period_days, epoch_bkjd, modplotint)
@@ -614,6 +609,7 @@ def modshiftTask(clip):
 
 import dave.diffimg.centroid as cent
 import dave.diffimg.prf as prf
+import dave.diffimg.tessprf as tessprf
 @task.task
 def measureDiffImgCentroidsTask(clip):
 
@@ -626,12 +622,16 @@ def measureDiffImgCentroidsTask(clip):
     cube[ ~np.isfinite(cube) ] = 0
     tpfHeader0 = clip['serve.tpfHeader0']
     tpfHeader = clip['serve.tpfHeader']
+
+#    print tpfHeader0
+
     ccdMod = tpfHeader0['MODULE']
     ccdOut = tpfHeader0['OUTPUT']
     bbox = cent.getBoundingBoxForImage(cube[0], tpfHeader)
     rollPhase = clip['rollPhase.rollPhase']
     prfPath = clip['config.prfPath']
-    prfObj = prf.KeplerPrf(prfPath)
+
+    prfObj = prf.KeplerPrf(prfPath) if clip['config.detrendType'] != 'tess' else tessprf.TessPrf(prfPath)
 
     time_days = clip['serve.time']
     qflags = clip['serve.flags']
@@ -741,37 +741,37 @@ def dispositionTask(clip):
     minProbForFail = clip['config.minProbDiffImgCentroidForFail']
     snr = clip['trapFit.snr']
     modshiftDict = clip['modshift']
-    centroidArray = clip['diffImg.centroid_timeseries']
-
     out = clipboard.Clipboard(isSignificantEvent=True, isCandidate=True, \
         reasonForFail="None")
 
+    if clip.config.detrendType != "tess":
+
+    	centroidArray = clip['diffImg.centroid_timeseries']
 
     #Compute centroid offset and significance
-    centVet = {'Warning':"None"}
-    try:
-        prob, chisq = cent.measureOffsetProbabilityInTimeseries(centroidArray)
-    except ValueError, e:
-        centVet['Warning'] = "Probability not computed: %s" %(e)
-        prob = 0
-        chisq = 0
+    	centVet = {'Warning':"None"}
+    	try:
+        	prob, chisq = cent.measureOffsetProbabilityInTimeseries(centroidArray)
+    	except ValueError, e:
+        	centVet['Warning'] = "Probability not computed: %s" %(e)
+        	prob = 0
+        	chisq = 0
 
-    centVet['probabilityOfOffset'] = prob
-    centVet['chiSquaredOfOffset'] = chisq
-    centVet['numCadencesWithCentroids'] = int( np.sum(centroidArray[:,1] > 0))
+    	centVet['probabilityOfOffset'] = prob
+    	centVet['chiSquaredOfOffset'] = chisq
+    	centVet['numCadencesWithCentroids'] = int( np.sum(centroidArray[:,1] > 0))
 
 
-    centVet['isCentroidFail'] = False
-    if np.isfinite(prob):
-        if prob > minProbForFail:
-            centVet['isCentroidFail'] = True
-            out['isCandidate'] = False
-            out['reasonForFail'] = "Centroid offset probability is %.1e" %(prob)
-    else:
-        centVet['Warning'] = "Probability is Nan"
+    	centVet['isCentroidFail'] = False
+    	if np.isfinite(prob):
+        	if prob > minProbForFail:
+            		centVet['isCentroidFail'] = True
+            		out['isCandidate'] = False
+            		out['reasonForFail'] = "Centroid offset probability is %.1e" %(prob)
+    	else:
+        	centVet['Warning'] = "Probability is Nan"
 
-    out['centroidVet'] = centVet
-
+    	out['centroidVet'] = centVet
 
     ####################################################
 
@@ -893,11 +893,11 @@ def saveClip(clip):
     return clip
 
 def loadTpfAndLc(k2id, campaign, ar, detrendType):
-#    ar = mastio.K2Archive(storeDir)  #Removed by SEM to generalize this function
 
     out = dict()
     fits, hdr = ar.getLongTpf(k2id, campaign, header=True, mmap=False)
     hdr0 = ar.getLongTpf(k2id, campaign, ext=0, mmap=False)
+
     cube = tpf.getTargetPixelArrayFromFits(fits, hdr)
 
     out['cube'] = cube
@@ -919,7 +919,11 @@ def loadTpfAndLc(k2id, campaign, ar, detrendType):
     #Load lightcurves from a specific detrending, and replace
     #the pdc time series with the new detrending
     key = detrendType.upper()
+    
     if key == "PDC":
+        pass
+    
+    elif key == "TESS":
         pass
 
     elif key == "EVEREST":
@@ -953,7 +957,7 @@ def loadTpfAndLc(k2id, campaign, ar, detrendType):
 
 
     out['time'] = fits['TIME'].copy()
-    out['flags'] = fits['SAP_QUALITY'].copy()
+    out['flags'] = fits['SAP_QUALITY'].copy() if key != "TESS" else fits['QUALITY'].copy()
     out['socData'] = data
     return out
 
@@ -994,7 +998,9 @@ def mapTime2ToIndexOfTime1(time1, time2):
     dt = np.fabs(dt.asarray())
     assert dt.ndim == 2
     dt = np.nanmin(dt, axis=0)
+
     idx = dt < 1e-8  #Two times must agree very well to be accepted
+
     assert len(idx) == len(time1)
     return idx
 

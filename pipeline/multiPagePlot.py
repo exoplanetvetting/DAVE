@@ -12,7 +12,7 @@ mpl.use('Agg')  #Use Agg backend to prevent X server use when headless
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 import dave.pipeline.plotting as pp
-import dave.diffimg.plot as dip 
+import dave.diffimg.plot_vbk as dip 
 import dave.stellar.readStellarTable as stel
 from pdb import set_trace as bp
  
@@ -43,8 +43,6 @@ def plot_multipages(outfile,clip,intext,figtype="png"):
       # Create a figure instance (ie. a new page) 
     #pdf_pages.attach_note(('KIC %u   [%u]' % (clip.value, clip.disposition.isCandidate)),positionRect=[100,200,10,400])
     
-    
-
     fig =  plt.figure(1, figsize=figuresize, dpi=dotperinch)  
    
     plt.figtext(0.2,0.85,intext,color='r',fontsize=15)
@@ -100,12 +98,13 @@ def plot_multipages(outfile,clip,intext,figtype="png"):
     except AttributeError:
         pass
 
+    
     try:    
         #Plot centroid plots
         (fig2,fig1)=dip.plotWrapper(clip)
-    except:
-        fig1=plt.plot()
-        fig2=plt.plot()
+    except ValueError:
+        fig1=plt.figure()
+        fig2=plt.figure()
 
     fig1.set_size_inches(figuresize)
     pdf_pages.savefig(fig1, dpi=dotperinch)
