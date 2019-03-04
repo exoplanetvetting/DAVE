@@ -100,11 +100,6 @@ def plotWrapper(clip):
 
     inTransitIndices = kplrfits.markTransitCadences(time, period_days, epoch_bkjd, duration_hrs/24., flags=flags)
 
-#    tce = clip['eventList'][0]
-#    period = tce['trapFit.period_days']
-#    epoch = tce['trapFit.epoch_bkjd']
-#    duration_hrs = tce['trapFit.duration_hrs']
-
     if clip['config.detrendType'] != "tess" and (clip['config.detrendType'] != "eleanor"):
 	rollPhase = clip['rollPhase.rollPhase']
 	centroids = clip['diffImg.centroid_timeseries']        
@@ -122,7 +117,7 @@ def plotWrapper(clip):
     	except ValueError, e:
         	titleStr = "Error: %s" %(e)
 
-    else:#if clip['config.detrendType'] == "tess":
+    else:
 	idx_arr_tmp_ = np.asarray(inTransitIndices)
 	goodCentroidIndices = np.linspace(0,len(idx_arr_tmp_), len(idx_arr_tmp_)+1)
 	goodCentroidIndices = goodCentroidIndices[:-1]
@@ -206,10 +201,8 @@ def PLOT_CENTROID_OFFSETS_VBK(clip):
     diff_mean_img_ = oot_mean_img_ - itr_mean_img_
 
     ss_ = oot_mean_img_.shape
-
 #    disp = lambda x: mp.imshow(x, cmap=mp.cm.binary, origin = "bottom", interpolation="nearest")
     extent_ = [col_zero_, col_zero_ + ss_[1], row_zero_, row_zero_ + ss_[0]]
-#    cmap_ = lambda x: mp.get_cmap('binary', int(np.max(data))-int(np.min(data))+1)
     disp = lambda x: mp.imshow(x, cmap=mp.get_cmap('binary', 512), origin = "bottom", interpolation="nearest", extent = extent_)
 #
 # GET CENTROIDS
@@ -242,12 +235,6 @@ def PLOT_CENTROID_OFFSETS_VBK(clip):
 
     disp(oot_mean_img_)
 
-#    mp.scatter(diffC, diffR, marker='o', c=cin, s=64, linewidths=0, cmap=mp.cm.RdYlBu)
-#    mp.plot(diffC, diffR, 'ro', ms= 6)
-
-#    mp.axhline(0, color='k', lw=.6)
-#    mp.axvline(0, color='k', lw=.5)
-#    mp.plot(0.,0., '*', ms=40, color='yellow')
     ax1.plot(ootCol, ootRow, 'c*', ms=8)#, mec = 'm')#, color='yellow')
     ax1.plot(np.mean(ootCol), np.mean(ootRow), 'c*', ms=14, label = 'AVG_OOT')#, mec = 'm')
 
@@ -256,7 +243,6 @@ def PLOT_CENTROID_OFFSETS_VBK(clip):
 #
     covar.plotErrorEllipse(ootCol, ootRow, color='c', ms=14, marker = '*', mfc = 'c')#, mec = 'm')
     covar.plotErrorEllipse(itrCol, itrRow, color='m', ms=14, marker = 'o', mfc = 'm')#, mec = 'c')
-#    covar.plotErrorEllipse(diffC, diffR, color='#888888', ms=3)
 
     ax1.plot(epic_Col, epic_Row, 'xy', mew=3, ms = 10, label = 'EPIC')
 
@@ -265,37 +251,8 @@ def PLOT_CENTROID_OFFSETS_VBK(clip):
 
     mp.legend(loc = 'best', fontsize = 8)
 
-#    xmin_ = np.min(np.asarray([ootCol, diffCol]))
-#    xmax_ = np.max(np.asarray([ootCol, diffCol]))
-
-#    ymin_ = np.min(np.asarray([ootRow, diffRow]))
-#    ymax_ = np.max(np.asarray([ootRow, diffRow]))
-
-#    mp.xlim(0.8*xmin_, 1.2*xmax_)
-#    mp.ylim(0.8*ymin_, 1.2*ymax_)
-
-#    probOffset, chiSq = covar.computeProbabilityOfObservedOffset(diffC, diffR)
-#    titleStr = "Prob. On Target: %.1e: $\chi^2$: %.3f" %(1-probOffset, chiSq)
-#    cb = mp.colorbar()
-#    cb.set_label("Time (BKJD)")
-
-    #Ensure some padding around the origin so the symbol is never
-    #at edge of the plot
-#    axl = list(mp.axis())
-#    axl[0] = min(axl[0], -0.1)
-#    axl[1] = max(axl[1], +0.1)
-#    axl[2] = min(axl[2], -0.1)
-#    axl[3] = max(axl[3], +0.1)
-#    mp.axis(axl)
 
     mp.subplot(222)
-##    titleStr = plotCentroidOffsets(centroids)
-##
-##
-#    mp.scatter(diffC, diffR, marker='o', c=cin, s=64, linewidths=0, cmap=mp.cm.RdYlBu)
-#    mp.plot(ootCol, ootRow, 'c*', ms = 10, mec = 'k')#cmap=mp.cm.Wistia)#spring)
-#    mp.plot(itrCol, itrRow, 'mo', ms = 10, mec = 'k')#cmap=mp.cm.winter)
-
     mp.plot(np.mean(ootCol),np.mean(ootRow), 'c*', ms=20, label = 'OOT')
     mp.plot(np.mean(itrCol),np.mean(itrRow), 'mo', ms=20, label = 'DIFF')
     mp.scatter(ootCol, ootRow, marker='*', c=cin, s=64, linewidths=0, cmap=mp.cm.RdYlBu)
@@ -304,41 +261,19 @@ def PLOT_CENTROID_OFFSETS_VBK(clip):
     cb = mp.colorbar()
     cb.set_label("Cadence")
 
-#    mp.axhline(0, color='k', lw=.5)
-#    mp.axvline(0, color='k', lw=.5)
-
-#    covar.plotErrorEllipse(diffC, diffR, color='#888888', ms=20)
     covar.plotErrorEllipse(ootCol, ootRow, color='c', ms=20, marker = '*', mfc = 'c')
     covar.plotErrorEllipse(itrCol, itrRow, color='m', ms=20, marker = 'o', mfc = 'm')
 
     mp.xlabel(r"$\Delta$ Column (pixels)")
 
-#    mp.ylabel(r"$\Delta$ Row (pixels)")
-
     probOffset, chiSq = covar.computeProbabilityOfObservedOffset(diffC, diffR)
     titleStr = "Prob. On Target: %.1e: $\chi^2$: %.3f" %(1-probOffset, chiSq)
 
     mp.legend(loc = 'best')
-#    cb = mp.colorbar()
-#    cb.set_label("Time (BKJD)")
 
     mp.xlim(xmin_-0.2, xmax_+0.2)
     mp.ylim(ymin_-0.2, ymax_+0.2)
     mp.tight_layout()
-#    mp.locator_params(axis='y', nbins=4)
-#    mp.locator_params(axis='x', nbins=4)
-
-
-    #Ensure some padding around the origin so the symbol is never
-    #at edge of the plot
-#    axl = list(mp.axis())
-#    axl[0] = min(axl[0], -0.1)
-#    axl[1] = max(axl[1], +0.1)
-#    axl[2] = min(axl[2], -0.1)
-#    axl[3] = max(axl[3], +0.1)
-#    mp.axis(axl)
-#
-#
 
     try:
         ax3 = mp.subplot(223, projection = mywcs_)#mywcs_)
@@ -350,23 +285,11 @@ def PLOT_CENTROID_OFFSETS_VBK(clip):
         pix_survey = img_survey[0][0].data
         hdr_survey = img_survey[0][0].header
 
-#    levels_ = np.linspace(np.min(pix_survey),np.percentile(pix_survey,95),40)
-#    levels_ = [0.9, 0.5, 0.1, 0.0]
-
         inverted_pix_survey = np.max(pix_survey) - pix_survey
         inverted_pix_survey = pix_survey#inverted_pix_survey/np.max(inverted_pix_survey)
 
         levels_ = np.linspace(np.min(inverted_pix_survey),np.percentile(inverted_pix_survey,99),10)
-#    levels_ = np.logspace(np.min(inverted_pix_survey),np.max(inverted_pix_survey),10)
-#    levels_ = [0.0,0.0001,0.0005,0.001,0.005,0.01,0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.95,0.99,1.]
-
-#    array, footprint = reproject_interp(pix_survey, mywcs_, shape_out = pix_survey.shape)#catalog_img_.shape)#ss_)
-
-#    disp(pix_survey)#.T)
-#    ax3.imshow(pix_survey, cmap=mp.get_cmap('binary',512))#, transform = wcs.WCS(hdr_survey))
         ax3.contourf(inverted_pix_survey, transform=ax3.get_transform(wcs.WCS(hdr_survey)), levels = levels_, cmap=mp.get_cmap('binary',256))
-#    ax.scatter(ra_, dec_, 'xy', mew=3, ms = 10, label = 'EPIC', transform=ax.get_transform(wcs.WCS(hdr_survey)))
-#    print ax3.get_xlim(), ax3.get_ylim()
 #
 #
         mp.tight_layout()
@@ -375,15 +298,6 @@ def PLOT_CENTROID_OFFSETS_VBK(clip):
 
     mp.subplot(224)
     titleStr_ = plotCentroidOffsets(centroids)
-#    disp(diff_mean_img_)
-#    mp.scatter(diffC, diffR, marker='s', c=cin, s=64, linewidths=0, cmap=mp.cm.RdYlBu)
-#    covar.plotErrorEllipse(diffC, diffR, color='#888888', ms=20, marker = 's')
-
-#    mp.scatter(ootCol, ootRow, marker='*', c=cin, s=64, linewidths=0, cmap=mp.cm.Wistia)#spring)
-#    covar.plotErrorEllipse(ootCol, ootRow, color='#888888', ms=20, marker = '*', mfc = 'm')
-
-#    mp.scatter(itrCol, itrRow, marker='o', c=cin, s=64, linewidths=0, cmap=mp.cm.winter) 
-#    covar.plotErrorEllipse(itrCol, itrRow, color='#888888', ms=20, marker = 'o', mfc = 'b')
 
     return titleStr
 ##
@@ -448,12 +362,6 @@ def PLOT_CENTROIDS_TESS(clip):
     mp.subplot(223)
 
     disp(itr_mean_img_)
-#    mp.plot(centroids[:,0], centroids[:,1], 'ko', label="Before")
-#    mp.plot(centroids[:,2], centroids[:,3], 'ro', label="Difference")
-#    mp.plot(centroids[:,4], centroids[:,5], 'wo', label="After")
-#    mp.plot(np.mean(centroids[:,0]), np.mean(centroids[:,1]), 'ks', label="Before")
-#    mp.plot(np.mean(centroids[:,4]), np.mean(centroids[:,5]), 'wo', label="After")
-#    mp.plot(diffCol+0*col_zero_,diffRow+0*row_zero_,'r*')#,ms=6)
   
     mp.xlabel("Column")
     mp.ylabel("Row")
@@ -476,227 +384,8 @@ def PLOT_CENTROIDS_TESS(clip):
 ##
 ##
 ##
-def PLOT_DIFF_IMG_TESS(clip):
-
-    centroids = clip['diffImgCentroids.results']
-    ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
-    diffCol_prf, diffRow_prf = centroids[:,2], centroids[:,3]
-
-    itrCol, itrRow = ootCol_prf - diffCol_prf, ootRow_prf - diffRow_prf
-    ootCol, ootRow, diffCol, diffRow = ootCol_prf, ootRow_prf, diffCol_prf, diffRow_prf
-
-    itrCol, itrRow, ootCol, ootRow, diffCol, diffRow = psfCentroids_vbk(clip)
-
-    diffC = (ootCol - diffCol)
-    diffR = (ootRow - diffRow)
-
-#    itr_mean_img_, oot_mean_img_, diff_mean_img_, itr_mean_cube_, oot_mean_cube_, diff_mean_cube_, transit_number_ = generateImages(clip)
-    itr_mean_img_, oot_mean_img_, diff_mean_img_ = generateImages(clip)
-    itr_mean_img_, oot_mean_img_, diff_mean_img_ = np.asarray(itr_mean_img_), np.asarray(oot_mean_img_), np.asarray(diff_mean_img_)
-
-    hdr_ = clip['serve.tpfHeader']    
-
-    if clip['config.detrendType'] == "tess":
-    	col_zero_, row_zero_ = int(hdr_['1CRV4P']), int(hdr_['2CRV4P'])
-    	epic_Col, epic_Row = col_zero_ + int(hdr_['1CRPX4']), row_zero_ + int(hdr_['2CRPX4'])
-
-    if clip['config.detrendType'] == "eleanor":
-    	col_zero_, row_zero_ = int(hdr_['CRPIX1']), int(hdr_['CRPIX2'])
-    	epic_Col, epic_Row = col_zero_ + int(hdr_['TPF_W']), row_zero_ + int(hdr_['TPF_H'])
-#
-#
-# START PLOTTING CENTROIDS
-#
-#
-#    ss_ = oot_mean_img_.shape
-#    extent_ = [col_zero_, col_zero_ + ss_[1], row_zero_, row_zero_ + ss_[0]]
-#    disp = lambda x: mp.imshow(x, cmap=mp.cm.YlGnBu_r, origin = "bottom", interpolation = "nearest", extent = extent_)
-    disp = lambda x: mp.imshow(x, cmap=parula_map, origin="bottom",interpolation="nearest")
-
-    mp.subplot(221)
-
-    plot_ = 'plot_images_'#'plot_flux_'#
-
-    if plot_ == 'plot_flux_':
-	mp.plot(time[oot_cadence_], flux[oot_cadence_], 'k.')
-	mp.plot(time[itr_cadence_], flux[itr_cadence_], 'r.')
-    	mp.xlim(1356., 1357.)
-    elif plot_ == 'plot_images_':
-	disp(diff_mean_img_)
-	mp.plot(diffCol,diffRow,'r*',ms=6)
-	mp.colorbar()
-	mp.clim(vmin=0)
-    	covar.plotErrorEllipse(diffCol, diffRow, color='r', ms=14, marker = '*', mfc = 'r')#, mec = 'c')
-    	probOffset, chiSq = covar.computeProbabilityOfObservedOffset(diffC, diffR)
-    	titleStr = "Prob. On Target: %.1e; $\chi^2$: %.3f" %(1-probOffset, chiSq)
-
-
-    mp.title("Difference Image")#: cent @ ["+str(round(mean_diffRow +1*row_zero_,2))+','+str(round(mean_diffCol +1*col_zero_,2))+']')
-
-    mp.subplot(222)
-    disp(oot_mean_img_)
-    mp.plot(ootCol,ootRow,'mo',ms=6)# if use_before_after_images_per_transit_=='n' else mp.plot(mean_ootCol,mean_ootRow,'mo',ms=9)
-#    mp.plot(itrCol, itrRow, 'mo', ms = 4)
-#    mp.plot(diffCol, diffRow, 'gs', ms = 4)
-    mp.colorbar()
-    mp.title("OOT Image")#: cent @ ["+str(round(mean_ootRow +1*row_zero_,2))+','+str(round(mean_ootCol + 1*col_zero_,2)) + ']')
-#
-#
-#
-#    
-    plt_what_ = 'itr'#'archive_img'#
-
-    if plt_what_ != 'archive_img':
-	mp.subplot(223)
-
-    	disp(itr_mean_img_)
-#    mp.plot(ootCol, ootRow, 'c*', ms = 4)
-    	mp.plot(itrCol,itrRow,'mo',ms=6)# if use_before_after_images_per_transit_=='n' else mp.plot(mean_itrCol,mean_itrRow,'gx',ms=9)
-#    mp.plot(diffCol, diffRow, 'gs', ms = 4)
-    	mp.colorbar()
-    	mp.title("In-transit Image")#: cent @ ["+str(round(mean_itrRow + 1*row_zero_,2))+','+str(round(mean_itrCol + 1*col_zero_,2)) + ']')
-
-    else:
-
-    	try:
-		from astropy import coordinates, units as u, wcs
-    		from astroquery.skyview import SkyView
-    		from astroquery.vizier import Vizier
-    		import astropy.units as u
-    		import math
-    		from scipy.ndimage import rotate
-    		from reproject import reproject_interp, reproject_exact, reproject_to_healpix, reproject_from_healpix
-    		from astropy.wcs import WCS
-#    		import pywcsgrid2
-
-    		hdr_ = clip['serve.tpfHeader']
-    		col_zero_, row_zero_ = int(hdr_['1CRV4P']), int(hdr_['2CRV4P'])
-
-    		epic_Col, epic_Row = col_zero_ + int(hdr_['1CRPX4']), row_zero_ + int(hdr_['2CRPX4'])
-
-   		def k2_ConvertHeaderWCS(tpf_header):
-        		funny_keywords = {'1CTYP4': 'CTYPE1',
-                        	'2CTYP4': 'CTYPE2',
-                        	'1CRPX4': 'CRPIX1',
-                        	'2CRPX4': 'CRPIX2',
-                        	'1CRVL4': 'CRVAL1',
-                        	'2CRVL4': 'CRVAL2',
-                        	'1CUNI4': 'CUNIT1',
-                        	'2CUNI4': 'CUNIT2',
-                        	'1CDLT4': 'CDELT1',
-                        	'2CDLT4': 'CDELT2',
-                        	'11PC4': 'PC1_1',
-                        	'12PC4': 'PC1_2',
-                        	'21PC4': 'PC2_1',
-                        	'22PC4': 'PC2_2'}
-        		mywcs = {}
-        		for oldkey, newkey in funny_keywords.items():
-                		mywcs[newkey] = tpf_header[oldkey]
-
-        		return wcs.WCS(mywcs)
-
-    		mywcs_ = k2_ConvertHeaderWCS(hdr_)
-
-        	ax3 = mp.subplot(223, projection = mywcs_)#mywcs_)
-
-        	ra_, dec_ = hdr_['RA_OBJ'], hdr_['DEC_OBJ']
-
-		print ra_, dec_
-        	center_ = coordinates.SkyCoord(ra_, dec_, unit=(u.deg, u.deg), frame='icrs')
-
-        	img_survey = SkyView.get_images(position=center_, survey='2MASS-J', radius=3.5*u.arcmin)
-        	pix_survey = img_survey[0][0].data
-        	hdr_survey = img_survey[0][0].header
-
-        	inverted_pix_survey = np.max(pix_survey) - pix_survey
-        	inverted_pix_survey = pix_survey#inverted_pix_survey/np.max(inverted_pix_survey)
-
-        	levels_ = np.linspace(np.min(inverted_pix_survey),np.percentile(inverted_pix_survey,99),10)
-
-        	ax3.contourf(inverted_pix_survey,transform=ax3.get_transform(wcs.WCS(hdr_survey)),levels = levels_,cmap=mp.get_cmap('binary',256))
-    	except:
-        	mp.subplot(223)
-#
-#
-#
-#
-    plt_what_ = 'archive_img'#'snr'#
-    if plt_what_ != 'archive_img':
-	mp.subplot(224)
-
-    	tmp_diff_img_ = 0.01 + diff_mean_img_ - np.min(diff_mean_img_.flatten())
-    	idx = np.isfinite(tmp_diff_img_)
-    	snr = np.empty_like(tmp_diff_img_)
-    	snr[idx] = tmp_diff_img_[idx]/np.sqrt(tmp_diff_img_[idx])
-    	disp(snr)
-    	mp.colorbar()
-    	mp.title("Difference SNR")
-    elif plt_what_ == 'archive_img':
-    	try:
-		from astropy import coordinates, units as u, wcs
-    		from astroquery.skyview import SkyView
-    		from astroquery.vizier import Vizier
-#    		import astropy.units as u
-    		import math
-    		from scipy.ndimage import rotate
-    		from reproject import reproject_interp, reproject_exact, reproject_to_healpix, reproject_from_healpix
-    		from astropy.wcs import WCS
-#    		import pywcsgrid2
-
-    		hdr_ = clip['serve.tpfHeader']
-    		col_zero_, row_zero_ = int(hdr_['1CRV4P']), int(hdr_['2CRV4P'])
-
-    		epic_Col, epic_Row = col_zero_ + int(hdr_['1CRPX4']), row_zero_ + int(hdr_['2CRPX4'])
-
-   		def k2_ConvertHeaderWCS(tpf_header):
-        		funny_keywords = {'1CTYP4': 'CTYPE1',
-                        	'2CTYP4': 'CTYPE2',
-                        	'1CRPX4': 'CRPIX1',
-                        	'2CRPX4': 'CRPIX2',
-                        	'1CRVL4': 'CRVAL1',
-                        	'2CRVL4': 'CRVAL2',
-                        	'1CUNI4': 'CUNIT1',
-                        	'2CUNI4': 'CUNIT2',
-                        	'1CDLT4': 'CDELT1',
-                        	'2CDLT4': 'CDELT2',
-                        	'11PC4': 'PC1_1',
-                        	'12PC4': 'PC1_2',
-                        	'21PC4': 'PC2_1',
-                        	'22PC4': 'PC2_2'}
-        		mywcs = {}
-        		for oldkey, newkey in funny_keywords.items():
-                		mywcs[newkey] = tpf_header[oldkey]
-
-        		return wcs.WCS(mywcs)
-
-    		mywcs_ = k2_ConvertHeaderWCS(hdr_)
-
-        	ax3 = mp.subplot(224, projection = mywcs_)#mywcs_)
-
-        	ra_, dec_ = hdr_['RA_OBJ'], hdr_['DEC_OBJ']
-
-#		print ra_, dec_
-        	center_ = coordinates.SkyCoord(ra_, dec_, unit=(u.deg, u.deg), frame='icrs')
-
-        	img_survey = SkyView.get_images(position=center_, survey='2MASS-J', radius=3.5*u.arcmin)
-		# NEED TO DO pip install urllib3==1.22 TO GET SOMETHING CORRECT!!!!
-        	pix_survey = img_survey[0][0].data
-        	hdr_survey = img_survey[0][0].header
-
-        	inverted_pix_survey = np.max(pix_survey) - pix_survey
-        	inverted_pix_survey = pix_survey#inverted_pix_survey/np.max(inverted_pix_survey)
-
-        	levels_ = np.linspace(np.min(inverted_pix_survey),np.percentile(inverted_pix_survey,99),10)
-
-        	ax3.contourf(inverted_pix_survey,transform=ax3.get_transform(wcs.WCS(hdr_survey)),levels = levels_,cmap=mp.get_cmap('binary',256))
-    	except:
-        	mp.subplot(224)
-##
-##
-##
 def PLOT_INDIV_IMG_TESS(clip):
 
-#    disp = lambda x: mp.imshow(x, cmap=mp.cm.YlGnBu_r, origin = "bottom", interpolation = "nearest")#, extent = extent_)
     disp = lambda x: mp.imshow(x, cmap=parula_map, origin="bottom",interpolation="nearest")
 
     itr_mean_img_, oot_mean_img_, diff_mean_img_, cube_itr_mean_, cube_oot_mean_, cube_diff_mean_, transit_number_ = generateImages(clip)
@@ -706,11 +395,6 @@ def PLOT_INDIV_IMG_TESS(clip):
 
     ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
     diffCol_prf, diffRow_prf = centroids[:,2], centroids[:,3]
-
-#
-# PLOT IN-TRANSIT, BEFORE TRANSIT, AND AFTER TRANSIT IMAGES ON A 3x3 GRID	
-#
-#	subplot_ = 330 + int(ii+1)#10*(int(float(ii)//3.) + 1) + int(ii+1)
 
     n_columns_ = 3
 
