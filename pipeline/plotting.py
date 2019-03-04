@@ -51,7 +51,7 @@ def plotData(clip, nPanel=3):
 
     rawRange = np.percentile(raw[~fl], [1.,99.])#[1,99])
 
-    if (clip['config.detrendType'] != "tess"):# and (clip['config.detrendType'] != "eleanor") :
+    if (clip['config.detrendType'] != "tess"):
 
     	for i in range(nPanel):
         	ax = plt.subplot(2*nPanel, 1, 2*i+1, facecolor=colour[i])
