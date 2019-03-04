@@ -44,6 +44,7 @@ where input is Sector, TIC ID, Planet Number, Period, BTJD, Transit Depth [ppm],
 outfile_ = 'tmp.txt'
 aa = pp_tess.runExport(clip,outfile_)
 
+## Additional requirements
 To get DAVE to work for K2, you will have to create a directory called `.mastio/k2` in your home directory.
 
 For K2, you will also need to download and extract
