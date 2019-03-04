@@ -30,15 +30,16 @@ You will almost certainly need to install @dfm's [python-bls](https://github.com
 
 
 ## Example use for K2
-from dave.pipeline import main
-cfg=main.loadMyConfiguration()
-clip = main.runOne(206103150,cfg)
+from dave.pipeline import main\\
+cfg=main.loadMyConfiguration()\\
+clip = main.runOne(206103150,cfg)\\
 
 ## Example use for TESS
 from dave.tessPipeline import vet_tess_ as pp_tess
-detrendType_ = "eleanor"#"tess"#
+detrendType_ = "eleanor"
 clip = pp_tess.runOneDv(detrendType, 1,271893367,1,5.8707,1326.2738,5338.0,2.4)
-# Input is: Sector, TIC ID, Planet Number, Period, BTJD, Transit Depth [ppm], Transit Duration [hours]
+
+where input is Sector, TIC ID, Planet Number, Period, BTJD, Transit Depth [ppm], Transit Duration [hours]
 
 outfile_ = 'tmp.txt'
 aa = pp_tess.runExport(clip,outfile_)
