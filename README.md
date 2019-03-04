@@ -1,4 +1,4 @@
-# dave™
+# DAVE™
 **D**iscovery **A**nd **V**etting of K2 **E**xoplanets™
 
 ## Summary
