@@ -3,7 +3,7 @@
 
 from dave.tessPipeline import vet_tess_
 
-detrendType_ = "eleanor"#"tess_2min"#
+detrendType_ = "tess_2min"#"eleanor"#
 
 # Input is: Sector, TIC ID, Planet Number, Period, BTJD, Transit Depth [ppm], Transit Duration [hours]
 clip = vet_tess_.runOneDv(detrendType_, 307210830, 1, 3.690613, 1356.2038, 1863, 1.27)
