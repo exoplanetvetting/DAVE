@@ -22,6 +22,7 @@ The pipeline performs the following steps:
 ```
 python checkRequirements.py
 ```
+You may also need to pip install the following packages: astropy, pyfits, astroquery, conda install gnuplot (for which you will need Conda-Forge), PyGnuplot, parmap, clipboard, lpproj, and numba. 
 
 ## Example use for K2
 1. from dave.pipeline import main
