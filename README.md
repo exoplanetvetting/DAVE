@@ -24,12 +24,12 @@ python checkRequirements.py
 ```
 You may also need to pip install the following packages: astropy, pyfits, astroquery, conda install gnuplot (for which you will need Conda-Forge), PyGnuplot, parmap, clipboard, lpproj, and numba. 
 
-## Example use for K2
+## Example use for K2 from python
 1. from dave.pipeline import main
 2. cfg=main.loadMyConfiguration()
 3. clip = main.runOne(206103150,cfg)
 
-## Example use for TESS
+## Example use for TESS from python
 1. from dave.tessPipeline import vet_tess_
 2. detrendType = "tess_2min"
 3. clip = vet_tess_.runOneDv(detrendType, 2, 307210830, 1, 3.690613, 1356.2038, 1863, 1.27)
@@ -39,7 +39,7 @@ You may also need to pip install the following packages: astropy, pyfits, astroq
 where input for runOneDv is:
 Sector, TIC ID, Planet Number, Period, BTJD, Transit Depth [ppm], Transit Duration [hours]. 
 
-or just run "./runOneTESS"
+or from the terminal just "./runOneTESS"
 
 Currently supported "detrendType" are "tess_2min" and "eleanor", where "tess" refers to the [SPOC short-cadence data](https://archive.stsci.edu/prepds/tess-data-alerts/), and "eleanor" refers to [eleanor-generated FFI lightcurves](http://adina.feinste.in/eleanor/)
 
