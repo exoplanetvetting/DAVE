@@ -1,7 +1,7 @@
 # Code to make diagnostic plots
 
 import sys
-import Gnuplot, Gnuplot.funcutils
+import PyGnuplot as Gnuplot#Gnuplot, Gnuplot.funcutils
 import numpy
 import math
 
