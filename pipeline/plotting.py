@@ -36,8 +36,8 @@ def plotData(clip, nPanel=3):
         per = clip['trapFit.period_days']
         epc = clip['trapFit.epoch_bkjd']
         dur_days = clip['trapFit.duration_hrs']/24.
-    except KeyError, e:
-        print "WARN: %s" %(e)
+    except KeyError as e:
+        print("WARN: %s" %(e))
         markTransits = False
 
     fig = plt.gcf()
@@ -51,44 +51,44 @@ def plotData(clip, nPanel=3):
 
     rawRange = np.percentile(raw[~fl], [1.,99.])#[1,99])
 
-    if (clip['config.detrendType'] != "tess"):
+    if (clip['config.detrendType'] != "tess_2min"):# and (clip['config.detrendType'] != "eleanor") :
 
     	for i in range(nPanel):
-        	ax = plt.subplot(2*nPanel, 1, 2*i+1, facecolor=colour[i])
-        	plt.plot(time[~fl], raw[~fl], 'ko', ms=1, alpha=.8)
-        	plt.ylim(rawRange)
-        	plt.ylabel("Raw flux/1000")
-		plt.xticks(color= 'w')
+            ax = plt.subplot(2*nPanel, 1, 2*i+1, facecolor=colour[i])
+            plt.plot(time[~fl], raw[~fl], 'ko', ms=1, alpha=.8)
+            plt.ylim(rawRange)
+            plt.ylabel("Raw flux/1000")
+            plt.xticks(color= 'w')
 
-        	if markTransits:
-            		plotTransitRegions(time[~fl], per, epc, dur_days)
+            if markTransits:
+                plotTransitRegions(time[~fl], per, epc, dur_days)
 
-        	plt.subplot(2*nPanel, 1, 2*i+2, sharex=ax, facecolor=colour[i])
+            plt.subplot(2*nPanel, 1, 2*i+2, sharex=ax, facecolor=colour[i])
         #Plotting bad data cadences turned off
 #        plt.plot(time[fl], 0*time[fl], 'mo', ms=8, mec="none")
-        	plt.plot(time[~fl], flux[~fl], 'ko', ms=1, alpha=.8)
-        	plt.ylabel("Detrended")
+            plt.plot(time[~fl], flux[~fl], 'ko', ms=1, alpha=.8)
+            plt.ylabel("Detrended")
 
-        	if markTransits:
-            		plotTransitRegions(time[~fl], per, epc, dur_days)
+            if markTransits:
+                plotTransitRegions(time[~fl], per, epc, dur_days)
 
-        	plt.xlim(start + i*deltaT, start + (i+1)*deltaT)
-		if i == 2:
-			plt.xlabel("Time (BTJD)")
+            plt.xlim(start + i*deltaT, start + (i+1)*deltaT)
+            if i == 2:
+                plt.xlabel("Time (BTJD)")
 
 #    	fig.tight_layout(pad=0)
 
-    elif clip['config.detrendType'] == "tess":
-	for i in range(nPanel):
-		ax = plt.subplot(nPanel, 1, i+1)#, facecolor=colour[i+3])
-		plt.plot(time[~fl], flux[~fl], 'ko', ms=1, alpha=.8)
-		plt.ylabel("PDC SAP FLUX")
-		plt.ylim(-0.005, 0.005)
-		if markTransits:
-            		plotTransitRegions(time[~fl], per, epc, dur_days)
-        	plt.xlim(start + i*deltaT, start + (i+1)*deltaT)
-		if i == 2:
-			plt.xlabel("Time (BTJD)")
+    elif clip['config.detrendType'] == "tess_2min":
+        for i in range(nPanel):
+            ax = plt.subplot(nPanel, 1, i+1)#, facecolor=colour[i+3])
+            plt.plot(time[~fl], flux[~fl], 'ko', ms=1, alpha=.8)
+            plt.ylabel("PDC SAP FLUX")
+            plt.ylim(-0.005, 0.005)
+            if markTransits:
+                plotTransitRegions(time[~fl], per, epc, dur_days)
+            plt.xlim(start + i*deltaT, start + (i+1)*deltaT)
+            if i == 2:
+                plt.xlabel("Time (BTJD)")
 #	fig.tight_layout(pad=0)
 
     plt.suptitle("TIC %i    Sector %i" %(epic, campaign))
@@ -178,23 +178,22 @@ def summaryPlot1(output):
     plt.subplot(2,2,(1,2))
     plotFolded(output)#, modelOn=False)
 
-    titlewords="EPIC=%s P=%.2f d Dur=%.2f d dep=%.1f ppm (snr=%.1f) " \
+    titlewords="TIC=%s P=%.2f d Dur=%.2f d dep=%.1f ppm (snr=%.1f) " \
         % (int(float(epicid)), trapper, trapdur,trapdepth,trapsnr)
     plt.title(titlewords)
     plt.xlim((0,trapper))
 
     plt.subplot(223)
     try:
-	if (output['config.detrendType'] != "tess") & (output['config.detrendType'] != "eleanor"):
-        	titleStr = dip.plotCentroidOffsets(centroids)
-        	titleStr = "%s" %(titleStr)
-        	plt.title(titleStr)
-	else:
-
-		titleStr = dip.plotCentroidOffsets_TESS(output)
-        	titleStr = "%s" %(titleStr)
-        	plt.title(titleStr)		
-    except ValueError, e:
+        if (output['config.detrendType'] != "tess_2min") & (output['config.detrendType'] != "eleanor"):
+            titleStr = dip.plotCentroidOffsets(centroids)
+            titleStr = "%s" %(titleStr)
+            plt.title(titleStr)
+        else:
+            titleStr = dip.plotCentroidOffsets_TESS(output)
+            titleStr = "%s" %(titleStr)
+            plt.title(titleStr)		
+    except ValueError as e:
         titleStr = "Error: %s" %(e)
         plt.axis([-1,1,-1,1])
         plt.title(titleStr,fontsize=9)

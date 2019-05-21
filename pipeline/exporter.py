@@ -82,10 +82,10 @@ def createOutputs(clip):
         clip.serve.time
     except AttributeError:
         clip=dpp.serveLocalTask(clip)    
-        print 'hi serve'        
-        print clip.serve
+        print('hi serve')        
+        print(clip.serve)
     try:
-        print clip.exception
+        print(clip.exception)
     except AttributeError:
             pass
     #dpp.plotTask(clip)  
@@ -111,13 +111,13 @@ def createOutputs(clip):
             cmd=''
             #cmd="gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile=%s/%s/%s-all.pdf %s  %s" % (clip.config.exportLoc,epic,epic, outfile,file2)
             #cmd="pdftk %s %s %s output %s/%s/%s-all.pdf" % (outfile,file2,file3,clip.config['exportLoc'],epic,epic)
-            print cmd
+            print(cmd)
             os.system(cmd)     
             
-    except (KeyError,AttributeError,TypeError),e:
+    except (KeyError,AttributeError,TypeError) as e:
         cmd="None"
-        print epic, e
-        print "No Exports"
+        print(epic, e)
+        print("No Exports")
     
     return cmd
     
@@ -149,9 +149,9 @@ def writeCandidates(clip):
             outtxt,hdr = createExportString(clip, delimiter=" ", badValue="nan")
         else:
             outtxt="none"
-    except (KeyError,AttributeError),e:
+    except (KeyError,AttributeError) as e:
         outtxt=e
-        print clip.value,e
+        print(clip.value,e)
     
     return outtxt
     

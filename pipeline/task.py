@@ -82,8 +82,7 @@ def task(func):
 
         clip = args[0]
         if 'exception' in clip.keys():
-            print "INFO: %s not run because exception previously raised" \
-                %(func.func_name)
+            print("INFO: %s not run because exception previously raised" %(func.func_name))
             return clip
 
         if "__meta__" not in clip.keys():
@@ -103,13 +102,13 @@ def task(func):
         t0 = time.time()
         try:
             clip = func(*args, **kwargs)
-        except SyntaxError, e:
+        except SyntaxError as e:
             raise(e)
-        except Exception, e:
+        except Exception as e:
             if debug:
                 #Cancel timeout, if any
                 signal.alarm(0)
-                print e
+                print(e)
                 pdb.post_mortem(sys.exc_info()[2])
                 raise e
             else:
@@ -128,7 +127,7 @@ def task(func):
                 if debug:
                     raise throwable
                 else:
-                    print throwable
+                    print(throwable)
                     clip = {'exception': throwable}
                     clip['functionName'] = func.__name__
 

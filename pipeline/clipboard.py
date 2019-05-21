@@ -290,7 +290,7 @@ class Clipboard(object):
         ---------
         Prints text to stdout.
         """
-        print self.asString(prefix, maxLevel)
+        print(self.asString(prefix, maxLevel))
 
 
     def asString(self, prefix="", maxLevel=np.inf):

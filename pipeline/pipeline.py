@@ -22,20 +22,20 @@ import dave.fileio.kplrfits as kplrfits
 try:
     import dave.lpp.calcLPPoctave as lpp
 except (ImportError, OSError):
-    print "Warn: LPP can't be imported"
+    print("Warn: LPP can't be imported")
 
 import dave.fileio.mastio as mastio
 import dave.fileio.tessmastio as tessmastio
 import dave.pipeline.tessfunc as tessfunc
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
-import task
+import dave.pipeline.task as task
 import os
 
 
 def runOne(k2id, config):
 
-    print "WARN: This function is deprecated. See main.py instead."
+    print("WARN: This function is deprecated. See main.py instead.")
     taskList = config['taskList']
 
     clip = clipboard.Clipboard()
@@ -62,7 +62,7 @@ def runOne(k2id, config):
                     f = eval(t)
                     clip = f(clip)
 
-    print "WARN: This function is deprecated. See main.py instead."
+    print("WARN: This function is deprecated. See main.py instead.")
     return clip
 
 
@@ -657,7 +657,7 @@ def measureDiffImgCentroidsTask(clip):
 @task.task
 def vetTask(clip):
 
-    print "WARN: vetTask is deprecated. Use dispostionTask instead"
+    print("WARN: vetTask is deprecated. Use dispostionTask instead")
 
     snr = clip['trapFit.snr']
     snrThreshold = clip['config.minSnrForDetection']
@@ -752,7 +752,7 @@ def dispositionTask(clip):
     	centVet = {'Warning':"None"}
     	try:
         	prob, chisq = cent.measureOffsetProbabilityInTimeseries(centroidArray)
-    	except ValueError, e:
+    	except ValueError as e:
         	centVet['Warning'] = "Probability not computed: %s" %(e)
         	prob = 0
         	chisq = 0
@@ -847,8 +847,8 @@ def saveOnError(clip):
     an exception is raised"""
 
     if 'exception' in clip.keys():
-        print "Error found, saving clip..."
-        print clip['exception']
+        print("Error found, saving clip...")
+        print(clip['exception'])
         saveClip(clip)
     return clip
 
@@ -886,8 +886,8 @@ def saveClip(clip):
                 sh[k] = clip[k]
         sh.close()
     
-    except Exception, e:
-        print "WARN: Error in saveClip: %s" %(e)
+    except Exception as e:
+        print("WARN: Error in saveClip: %s" %(e))
         clip['exception'] = str(e)
 
     return clip
