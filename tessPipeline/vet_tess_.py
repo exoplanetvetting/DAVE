@@ -49,21 +49,24 @@ def createConfig(detrendType, sector, tic, planetNum, period, tepoch, tdepth, td
     cfg['tdepth'] = tdepth
     cfg['tdur'] = tdur
 
-
     #TODO This shouldn't be hardcoded, but passed as a parameter
-    cfg['dvtLocalPath'] = "/Users/.eleanor/"
+    cfg['dvtLocalPath'] = "/Users/vkostov/.eleanor/"
     
     #TODO Need modshift paths
-    cfg['lppMapFile'] = "/Users/LPP_map/combMapDR25AugustMapDV_6574.mat"
+    cfg['lppMapFile'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/LPP_map/combMapDR25AugustMapDV_6574.mat"
 
-    cfg['modshiftBasename'] = "/Users/justVet/"      
-    cfg['onepageBasename'] = "/Users/justVet/"
+    cfg['modshiftBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"      
+    cfg['onepageBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"
 
-    if detrendType == 'tess':
-	cfg['taskList'] = ['serveTask', 'trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
-
+    if detrendType == 'tess_2min':
+        cfg['taskList'] = ['serveTask', 'trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
+    elif detrendType == 'tess_FFI':
+        cfg['taskList'] = ['serveTask', 'centroidsTask', 'trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
     elif detrendType == 'eleanor':
-	cfg['taskList'] = ['serveTask', 'detrendTask', 'trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask', 'centroidsTask', 'dispositionTask']
+        cfg['taskList'] = ['serveTask', 'detrendTask', 'trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask', 'centroidsTask', 'dispositionTask']
+    elif detrendType == 'ryan':
+        cfg['taskList'] = ['serveTask', 'trapezoidFitTask','modshiftTask']
+
     clip = clipboard.Clipboard(cfg)
     
     return clip
@@ -121,14 +124,13 @@ def runAllTces(tceFile,sector,outfile):
         
         #Write out decision
         with open(outfile,"a") as fp:
-        	if index == 0:
-                	fp.write(header+"\n")
-                
-            	fp.write(text + "\n")
+            if index == 0:
+                fp.write(header+"\n")                
+            fp.write(text + "\n")
 #	except:
 #		print "Error"
 
-	print row.ticid, row.planetNumber, row.orbitalPeriodDays, row. transitEpochBtjd, "... DONE!"
+        print(row.ticid, row.planetNumber, row.orbitalPeriodDays, row. transitEpochBtjd, "... DONE!")
 
 
     return clip
@@ -146,7 +148,7 @@ def runExport(clip,output):
         clip=stel.addStellarToClip(clip)
         clip=stel.estimatePlanetProp(clip)
     except:
-        print 'No Stellar Values'
+        print('No Stellar Values')
         
     outstr,header=ex.createExportString(clip, delimiter=" ", badValue="nan")
 

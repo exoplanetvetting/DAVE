@@ -23,6 +23,8 @@ from scipy.signal import savgol_filter
 import dave.vetting.RoboVet as RoboVet
 import dave.misc.covar as covar
 import os
+import glob
+import pandas as pd
 
 import numpy as np
 
@@ -83,113 +85,312 @@ def serveTask(clip):
     planNum = clip['config.planetNum']
     localPath = clip['config.dvtLocalPath']
  
-    if source_ == "tess":
+    if source_ == "tess_2min":
 
-    	dvt, hdr, tpf_, hdr_tpf = tessfunc.serve(sector, tic, planNum, localPath)
+        dvt, hdr, tpf_, hdr_tpf = tessfunc.serve(sector, tic, planNum, localPath)
 
-    	cube = tpf.getTargetPixelArrayFromFits(tpf_, hdr_tpf)
+        cube = tpf.getTargetPixelArrayFromFits(tpf_, hdr_tpf)
 
-    	out = dict()
-    	out['time'] = dvt['TIME']
-    	out['cube'] = cube
-    	out['tpfHeader'] = hdr_tpf
-    	out['detrendFlux'] = dvt['LC_DETREND']
-    	out['flags'] = np.isnan(dvt['LC_DETREND'])
-    	out['modelFlux'] = dvt['MODEL_INIT']
-    
-   	par = dict()
-    	par['orbitalPeriod_days'] = clip['config.period']#hdr['TPERIOD']
-    	par['epoch_btjd'] = clip['config.tepoch']#hdr['TEPOCH']
-    	par['transitDepth_ppm'] = clip['config.tdepth']#hdr['TDEPTH']
-    	par['transitDuration_hrs'] = clip['config.tdur']#hdr['TDUR']
+        out = dict()
+        out['time'] = dvt['TIME']
+        out['cube'] = cube
+        out['tpfHeader'] = hdr_tpf
+        out['detrendFlux'] = dvt['LC_DETREND']
+        out['flags'] = np.isnan(dvt['LC_DETREND'])
+        out['modelFlux'] = dvt['MODEL_INIT']
+        
+        par = dict()
+        par['orbitalPeriod_days'] = clip['config.period']#hdr['TPERIOD']
+        par['epoch_btjd'] = clip['config.tepoch']#hdr['TEPOCH']
+        par['transitDepth_ppm'] = clip['config.tdepth']#hdr['TDEPTH']
+        par['transitDuration_hrs'] = clip['config.tdur']#hdr['TDUR']
 
-    	clip['serve'] = out
-    	clip['serve.param'] = par
+        clip['serve'] = out
+        clip['serve.param'] = par
  
     #Enforce contract
-    	clip['serve.time']
-    	clip['serve.cube']
-    	clip['serve.detrendFlux']
-    	clip['serve.flags']
-    	clip['serve.modelFlux']
-    	clip['serve.param.orbitalPeriod_days']
-    	clip['serve.param.epoch_btjd']
-    	clip['serve.param.transitDepth_ppm']
-    	clip['serve.param.transitDuration_hrs']
+        clip['serve.time']
+        clip['serve.cube']
+        clip['serve.detrendFlux']
+        clip['serve.flags']
+        clip['serve.modelFlux']
+        clip['serve.param.orbitalPeriod_days']
+        clip['serve.param.epoch_btjd']
+        clip['serve.param.transitDepth_ppm']
+        clip['serve.param.transitDuration_hrs']
 
-    	out = dict()
-    	out['flux_frac'] = dvt['LC_DETREND']
-    	out['flags'] = np.isnan(dvt['LC_DETREND'])
-    	clip['detrend'] = out
-    	clip['detrend.flux_frac']
-    	clip['detrend.flags']
+        out = dict()
+        out['flux_frac'] = dvt['LC_DETREND']
+        out['flags'] = np.isnan(dvt['LC_DETREND'])
+        clip['detrend'] = out
+        clip['detrend.flux_frac']
+        clip['detrend.flags']
 
-    	out = dict()
-    	out['period'] = clip['config.period']#hdr['TPERIOD']
-    	out['epoch'] = clip['config.tepoch']#hdr['TEPOCH']
-    	clip['bls'] = out
-    	clip['bls.period']
-    	clip['bls.epoch']
+        out = dict()
+        out['period'] = clip['config.period']#hdr['TPERIOD']
+        out['epoch'] = clip['config.tepoch']#hdr['TEPOCH']
+        clip['bls'] = out
+        clip['bls.period']
+        clip['bls.epoch']
 
-    	out = dict()
-    	out['time'] = dvt['TIME']
-    	out['rawLightcurve'] = dvt['LC_DETREND']
-    	clip['extract'] = out
-    	clip['extract.time']
-    	clip['extract.rawLightcurve']
+        out = dict()
+        out['time'] = dvt['TIME']
+        out['rawLightcurve'] = dvt['LC_DETREND']
+        clip['extract'] = out
+        clip['extract.time']
+        clip['extract.rawLightcurve']
+
+
+    if source_ == "tess_FFI":
+
+        lc, hdr, tpf_, hdr_tpf = tessfunc.serve_TESS_FFI(sector, tic, planNum, localPath)
+
+        cube = tpf.getTargetPixelArrayFromFits(tpf_, hdr_tpf)
+
+        out = dict()
+        out['time'] = lc['TIME']
+        out['cube'] = cube
+        out['tpfHeader'] = hdr_tpf
+        out['detrendFlux'] = lc['PDCSAP_FLUX']
+        out['flags'] = np.isnan(lc['PDCSAP_FLUX'])
+    
+        par = dict()
+        par['orbitalPeriod_days'] = clip['config.period']
+        par['epoch_btjd'] = clip['config.tepoch']
+        par['transitDepth_ppm'] = clip['config.tdepth']
+        par['transitDuration_hrs'] = clip['config.tdur']
+    	
+        clip['serve'] = out
+        clip['serve.param'] = par
+ 
+    #Enforce contract
+        clip['serve.time']
+        clip['serve.cube']
+        clip['serve.detrendFlux']
+        clip['serve.flags']
+        clip['serve.param.orbitalPeriod_days']
+        clip['serve.param.epoch_btjd']
+        clip['serve.param.transitDepth_ppm']
+        clip['serve.param.transitDuration_hrs']
+
+        out = dict()
+        out['flux_frac'] = lc['PDCSAP_FLUX']
+        out['flags'] = np.isnan(lc['PDCSAP_FLUX'])
+        clip['detrend'] = out
+        clip['detrend.flux_frac']
+        clip['detrend.flags']
+
+        out = dict()
+        out['period'] = clip['config.period']#hdr['TPERIOD']
+        out['epoch'] = clip['config.tepoch']#hdr['TEPOCH']
+        clip['bls'] = out
+        clip['bls.period']
+        clip['bls.epoch']
+
+        out = dict()
+        out['time'] = lc['TIME']
+        out['rawLightcurve'] = lc['PDCSAP_FLUX']
+        clip['extract'] = out
+        clip['extract.time']
+        clip['extract.rawLightcurve']
+
 
     elif source_ == "eleanor":
 
-	prefix, suffix = "hlsp_eleanor_tess_ffi_tic", "_s01_tess_v0.1.8_lc.fits"
+        prefix, suffix = "hlsp_eleanor_tess_ffi_tic", "_s01_tess_v0.1.8_lc.fits"
 
-	fits_fn = "%s%i%s" %(prefix, int(tic), suffix)
-	fits_fn = os.path.join(localPath, fits_fn)
+        fits_fn = "%s%i%s" %(prefix, int(tic), suffix)
+        fits_fn = os.path.join(localPath, fits_fn)
 
-	hdu = fits.open(fits_fn)
+        hdu = fits.open(fits_fn)
 #	print(hdu[1].columns)
 #	header_ = hdu[0].header#hdu[1].header
 
-	out = dict()
-	out['tpfHeader'] = hdu[0].header
-	out['cube'] = hdu[1].data['TPF']
-	out['time'] = hdu[1].data['TIME']# - min(hdu[1].data['TIME'])
-	out['detrendFlux'] = (hdu[1].data['PSF_FLUX']/np.nanmedian(hdu[1].data['PSF_FLUX'])) - 1.
-	flags_ = np.isfinite(hdu[1].data['PSF_FLUX'])
-	flags_[hdu[1].data['QUALITY'] == 0] = False
-    	out['flags'] = flags_
+        out = dict()
+        out['tpfHeader'] = hdu[0].header
+        out['cube'] = hdu[1].data['TPF']
+        out['time'] = hdu[1].data['TIME']# - min(hdu[1].data['TIME'])
+        out['detrendFlux'] = (hdu[1].data['CORR_FLUX']/np.nanmedian(hdu[1].data['CORR_FLUX'])) - 1.
+        flags_ = np.isfinite(hdu[1].data['CORR_FLUX'])
+        flags_[hdu[1].data['QUALITY'] == 0] = False
+        out['flags'] = flags_
 
-	par = dict()
-    	par['orbitalPeriod_days'] = clip['config.period']
-    	par['epoch_btjd'] = clip['config.tepoch']
-    	par['transitDepth_ppm'] = clip['config.tdepth']
-    	par['transitDuration_hrs'] = clip['config.tdur']
+        par = dict()
+        par['orbitalPeriod_days'] = clip['config.period']
+        par['epoch_btjd'] = clip['config.tepoch']
+        par['transitDepth_ppm'] = clip['config.tdepth']
+        par['transitDuration_hrs'] = clip['config.tdur']
 
-    	clip['serve'] = out
-    	clip['serve.param'] = par
+        clip['serve'] = out
+        clip['serve.param'] = par
  
     	#Enforce contract
-    	clip['serve.time']
-    	clip['serve.cube']
-    	clip['serve.detrendFlux']
-    	clip['serve.flags']
-    	clip['serve.param.orbitalPeriod_days']
-    	clip['serve.param.epoch_btjd']
-    	clip['serve.param.transitDepth_ppm']
-    	clip['serve.param.transitDuration_hrs']
+        clip['serve.time']
+        clip['serve.cube']
+        clip['serve.detrendFlux']
+        clip['serve.flags']
+        clip['serve.param.orbitalPeriod_days']
+        clip['serve.param.epoch_btjd']
+        clip['serve.param.transitDepth_ppm']
+        clip['serve.param.transitDuration_hrs']
 
-    	out = dict()
-    	out['period'] = clip['config.period']
-    	out['epoch'] = clip['config.tepoch']
-    	clip['bls'] = out
-    	clip['bls.period']
-    	clip['bls.epoch']
+        out = dict()
+        out['period'] = clip['config.period']
+        out['epoch'] = clip['config.tepoch']
+        clip['bls'] = out
+        clip['bls.period']
+        clip['bls.epoch']
 
-    	out = dict()
-    	out['time'] = hdu[1].data['TIME']# - min(hdu[1].data['TIME'])
-    	out['rawLightcurve'] = (hdu[1].data['RAW_FLUX']/np.nanmedian(hdu[1].data['RAW_FLUX'])) - 1.
-    	clip['extract'] = out
-    	clip['extract.time']
-    	clip['extract.rawLightcurve']
+        out = dict()
+        out['time'] = hdu[1].data['TIME']# - min(hdu[1].data['TIME'])
+        out['rawLightcurve'] = (hdu[1].data['RAW_FLUX']/np.nanmedian(hdu[1].data['RAW_FLUX'])) - 1.
+        clip['extract'] = out
+        clip['extract.time']
+        clip['extract.rawLightcurve']
+
+
+    elif source_ == "ryan":
+
+# GET DATA
+        def get_data_(tic, sector):
+            file_path_ = "/Users/vkostov/Desktop/Ideas_etc/TESS/tesseract/ryan_LCs/data/"
+
+            for fn_ in glob.glob(file_path_ + str(tic) + "_sector0" + str(sector) + "*.lc"):
+                data = pd.read_csv(fn_, sep = ' ')
+                data = np.array(data)
+                time = data[:,0]
+                mag_raw = data[:,1]
+                flux = 10**(-0.4*data[:,1])
+        
+            return time, flux
+#
+#
+#DETREND DATA
+        def detrend_data_(time, flux, sector):
+            x = time
+            y = flux/np.nanmedian(flux)
+            mu = np.median(y)
+            y = (y / mu - 1)# * 1e3
+
+# Identify outliers
+            m = np.ones(len(y), dtype=bool)
+            for i in range(10):
+                y_prime = np.interp(x, x[m], y[m])
+                smooth = savgol_filter(y_prime, 121, polyorder=3)
+                resid = y - smooth
+                sigma = np.sqrt(np.mean(resid**2))
+                m0 = np.abs(resid) < 3*sigma
+                if m.sum() == m0.sum():
+                    m = m0
+                    break
+                m = m0
+
+# Only discard positive outliers
+            if sector < 3:
+                m = (resid < 3*sigma) & (resid > -5*sigma)
+            else:
+                m = (resid < 2*sigma) & (resid > -5*sigma)
+# REMOVE DATA AROUND DATA GAPS/DISCONTINUITIES!!!!
+            if sector < 3:
+                m[(x - np.min(x) >= 12.25) & (x - np.min(x) <= 15.3)] = False
+            elif sector == 3:
+                m[(x - np.min(x) >= 11.5) & (x - np.min(x) <= 14.5)] = False
+                m[(x - np.min(x) <= 2.25)] = False
+                m[(x - np.min(x) > 26.5)] = False 
+            elif sector == 4:
+                m[(x - np.min(x) >= 7.) & (x - np.min(x) <= 15.)] = False
+                m[(x - np.min(x) >= 25.)] = False
+#
+# Shift the data so that it starts at t=0. This tends to make the fit
+# better behaved since t0 covaries with period.
+#    print(min(x), min(x[m]))
+            x_ref = np.min(x[m]) if sector != 3 else np.min(x)
+#    x -= x_ref
+
+# Make sure that the data type is consistent
+            x_bak_, y_bak_ = x, y
+            x = np.ascontiguousarray(x[m], dtype=np.float64)
+            y = np.ascontiguousarray(y[m], dtype=np.float64)
+            smooth = np.ascontiguousarray(smooth[m], dtype=np.float64)
+
+            x_detrend_ = x
+            y_detrend_ = y - smooth
+
+            return x_detrend_, y_detrend_, x_ref, x_bak_, y_bak_, smooth, m
+#
+#
+# Get all sectors
+        sector = [1,2,3,4]
+
+        time, flux_raw, time_detrend_, flux_detrend_ = 0., 0., 0., 0.
+
+        for jj in range(len(sector)):
+            try:
+                if sector[jj] == 1:
+                    time_raw, flux_raw = get_data_(tic, sector[jj])
+                    time = time_raw
+                    time_detrend_, flux_detrend_, t0, x_bak_, y_bak_, smooth, m = detrend_data_(time, flux_raw, sector[jj])  
+                    time_detrend_ = time_detrend_ + 0.*t0
+                else:
+                    time_, flux_ = get_data_(tic, sector[jj])
+                    time_tmp_, flux_tmp_, t0_, x_tmp_, y_tmp_, smooth, m_tmp = detrend_data_(time_, flux_, sector[jj])
+                    time_detrend_ = np.hstack((time_detrend_,time_tmp_+0.*t0_))
+                    flux_detrend_ = np.hstack((flux_detrend_, flux_tmp_))
+            except:
+                do_ = 'nothing'
+
+        time_detrend_, flux_detrend_ = time_detrend_[1:], flux_detrend_[1:]
+#	time_detrend_ -= min(time_detrend_)
+
+        out = dict()
+#	out['tpfHeader'] = hdu[0].header
+        out['cube'] = np.zeros((10,5,5))#hdu[1].data['TPF']
+        out['time'] = time_detrend_
+        out['detrendFlux'] = flux_detrend_
+        flags_ = np.zeros(len(flux_detrend_), dtype = bool)
+        out['flags'] = flags_
+
+        par = dict()
+        par['orbitalPeriod_days'] = clip['config.period']
+        par['epoch_btjd'] = clip['config.tepoch']
+        par['transitDepth_ppm'] = clip['config.tdepth']
+        par['transitDuration_hrs'] = clip['config.tdur']
+
+        clip['serve'] = out
+        clip['serve.param'] = par
+ 
+    	#Enforce contract
+        clip['serve.time']
+        clip['serve.cube']
+        clip['serve.detrendFlux']
+        clip['serve.flags']
+        clip['serve.param.orbitalPeriod_days']
+        clip['serve.param.epoch_btjd']
+        clip['serve.param.transitDepth_ppm']
+        clip['serve.param.transitDuration_hrs']
+
+        out = dict()
+        out['period'] = clip['config.period']
+        out['epoch'] = clip['config.tepoch']
+        clip['bls'] = out
+        clip['bls.period']
+        clip['bls.epoch']
+
+        out = dict()
+        out['time'] = time_detrend_
+        out['rawLightcurve'] = flux_detrend_
+        clip['extract'] = out
+        clip['extract.time']
+        clip['extract.rawLightcurve']
+
+        out = dict()
+        out['time'] = time_detrend_
+        out['flux_frac'] = flux_detrend_
+        out['flags'] = np.zeros(len(flux_detrend_), dtype = bool)
+
+        clip['detrend'] = out
+        clip['detrend.flux_frac']
+        clip['detrend.flags']
 
     return clip
 
@@ -250,34 +451,78 @@ def detrendTask(clip):
 
     return clip
 
+
 ######################################
 
 @task
-def blsTask(clip):
-#    import dave.blsCode.bls_ktwo as bls
+def oldBlsTask(clip):
     import bls
 
     time_days = clip['serve.time']
     flux_norm = clip['detrend.flux_frac']
     flags = clip['detrend.flags']
-
-    minPeriod = 1.
-    maxPeriod = 20.
+    min_period = 1.
+    max_period = int((0.3*(max(time_days) - min(time_days))))
 
     period, epoch, duration, depth, bls_search_periods, convolved_bls = \
-	bls.doSearch(time_days[~flags], flux_norm[~flags], minPeriod, maxPeriod)
+        bls.doSearch(time_days, flux_norm, min_period, max_period)
 
     out = clipboard.Clipboard()
     out['period'] = period
     out['epoch'] = epoch
-    ut['duration_hrs'] = duration * 24
+    out['duration_hrs'] = duration * 24
     out['depth'] = depth
+    out['model'] = convolved_bls
     clip['bls'] = out
 
     ##Enforce contract
     clip['bls.period']
     clip['bls.epoch']
     clip['bls.duration_hrs']
+    clip['bls.model']
+    
+    return clip
+
+
+######################################
+
+@task
+def blsTask(clip):
+    import bls
+    from astropy.stats import BoxLeastSquares
+
+    time_days = clip['serve.time']
+    flux_norm = clip['detrend.flux_frac']
+    flags = clip['detrend.flags']
+
+    min_period = 1.
+    max_period = int((0.3*(max(time_days) - min(time_days))))
+    period_grid = np.exp(np.linspace(np.log(min_period), np.log(max_period_), 50000))
+    durations_ = 0.1+0.05*np.linspace(0,3,4)
+    bls = BoxLeastSquares(time_days, flux_norm)
+    bls_power = bls.power(period_grid, durations_, oversample=20)
+
+    index = np.argmax(bls_power.power)
+    period = bls_power.period[index]
+    epoch = bls_power.transit_time[index]
+    depth = bls_power.depth[index]
+    duration = 24.*bls_power.duration[index]
+    bls_model = bls.model(time_days, period, duration)
+
+    out = clipboard.Clipboard()
+    out['period'] = period
+    out['epoch'] = epoch
+    out['duration_hrs'] = duration * 24
+    out['model'] = bls_model
+    out['depth'] = depth
+
+    clip['bls'] = out
+
+    ##Enforce contract
+    clip['bls.period']
+    clip['bls.epoch']
+    clip['bls.duration_hrs']
+    clip['bls.model']
 
     return clip
 
@@ -288,11 +533,8 @@ import dave.trapezoidFit.estimateSnr as tf
 def trapezoidFitTask(clip):
 
     time_days = clip['serve.time']
-    flux_norm = clip['serve.detrendFlux'] if clip['config.detrendType'] == "tess" else clip['detrend.flux_frac']
+    flux_norm = clip['serve.detrendFlux'] if clip['config.detrendType'] == "tess_2min" else clip['detrend.flux_frac']
     flags = clip['detrend.flags']
-
-#    print(time_days[0:10], clip['serve.param.epoch_btjd'])
-#    print(flags[0:20])
 
     period_days = clip['serve.param.orbitalPeriod_days']
     duration_hrs = clip['serve.param.transitDuration_hrs']
@@ -302,10 +544,16 @@ def trapezoidFitTask(clip):
     #We don't know these values.
     unc = np.ones_like(flux_norm)
     unc[flags] = 1e99
-    flux_norm[flags] = 0
+    if clip['config.detrendType'] != "ryan":
+    	flux_norm[flags] = 0
 
     assert(np.all(np.isfinite(time_days[~flags])))
     assert(np.all(np.isfinite(flux_norm[~flags])))
+
+#    print(time_days[0:10], clip['serve.param.epoch_btjd'])
+#    print(flux_norm[0:10])
+#    print(flags[0:10])
+
     out = tf.getSnrOfTransit(time_days, flux_norm, unc, flags, \
         period_days, phase_bkjd, duration_hrs, depth_frac)
 
@@ -362,8 +610,17 @@ def lppMetricTask(clip):
 def modshiftTask(clip):
     
     time = clip['serve.time']
-    flux = clip['serve.detrendFlux'] if clip['config.detrendType'] == "tess" else clip['detrend.flux_frac']
-    model = clip['serve.modelFlux'] if clip['config.detrendType'] == "tess" else clip['trapFit.bestFitModel']
+
+    if clip['config.detrendType'] == "tess_2min":
+        flux = clip['serve.detrendFlux']
+        model = clip['serve.modelFlux']
+    elif clip['config.detrendType'] == "eleanor":
+        flux = clip['detrend.flux_frac']
+        model = clip['trapFit.bestFitModel']
+    elif clip['config.detrendType'] == "ryan":
+        flux = clip['serve.detrendFlux']
+        model = clip['trapFit.bestFitModel']
+	
     period_days = clip['serve.param.orbitalPeriod_days']
     epoch_btjd = clip['serve.param.epoch_btjd']
 
@@ -384,8 +641,7 @@ def modshiftTask(clip):
     modplotint = 1  # Change to 0 or anything besides 1 to not have modshift produce plot
     plotname = "%s-%02i-%04i" % (basename, np.round(period_days*10), np.round(epoch_btjd))
 
-    out = ModShift.runModShift(time, flux, model, \
-        plotname, objectname, period_days, epoch_btjd, modplotint)
+    out = ModShift.runModShift(time, flux, model, plotname, objectname, period_days, epoch_btjd, modplotint)
     clip['modshift'] = out
 
     #Enforce contract
@@ -401,7 +657,7 @@ from dave.tessPipeline.sweet import runSweetTest
 @task 
 def sweetTask(clip):
     time = clip['serve.time']
-    flux = clip['serve.detrendFlux'] if clip['config.detrendType'] == "tess" else clip['detrend.flux_frac']
+    flux = clip['serve.detrendFlux'] if clip['config.detrendType'] == "tess_2min" else clip['detrend.flux_frac']
     period_days = clip['serve.param.orbitalPeriod_days']
     epoch_btjd = clip['serve.param.epoch_btjd']
     duration_hrs = clip['serve.param.transitDuration_hrs']     
@@ -430,16 +686,20 @@ def centroidsTask(clip):
     
     time = clip['serve.time']
     cube = clip['serve.cube']
-    period_days = clip['serve.param.orbitalPeriod_days']
-    epoch_btjd = clip['serve.param.epoch_btjd']
-    duration_hrs = clip['serve.param.transitDuration_hrs']     
-    
+    period_days = clip['trapFit.period_days']#clip['serve.param.orbitalPeriod_days']
+    epoch_btjd = clip['trapFit.epoch_bkjd']#clip['serve.param.epoch_btjd']
+    duration_hrs = clip['trapFit.duration_hrs']#clip['serve.param.transitDuration_hrs']  
+   
+#    print clip['serve.param.orbitalPeriod_days'],  clip['serve.param.epoch_btjd'], clip['serve.param.transitDuration_hrs'] 
+#    print clip['trapFit.period_days'], clip['trapFit.epoch_bkjd'], clip['trapFit.duration_hrs'], clip['trapFit.ingress_hrs'], clip['trapFit.depth_frac']
+#    xxxx
+
     duration_days = duration_hrs / 24.
-    res = measurePerTransitCentroids(time, cube, period_days, epoch_btjd, 
-                                     duration_days, plotFilePattern=None)
+    res = measurePerTransitCentroids(time, cube, period_days, epoch_btjd, duration_days, plotFilePattern=None)
 
     res['method'] = "Fast Gaussian PSF fitting"
     clip['diffImgCentroids'] = res
+
 
     #Enforce contract
     clip['diffImgCentroids.results']
@@ -519,9 +779,9 @@ def vbkPsfCentroidsTask(clip):
     no_transits_ = oot_cadence[tmp_idx_[-1]]
 
     for ii in range(1,len(itr_cadence)):
-	if itr_cadence[ii] - itr_cadence[ii-1] > 10:
-		transit_number_ += 1
-		transits_ = np.hstack((transits_ , itr_cadence[ii-1], itr_cadence[ii]))
+        if itr_cadence[ii] - itr_cadence[ii-1] > 10:
+            transit_number_ += 1
+            transits_ = np.hstack((transits_ , itr_cadence[ii-1], itr_cadence[ii]))
     transits_ = np.hstack((transits_ , itr_cadence[-1]))
 #
 #
@@ -532,62 +792,62 @@ def vbkPsfCentroidsTask(clip):
 
     if use_before_after_images_per_transit_ == 'y':
 
-	itrCol, itrRow, itr_cov = [], [], []
-	ootCol, ootRow, oot_cov = [], [], []
-	diffCol, diffRow, diff_cov = [], [], []
+        itrCol, itrRow, itr_cov = [], [], []
+        ootCol, ootRow, oot_cov = [], [], []
+        diffCol, diffRow, diff_cov = [], [], []
 
-	cube_back_ = cube
-    	if clip['config.detrendType'] == "tess":
-		cube = cube[:,epic_Col-col_zero_-3:epic_Col-col_zero_+3, epic_Row-row_zero_-3:epic_Row-row_zero_+3]
-	if clip['config.detrendType'] == "eleanor":
-		cube = cube[:,epic_Col-col_zero_-10:epic_Col-col_zero_+10, epic_Row-row_zero_-10:epic_Row-row_zero_+10]
+        cube_back_ = cube
+        if clip['config.detrendType'] == "tess":
+            cube = cube[:,epic_Col-col_zero_-3:epic_Col-col_zero_+3, epic_Row-row_zero_-3:epic_Row-row_zero_+3]
+        if clip['config.detrendType'] == "eleanor":
+            cube = cube[:,epic_Col-col_zero_-10:epic_Col-col_zero_+10, epic_Row-row_zero_-10:epic_Row-row_zero_+10]
 
-	ss_ = cube.shape
-	itr_mean_cube_ = np.zeros((transit_number_, ss_[1], ss_[2]))
-	oot_mean_cube_ = np.zeros((transit_number_, ss_[1], ss_[2]))
-	diff_mean_cube_ = np.zeros((transit_number_, ss_[1], ss_[2]))
+        ss_ = cube.shape
+        itr_mean_cube_ = np.zeros((transit_number_, ss_[1], ss_[2]))
+        oot_mean_cube_ = np.zeros((transit_number_, ss_[1], ss_[2]))
+        diff_mean_cube_ = np.zeros((transit_number_, ss_[1], ss_[2]))
 
-	for ii in range(transit_number_):
+        for ii in range(transit_number_):
 
-		number_of_cadences_in_transit_ = transits_[2*ii+1] - transits_[2*ii]
+            number_of_cadences_in_transit_ = transits_[2*ii+1] - transits_[2*ii]
 
-		idx_in_transit_ = np.linspace(transits_[2*ii], transits_[2*ii+1], int(number_of_cadences_in_transit_+1))
-		idx_in_transit = [int(aa) for aa in idx_in_transit_]
+            idx_in_transit_ = np.linspace(transits_[2*ii], transits_[2*ii+1], int(number_of_cadences_in_transit_+1))
+            idx_in_transit = [int(aa) for aa in idx_in_transit_]
 
-		idx_before_, = np.where(oot_cadence < transits_[2*ii])
-		idx_before = oot_cadence[idx_before_[-1-number_of_cadences_in_transit_:]]
+            idx_before_, = np.where(oot_cadence < transits_[2*ii])
+            idx_before = oot_cadence[idx_before_[-1-number_of_cadences_in_transit_:]]
 
-		idx_after_, = np.where(oot_cadence > transits_[2*ii+1])				
-		idx_after = oot_cadence[idx_after_[0:number_of_cadences_in_transit_+1]]
+            idx_after_, = np.where(oot_cadence > transits_[2*ii+1])				
+            idx_after = oot_cadence[idx_after_[0:number_of_cadences_in_transit_+1]]
 
-    		itr_mean_img_by_transit_ = np.nanmean(cube[idx_in_transit,:,:], axis = 0)
-    		before_tr_mean_img_by_transit_ = np.nanmean(cube[idx_before,:,:], axis = 0)
-    		after_tr_mean_img_by_transit_ = np.nanmean(cube[idx_after,:,:], axis = 0)
+            itr_mean_img_by_transit_ = np.nanmean(cube[idx_in_transit,:,:], axis = 0)
+            before_tr_mean_img_by_transit_ = np.nanmean(cube[idx_before,:,:], axis = 0)
+            after_tr_mean_img_by_transit_ = np.nanmean(cube[idx_after,:,:], axis = 0)
 
-    		oot_mean_img_by_transit_ = 0.5*(before_tr_mean_img_by_transit_ + after_tr_mean_img_by_transit_)
+            oot_mean_img_by_transit_ = 0.5*(before_tr_mean_img_by_transit_ + after_tr_mean_img_by_transit_)
 
-		diff_mean_img_by_transit_ = oot_mean_img_by_transit_ - itr_mean_img_by_transit_
+            diff_mean_img_by_transit_ = oot_mean_img_by_transit_ - itr_mean_img_by_transit_
 #		diff_mean_img_by_transit_ = diff_mean_img_by_transit_ - np.min(diff_mean_img_by_transit_).flatten()
 		
-		itrCol_by_transit_, itrRow_by_transit_, itr_cov_by_transit_ = intertial_axis(itr_mean_img_by_transit_)
-    		ootCol_by_transit_, ootRow_by_transit_, oot_cov_by_transit_ = intertial_axis(oot_mean_img_by_transit_)
-    		diffCol_by_transit_, diffRow_by_transit_, diff_cov_by_transit_ = intertial_axis(diff_mean_img_by_transit_)
+            itrCol_by_transit_, itrRow_by_transit_, itr_cov_by_transit_ = intertial_axis(itr_mean_img_by_transit_)
+            ootCol_by_transit_, ootRow_by_transit_, oot_cov_by_transit_ = intertial_axis(oot_mean_img_by_transit_)
+            diffCol_by_transit_, diffRow_by_transit_, diff_cov_by_transit_ = intertial_axis(diff_mean_img_by_transit_)
 
-		itrCol, itrRow = np.hstack((itrCol, itrCol_by_transit_)), np.hstack((itrRow, itrRow_by_transit_))
-		ootCol, ootRow = np.hstack((ootCol, ootCol_by_transit_)), np.hstack((ootRow, ootRow_by_transit_))
-		diffCol, diffRow = np.hstack((diffCol, diffCol_by_transit_)), np.hstack((diffRow, diffRow_by_transit_))
+            itrCol, itrRow = np.hstack((itrCol, itrCol_by_transit_)), np.hstack((itrRow, itrRow_by_transit_))
+            ootCol, ootRow = np.hstack((ootCol, ootCol_by_transit_)), np.hstack((ootRow, ootRow_by_transit_))
+            diffCol, diffRow = np.hstack((diffCol, diffCol_by_transit_)), np.hstack((diffRow, diffRow_by_transit_))
 
-		itr_mean_cube_[ii,:,:] = itr_mean_img_by_transit_
-		oot_mean_cube_[ii,:,:] = oot_mean_img_by_transit_
-		diff_mean_cube_[ii,:,:] = diff_mean_img_by_transit_
+            itr_mean_cube_[ii,:,:] = itr_mean_img_by_transit_
+            oot_mean_cube_[ii,:,:] = oot_mean_img_by_transit_
+            diff_mean_cube_[ii,:,:] = diff_mean_img_by_transit_
 
 #		else:
 #			print 'BAD transit =', str(ii)
 #			continue
 
-	itr_mean_img_ = np.nanmean(itr_mean_cube_, axis = 0)
-	oot_mean_img_ = np.nanmean(oot_mean_cube_, axis = 0)
-	diff_mean_img_ = oot_mean_img_ - itr_mean_img_#np.nanmedian(diff_mean_cube_, axis = 0)
+        itr_mean_img_ = np.nanmean(itr_mean_cube_, axis = 0)
+        oot_mean_img_ = np.nanmean(oot_mean_cube_, axis = 0)
+        diff_mean_img_ = oot_mean_img_ - itr_mean_img_#np.nanmedian(diff_mean_cube_, axis = 0)
 
 #	print itrRow + 1*row_zero_, itrCol + 1*col_zero_
 #    	print ootRow + 1*row_zero_, ootCol + 1*col_zero_
@@ -597,20 +857,20 @@ def vbkPsfCentroidsTask(clip):
 #	xxxxx
 
     else:
-	itr_mean_img_ = np.nanmean(cube[itr_cadence_], axis = 0)
-	oot_mean_img_ = np.nanmean(cube[oot_cadence_], axis = 0)
-	diff_mean_img_ = oot_mean_img_ - itr_mean_img_
+        itr_mean_img_ = np.nanmean(cube[itr_cadence_], axis = 0)
+        oot_mean_img_ = np.nanmean(cube[oot_cadence_], axis = 0)
+        diff_mean_img_ = oot_mean_img_ - itr_mean_img_
 
-    	itrCol, itrRow, itr_cov = intertial_axis(itr_mean_img_)
-    	ootCol, ootRow, oot_cov = intertial_axis(oot_mean_img_)
-    	diffCol, diffRow, diff_cov = intertial_axis(diff_mean_img_)
+        itrCol, itrRow, itr_cov = intertial_axis(itr_mean_img_)
+        ootCol, ootRow, oot_cov = intertial_axis(oot_mean_img_)
+        diffCol, diffRow, diff_cov = intertial_axis(diff_mean_img_)
 #    	itrCol, itrRow = 1*col_zero_ + itrCol, 1*row_zero_ + itrRow
 #    	ootCol, ootRow = 1*col_zero_ + ootCol, 1*row_zero_ + ootRow
 #    	diffCol, diffRow = 1*col_zero_ + diffCol, 1*row_zero_ + diffRow
 
-    	print itrRow + 1*row_zero_, itrCol + 1*col_zero_
-    	print ootRow + 1*row_zero_, ootCol + 1*col_zero_
-    	print diffRow + 1*row_zero_, diffCol + 1*col_zero_
+        print(itrRow + 1*row_zero_, itrCol + 1*col_zero_)
+        print(ootRow + 1*row_zero_, ootCol + 1*col_zero_)
+        print(diffRow + 1*row_zero_, diffCol + 1*col_zero_)
 
     return clip
 
@@ -632,10 +892,10 @@ def dispositionTask(clip):
     	diffC, diffR = (ootCol_prf - diffCol_prf), (ootRow_prf - diffRow_prf)
 
     	prob, chisq = covar.computeProbabilityOfObservedOffset(diffC, diffR)
-    except ValueError, e:
-	centVet['Warning'] = "Probability not computed: %s" %(e)
-	prob = 0
-	chisq = 0
+    except ValueError as e:
+        centVet['Warning'] = "Probability not computed: %s" %(e)
+        prob = 0
+        chisq = 0
 
     centVet['probabilityOfOffset'] = prob
     centVet['chiSquaredOfOffset'] = chisq
@@ -643,24 +903,24 @@ def dispositionTask(clip):
 
     centVet['isCentroidFail'] = False
     if np.isfinite(prob):
-	if prob > minProbForFail:
-		centVet['isCentroidFail'] = True
-		out['isCandidate'] = False
-		out['reasonForFail'] = "Centroid offset probability is %.1e" %(prob)
+        if prob > minProbForFail:
+            centVet['isCentroidFail'] = True
+            out['isCandidate'] = False
+            out['reasonForFail'] = "Centroid offset probability is %.1e" %(prob)
 
     out['centroidVet'] = centVet
 
 # FLUX VET
     try:
         fluxVet = RoboVet.roboVet(clip.modshift)
-	assert(fluxVet['disp'] in ["candidate", "false positive"])
+        assert(fluxVet['disp'] in ["candidate", "false positive"])
 
     except:
         fluxVet ={}
         fluxVet['disp'] = 'candidate'
         fluxVet['not_trans_like'] = 0
         fluxVet['sig_sec'] = 0
-	fluxVet['comments'] = 'NO_MODSHIFT'
+        fluxVet['comments'] = 'NO_MODSHIFT'
 
     out['fluxVet'] = fluxVet
     
@@ -679,11 +939,11 @@ def dispositionTask(clip):
            fluxVet['not_trans_like']=1
 
     if fluxVet['disp'] == "false positive":
-	out['isCandidate'] = False
-	out['reasonForFail'] = fluxVet['comments']
+        out['isCandidate'] = False
+        out['reasonForFail'] = fluxVet['comments']
 
-	if fluxVet['not_trans_like'] > 0:
-		out['isSignificantEvent'] = False
+        if fluxVet['not_trans_like'] > 0:
+            out['isSignificantEvent'] = False
 
 #    clip['fluxVet']= fluxVet
 #    clip['disposition']= fluxVet

@@ -16,7 +16,7 @@ from astroquery.mast import Tesscut
 from astropy.coordinates import SkyCoord
 
 
-from dave.fileio.tessio import TessDvtLocalArchive
+from dave.tessPipeline.tessio import TessDvtLocalArchive
 from dave.tessPipeline.tessmastio import TessAstroqueryArchive
 
 import os
@@ -30,12 +30,26 @@ def serve(sector, tic, planetNum, localPath):
 #    dvt, hdr = ar.getLightcurve(tic, sector, ext=planetNum, header=True)
       
     if planetNum > 1:
-	planetNum = 1 # bug associted with TESS DVT files. needs fixing
+        planetNum = 1
 
     tpf, hdr_tpf = ar.getTPF(tic, sector, ext=planetNum, header=True)
 
     return dvt, hdr, tpf, hdr_tpf
-    
+
+def serve_TESS_FFI(sector, tic, planetNum, localPath):
+
+    ar = TessAstroqueryArchive(localPath)
+        
+    aa = ar.getFfiCutout(tic, sector, 11)
+
+    dvt, hdr = ar.getLightcurve(tic, sector, ext=planetNum, header=True)
+      
+    if planetNum > 1:
+        planetNum = 1
+
+    tpf, hdr_tpf = ar.getTPF(tic, sector, ext=planetNum, header=True)
+
+    return dvt, hdr, tpf, hdr_tpf
 
 def getOutputBasename(basePath, tic):
     """Get the output basename for any files a task creates

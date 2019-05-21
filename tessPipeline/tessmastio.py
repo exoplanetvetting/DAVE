@@ -134,7 +134,10 @@ class TessAstroqueryArchive(object):
         #@todo check ticid is an integer.
         
         starName="TIC %i" % int(ticid)
+        starName = int(ticid)
+
         cat = Catalogs.query_criteria(ID=starName,catalog = "Tic")
+
         coord = SkyCoord(cat[0]['ra'], cat[0]['dec'], unit = "deg")
         
         return coord
@@ -170,7 +173,11 @@ class TessAstroqueryArchive(object):
         """
         
         coord = self.getRaDec(ticid)
+
         if not self.checkCoordInSector(coord,sector):
             raise ValueError("Requested TIC not in Requested Sector.")
+
+
+        manifest = Tesscut.get_cutouts(coord, size)
                 
-        return self.getTessCut(coord, size)
+        return# self.getTessCut(coord, size)
