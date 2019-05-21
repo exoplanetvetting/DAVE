@@ -37,6 +37,10 @@ You may also need to pip install the following packages: astropy, pyfits, astroq
 5. export_ = vet_tess_.runExport(clip,outfile_)
 
 
+OR 
+
+"./runOneTESS"
+
 where input for runOneDv is:
 Sector, TIC ID, Planet Number, Period, BTJD, Transit Depth [ppm], Transit Duration [hours]. 
 
