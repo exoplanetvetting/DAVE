@@ -43,7 +43,7 @@ Sector, TIC ID, Planet Number, Period, BTJD, Transit Depth [ppm], Transit Durati
 
 or from the terminal: "./runOneTESS"
 
-Currently supported "detrendType" are "tess_2min" and "eleanor", where "tess" refers to the [SPOC short-cadence data](https://archive.stsci.edu/prepds/tess-data-alerts/), and "eleanor" refers to [eleanor-generated FFI lightcurves](http://adina.feinste.in/eleanor/)
+Currently supported "detrendType" are "tess_2min" and "eleanor", where "tess_2min" refers to the [SPOC short-cadence data](https://archive.stsci.edu/prepds/tess-data-alerts/), and "eleanor" refers to [eleanor-generated FFI lightcurves](http://adina.feinste.in/eleanor/)
 
 ## Additional requirements
 To get DAVE to work for K2, you will have to create a directory called `.mastio/k2` in your home directory.
