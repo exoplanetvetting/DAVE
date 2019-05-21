@@ -36,15 +36,12 @@ You may also need to pip install the following packages: astropy, pyfits, astroq
 4. outfile = "tmp.txt"
 5. export_ = vet_tess_.runExport(clip,outfile_)
 
-
-OR 
-
-"./runOneTESS"
-
 where input for runOneDv is:
 Sector, TIC ID, Planet Number, Period, BTJD, Transit Depth [ppm], Transit Duration [hours]. 
 
-Currently supported "detrendType" are "tess" and "eleanor", where "tess" refers to the [SPOC short-cadence data](https://archive.stsci.edu/prepds/tess-data-alerts/), and "eleanor" refers to [eleanor-generated FFI lightcurves](http://adina.feinste.in/eleanor/)
+or just run "./runOneTESS"
+
+Currently supported "detrendType" are "tess_2min" and "eleanor", where "tess" refers to the [SPOC short-cadence data](https://archive.stsci.edu/prepds/tess-data-alerts/), and "eleanor" refers to [eleanor-generated FFI lightcurves](http://adina.feinste.in/eleanor/)
 
 ## Additional requirements
 To get DAVE to work for K2, you will have to create a directory called `.mastio/k2` in your home directory.
