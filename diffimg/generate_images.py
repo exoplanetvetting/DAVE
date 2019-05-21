@@ -47,9 +47,9 @@ def generateImages(clip):
     no_transits_ = oot_cadence[tmp_idx_[-1]]
 
     for ii in range(1,len(itr_cadence)):
-	if itr_cadence[ii] - itr_cadence[ii-1] > 10:
-		transit_number_ += 1
-		transits_ = np.hstack((transits_ , itr_cadence[ii-1], itr_cadence[ii]))
+        if itr_cadence[ii] - itr_cadence[ii-1] > 10:
+            transit_number_ += 1
+            transits_ = np.hstack((transits_ , itr_cadence[ii-1], itr_cadence[ii]))
     transits_ = np.hstack((transits_ , itr_cadence[-1]))
 
     ss_ = cube.shape
@@ -59,28 +59,28 @@ def generateImages(clip):
 
     for ii in range(transit_number_):
 
-	number_of_cadences_in_transit_ = transits_[2*ii+1] - transits_[2*ii]
+        number_of_cadences_in_transit_ = transits_[2*ii+1] - transits_[2*ii]
 
-	idx_in_transit_ = np.linspace(transits_[2*ii], transits_[2*ii+1], int(number_of_cadences_in_transit_+1))
-	idx_in_transit = [int(aa) for aa in idx_in_transit_]
+        idx_in_transit_ = np.linspace(transits_[2*ii], transits_[2*ii+1], int(number_of_cadences_in_transit_+1))
+        idx_in_transit = [int(aa) for aa in idx_in_transit_]
 
-	idx_before_, = np.where(oot_cadence < transits_[2*ii])
-	idx_before = oot_cadence[idx_before_[-1-number_of_cadences_in_transit_:]]
+        idx_before_, = np.where(oot_cadence < transits_[2*ii])
+        idx_before = oot_cadence[idx_before_[-1-number_of_cadences_in_transit_:]]
 
-	idx_after_, = np.where(oot_cadence > transits_[2*ii+1])				
-	idx_after = oot_cadence[idx_after_[0:number_of_cadences_in_transit_+1]]
+        idx_after_, = np.where(oot_cadence > transits_[2*ii+1])				
+        idx_after = oot_cadence[idx_after_[0:number_of_cadences_in_transit_+1]]
 
-	itr_mean_img_by_transit_ = np.nanmean(cube[idx_in_transit,:,:], axis = 0)
-	before_tr_mean_img_by_transit_ = np.nanmean(cube[idx_before,:,:], axis = 0)
-	after_tr_mean_img_by_transit_ = np.nanmean(cube[idx_after,:,:], axis = 0)
+        itr_mean_img_by_transit_ = np.nanmean(cube[idx_in_transit,:,:], axis = 0)
+        before_tr_mean_img_by_transit_ = np.nanmean(cube[idx_before,:,:], axis = 0)
+        after_tr_mean_img_by_transit_ = np.nanmean(cube[idx_after,:,:], axis = 0)
 
-	oot_mean_img_by_transit_ = 0.5*(before_tr_mean_img_by_transit_ + after_tr_mean_img_by_transit_)
+        oot_mean_img_by_transit_ = 0.5*(before_tr_mean_img_by_transit_ + after_tr_mean_img_by_transit_)
 
-	diff_mean_img_by_transit_ = oot_mean_img_by_transit_ - itr_mean_img_by_transit_
+        diff_mean_img_by_transit_ = oot_mean_img_by_transit_ - itr_mean_img_by_transit_
 
-	itr_mean_cube_[ii,:,:] = itr_mean_img_by_transit_
-	oot_mean_cube_[ii,:,:] = oot_mean_img_by_transit_
-	diff_mean_cube_[ii,:,:] = diff_mean_img_by_transit_
+        itr_mean_cube_[ii,:,:] = itr_mean_img_by_transit_
+        oot_mean_cube_[ii,:,:] = oot_mean_img_by_transit_
+        diff_mean_cube_[ii,:,:] = diff_mean_img_by_transit_
 
     itr_mean_img_ = np.nanmean(itr_mean_cube_, axis = 0)
     oot_mean_img_ = np.nanmean(oot_mean_cube_, axis = 0)

@@ -77,7 +77,7 @@ def constructK2DifferenceImage(cube, indexOfCadenceInTransit, rollPhase, flags):
 
     try:
         oot, diagnostics = getInterpolatedOotImage(cube, rollPhase, flags, i0)
-    except ValueError, e:
+    except ValueError as e:
         msg = "WARN: While creating Diff Img for %i: %s" \
             %(i0, e)
         raise ValueError(msg)
@@ -209,7 +209,7 @@ def getInterpolatedOotImage(cube, rollPhase, flags, i0):
         ootBefore, rinBefore = \
             getDiffFromRange(cube, lwrBefore, uprBefore, rollPhase, rollPhase0)
         diagnostics['rinBefore'] = rinBefore
-    except ValueError, e:
+    except ValueError as e:
         diagnostics['errorMsg'] = "Early diff img: %s" %(e)
         return oot, diagnostics
 
@@ -218,7 +218,7 @@ def getInterpolatedOotImage(cube, rollPhase, flags, i0):
         ootAfter, rinAfter = getDiffFromRange(cube, lwrAfter, uprAfter, \
             rollPhase, rollPhase0)
         diagnostics['rinAfter'] = rinAfter
-    except ValueError, e:
+    except ValueError as e:
         diagnostics['errorMsg'] = "Later diff img: %s" %(e)
         return oot, diagnostics
 

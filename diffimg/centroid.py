@@ -224,7 +224,7 @@ def measureDiffOffset(period_days, epoch_bkjd, duration_hrs, \
                 prfObj, ccdMod, ccdOut, cube, w, bbox, rollPhase, qFlags, \
                 hdr=None, plot=False)
             diagnostics[i] = dDict
-        except ValueError, e:
+        except ValueError as e:
             log.append("Img %i: %s" %(w, e))
             pass
 
@@ -475,7 +475,7 @@ def plotCentroidFitDiagnostic(img, hdr, ccdMod, ccdOut, res, prfObj):
     mp.colorbar()
     mp.title("Residuals")
 
-    print "Performance %.3f" %(np.max(np.abs(diff))/np.max(img))
+    print("Performance %.3f" %(np.max(np.abs(diff))/np.max(img)))
 
 
 

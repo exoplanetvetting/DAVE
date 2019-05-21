@@ -7,7 +7,8 @@ Created on Sun Dec  2 14:12:33 2018
 from __future__ import print_function
 from __future__ import division
 
-from AbstractPrfLookup import AbstractPrfLookup
+#from AbstractPrfLookup import AbstractPrfLookup
+from dave.diffimg.AbstractPrfLookup import AbstractPrfLookup
 from pdb import set_trace as debug
 import scipy.io as spio
 import numpy as np
