@@ -31,11 +31,10 @@ You may also need to pip install the following packages: astropy, pyfits, astroq
 
 ## Example use for TESS
 1. from dave.tessPipeline import vet_tess_
-2. detrendType = "tess"
+2. detrendType = "tess_2min"
 3. clip = vet_tess_.runOneDv(detrendType, 2, 307210830, 1, 3.690613, 1356.2038, 1863, 1.27)
-4. vet_tess_.runExport(clip,"tmp.txt")
-5. outfile = "tmp.txt"
-6. export_ = vet_tess_.runExport(clip,outfile_)
+4. outfile = "tmp.txt"
+5. export_ = vet_tess_.runExport(clip,outfile_)
 
 
 where input for runOneDv is:
