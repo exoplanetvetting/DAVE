@@ -59,7 +59,7 @@ def createConfig(detrendType, sector, tic, planetNum, period, tepoch, tdepth, td
     cfg['onepageBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"
 
     if detrendType == 'tess_2min':
-        cfg['taskList'] = ['serveTask', 'trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
+        cfg['taskList'] = ['serveTask','blsTask','trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
     elif detrendType == 'tess_FFI':
         cfg['taskList'] = ['serveTask', 'centroidsTask', 'trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
     elif detrendType == 'eleanor':

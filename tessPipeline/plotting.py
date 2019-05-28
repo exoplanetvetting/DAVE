@@ -122,11 +122,15 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
 #    tce = clip['eventList'][0]
     tce = clip  #In prepartion for the multi-search pipeline
     flux = clip['detrend.flux_frac']
-#    period = tce['trapFit.period_days']
-#    epoch = tce['trapFit.epoch_bkjd']
-#    model = tce['trapFit.bestFitModel']
-    period = tce['bls.period']
-    epoch = tce['bls.epoch']
+    period = tce['trapFit.period_days']
+    epoch = tce['trapFit.epoch_bkjd']
+    model = tce['trapFit.bestFitModel']
+
+#    if clip['config.detrendType'] == "tess_2min":
+#        flux = clip['serve.detrendFlux']
+#        model = clip['serve.modelFlux']
+#    period = tce['bls.period']
+#    epoch = tce['bls.epoch']
 
     if doublePeriod:
         period *= 2
@@ -142,7 +146,7 @@ def plotFolded(clip, doublePeriod = False, modelOn = True):
     plt.plot(period+ phi[~fl], 1e6*flux[~fl], 'o', color='#888888', ms=4, mec="none")
     plt.title("PC:%i"%numPC)
     if modelOn:
-        model = tce['trapFit.bestFitModel']
+#        model = tce['trapFit.bestFitModel']
         x = phi[~fl]
         y = 1e6*model[~fl]
         idx = np.argsort(x)

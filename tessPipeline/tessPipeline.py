@@ -103,10 +103,10 @@ def serveTask(clip):
         out['modelFlux'] = dvt['MODEL_INIT']
         
         par = dict()
-        par['orbitalPeriod_days'] = clip['config.period']#hdr['TPERIOD']
-        par['epoch_btjd'] = clip['config.tepoch']#hdr['TEPOCH']
-        par['transitDepth_ppm'] = clip['config.tdepth']#hdr['TDEPTH']
-        par['transitDuration_hrs'] = clip['config.tdur']#hdr['TDUR']
+        par['orbitalPeriod_days'] = clip['config.period']#hdr['TPERIOD']#
+        par['epoch_btjd'] = clip['config.tepoch']#hdr['TEPOCH']#
+        par['transitDepth_ppm'] = clip['config.tdepth']#hdr['TDEPTH']#
+        par['transitDuration_hrs'] = clip['config.tdur']#hdr['TDUR']#
 
         clip['serve'] = out
         clip['serve.param'] = par
@@ -454,55 +454,27 @@ def detrendTask(clip):
     clip['detrend.flags']
 
     return clip
-
-
-######################################
-
-@task
-def oldBlsTask(clip):
-    import bls
-
-    time_days = clip['serve.time']
-    flux_norm = clip['detrend.flux_frac']
-    flags = clip['detrend.flags']
-    min_period = 1.
-    max_period = int((0.3*(max(time_days) - min(time_days))))
-
-    period, epoch, duration, depth, bls_search_periods, convolved_bls = \
-        bls.doSearch(time_days, flux_norm, min_period, max_period)
-
-    out = clipboard.Clipboard()
-    out['period'] = period
-    out['epoch'] = epoch
-    out['duration_hrs'] = duration * 24
-    out['depth'] = depth
-    out['model'] = convolved_bls
-    clip['bls'] = out
-
-    ##Enforce contract
-    clip['bls.period']
-    clip['bls.epoch']
-    clip['bls.duration_hrs']
-    clip['bls.model']
-    
-    return clip
-
-
 ######################################
 
 @task
 def blsTask(clip):
-    import bls
     from astropy.stats import BoxLeastSquares
 
     time_days = clip['serve.time']
-    flux_norm = clip['detrend.flux_frac']
-    flags = clip['detrend.flags']
+    flux_norm = clip['serve.detrendFlux'] if clip['config.detrendType'] == "tess_2min" else clip['detrend.flux_frac']
+    flags = clip['serve.flags'] if clip['config.detrendType'] == "tess_2min" else clip['detrend.flags']
+    if clip['config.detrendType'] != "ryan":
+    	flux_norm[flags] = 0
 
-    min_period = 1.
-    max_period = int((0.3*(max(time_days) - min(time_days))))
-    period_grid = np.exp(np.linspace(np.log(min_period), np.log(max_period_), 50000))
+    min_period_ = 0.5
+    max_period_ = int((0.3*(max(time_days) - min(time_days))))
+    period_grid = np.exp(np.linspace(np.log(min_period_), np.log(max_period_), 50000))
     durations_ = 0.1+0.05*np.linspace(0,3,4)
+  
+    time_days_ref_ = min(time_days)
+    time_days -= time_days_ref_
+#    print(np.mean(flux_norm), max(flux_norm), min(flux_norm))
+
     bls = BoxLeastSquares(time_days, flux_norm)
     bls_power = bls.power(period_grid, durations_, oversample=20)
 
@@ -510,26 +482,26 @@ def blsTask(clip):
     period = bls_power.period[index]
     epoch = bls_power.transit_time[index]
     depth = bls_power.depth[index]
-    duration = 24.*bls_power.duration[index]
-    bls_model = bls.model(time_days, period, duration)
+    duration_hrs = 24.*bls_power.duration[index]
+    bls_model = bls.model(time_days, period, duration_hrs/24., epoch)
 
     out = clipboard.Clipboard()
     out['period'] = period
-    out['epoch'] = epoch
-    out['duration_hrs'] = duration * 24
+    out['epoch'] = epoch + time_days_ref_
+    out['duration'] = duration_hrs
     out['model'] = bls_model
-    out['depth'] = depth
+    out['depth'] = depth * 1e6
 
     clip['bls'] = out
 
     ##Enforce contract
     clip['bls.period']
     clip['bls.epoch']
-    clip['bls.duration_hrs']
+    clip['bls.duration']
     clip['bls.model']
+    clip['bls.depth']
 
     return clip
-
 ######################################
 
 import dave.trapezoidFit.estimateSnr as tf
@@ -538,12 +510,12 @@ def trapezoidFitTask(clip):
 
     time_days = clip['serve.time']
     flux_norm = clip['serve.detrendFlux'] if clip['config.detrendType'] == "tess_2min" else clip['detrend.flux_frac']
-    flags = clip['detrend.flags']
+    flags = clip['serve.flags'] if clip['config.detrendType'] == "tess_2min" else clip['detrend.flags']
 
-    period_days = clip['serve.param.orbitalPeriod_days']
-    duration_hrs = clip['serve.param.transitDuration_hrs']
-    phase_bkjd = clip['serve.param.epoch_btjd']
-    depth_frac = clip['serve.param.transitDepth_ppm']/1e6
+    period_days = clip['bls.period']#clip['serve.param.orbitalPeriod_days']
+    duration_hrs = clip['bls.duration']#clip['serve.param.transitDuration_hrs']
+    phase_bkjd = clip['bls.epoch']#clip['serve.param.epoch_btjd']
+    depth_frac = clip['bls.depth']/1e6#clip['serve.param.transitDepth_ppm']/1e6
 
     #We don't know these values.
     unc = np.ones_like(flux_norm)
@@ -557,6 +529,8 @@ def trapezoidFitTask(clip):
 #    print(time_days[0:10], clip['serve.param.epoch_btjd'])
 #    print(flux_norm[0:10])
 #    print(flags[0:10])
+    
+#    time_days -= min(time_days)
 
     out = tf.getSnrOfTransit(time_days, flux_norm, unc, flags, \
         period_days, phase_bkjd, duration_hrs, depth_frac)
@@ -571,8 +545,59 @@ def trapezoidFitTask(clip):
     clip['trapFit.depth_frac']
     clip['trapFit.bestFitModel']
     clip['trapFit.snr']
-    return clip
 
+#    print(clip['trapFit'])
+#    print()
+#    print(clip['bls'])
+
+    return clip
+######################################
+
+@task
+def modshiftTask(clip):
+    
+    time = clip['serve.time']
+
+    if clip['config.detrendType'] == "tess_2min":
+        flux = clip['serve.detrendFlux']
+        model = clip['serve.modelFlux']
+    elif clip['config.detrendType'] == "eleanor":
+        flux = clip['detrend.flux_frac']
+        model = clip['trapFit.bestFitModel']
+    elif clip['config.detrendType'] == "ryan":
+        flux = clip['serve.detrendFlux']
+        model = clip['trapFit.bestFitModel']
+	
+    period_days = clip['trapFit.period_days']#clip['serve.param.orbitalPeriod_days']
+    epoch_btjd = clip['trapFit.epoch_bkjd']#clip['serve.param.epoch_btjd']
+
+    #Filter out nans
+    idx = np.isnan(time) | np.isnan(flux) | np.isnan(model)
+    time = time[~idx]
+    flux = flux[~idx]
+    model = model[~idx]
+
+    tic = clip['config.tic']
+    basePath = clip['config.modshiftBasename']
+    ticStr = "%016i" %(tic)
+    basename = tessfunc.getOutputBasename(basePath, ticStr)
+
+    # Name that will go in title of modshift plot
+    objectname = "TIC %012i" % (tic)
+
+    modplotint = 1  # Change to 0 or anything besides 1 to not have modshift produce plot
+    plotname = "%s-%02i-%04i" % (basename, np.round(period_days*10), np.round(epoch_btjd))
+
+    out = ModShift.runModShift(time, flux, model, plotname, objectname, period_days, epoch_btjd, modplotint)
+    clip['modshift'] = out
+
+    #Enforce contract
+    clip['modshift.mod_Fred']
+    clip['modshift.mod_ph_pri']
+    clip['modshift.mod_secdepth']
+    clip['modshift.mod_sig_pri']
+
+    return clip
 ######################################
 
 from dave.lpp.loadLppData import MapInfo
@@ -607,54 +632,6 @@ def lppMetricTask(clip):
     clip['lpp.TLpp']
 
     return clip
-
-######################################
-
-@task
-def modshiftTask(clip):
-    
-    time = clip['serve.time']
-
-    if clip['config.detrendType'] == "tess_2min":
-        flux = clip['serve.detrendFlux']
-        model = clip['serve.modelFlux']
-    elif clip['config.detrendType'] == "eleanor":
-        flux = clip['detrend.flux_frac']
-        model = clip['trapFit.bestFitModel']
-    elif clip['config.detrendType'] == "ryan":
-        flux = clip['serve.detrendFlux']
-        model = clip['trapFit.bestFitModel']
-	
-    period_days = clip['serve.param.orbitalPeriod_days']
-    epoch_btjd = clip['serve.param.epoch_btjd']
-
-    #Filter out nans
-    idx = np.isnan(time) | np.isnan(flux) | np.isnan(model)
-    time = time[~idx]
-    flux = flux[~idx]
-    model = model[~idx]
-
-    tic = clip['config.tic']
-    basePath = clip['config.modshiftBasename']
-    ticStr = "%016i" %(tic)
-    basename = tessfunc.getOutputBasename(basePath, ticStr)
-
-    # Name that will go in title of modshift plot
-    objectname = "TIC %012i" % (tic)
-
-    modplotint = 1  # Change to 0 or anything besides 1 to not have modshift produce plot
-    plotname = "%s-%02i-%04i" % (basename, np.round(period_days*10), np.round(epoch_btjd))
-
-    out = ModShift.runModShift(time, flux, model, plotname, objectname, period_days, epoch_btjd, modplotint)
-    clip['modshift'] = out
-
-    #Enforce contract
-    clip['modshift.mod_Fred']
-    clip['modshift.mod_ph_pri']
-    clip['modshift.mod_secdepth']
-    clip['modshift.mod_sig_pri']
-    return clip
-
 ######################################
 
 from dave.tessPipeline.sweet import runSweetTest
@@ -680,7 +657,6 @@ def sweetTask(clip):
     clip['sweet.amp']
     
     return clip
-
 ######################################
 
 #Won't work until serve loads up a TPF file
@@ -704,14 +680,13 @@ def centroidsTask(clip):
     res['method'] = "Fast Gaussian PSF fitting"
     clip['diffImgCentroids'] = res
 
-
     #Enforce contract
     clip['diffImgCentroids.results']
     return clip
+######################################
 
 @task
 def vbkPsfCentroidsTask(clip):
-
 
     def raw_moment(data, iord, jord):
         nrows, ncols = data.shape
