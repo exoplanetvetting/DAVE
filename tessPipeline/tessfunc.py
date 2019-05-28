@@ -14,40 +14,38 @@ import pandas as pd
 import numpy as np
 from astroquery.mast import Tesscut
 from astropy.coordinates import SkyCoord
-
-
 from dave.tessPipeline.tessio import TessDvtLocalArchive
 from dave.tessPipeline.tessmastio import TessAstroqueryArchive
-
 import os
 
-def serve(sector, tic, planetNum, localPath):
+def serve(sector, tic, planetNum, localPath, source_):
+    
+    if planetNum > 1:
+        planetNum = 1
 
     ar = TessAstroqueryArchive(localPath)
 #    ar = TessDvtLocalArchive(localPath)
         
-    dvt, hdr = ar.getDvt(tic, sector, ext=planetNum, header=True)
+    if source_ == "tess_2min":
+        dvt, hdr = ar.getDvt(tic, sector, ext=planetNum, header=True)
 #    dvt, hdr = ar.getLightcurve(tic, sector, ext=planetNum, header=True)
-      
-    if planetNum > 1:
-        planetNum = 1
+        tpf, hdr_tpf = ar.getTPF(tic, sector, ext=planetNum, header=True)
 
-    tpf, hdr_tpf = ar.getTPF(tic, sector, ext=planetNum, header=True)
+    elif source_ == "tess_FFI":
+        aperture_size = 11# in pixels
+        tpf, hdr_tpf = ar.getFfiCutout(tic, sector, aperture_size)
+        dvt, hdr = tpf, hdr_tpf
 
     return dvt, hdr, tpf, hdr_tpf
 
 def serve_TESS_FFI(sector, tic, planetNum, localPath):
 
     ar = TessAstroqueryArchive(localPath)
-        
-    aa = ar.getFfiCutout(tic, sector, 11)
-
-    dvt, hdr = ar.getLightcurve(tic, sector, ext=planetNum, header=True)
-      
-    if planetNum > 1:
-        planetNum = 1
-
-    tpf, hdr_tpf = ar.getTPF(tic, sector, ext=planetNum, header=True)
+    tpf, hdr_tpf = ar.getFfiCutout(tic, sector, 11)
+    dvt, hdr = tpf, hdr_tpf
+#    print(tpf_header)
+#    print(tpf.shape)
+#    xxxx
 
     return dvt, hdr, tpf, hdr_tpf
 

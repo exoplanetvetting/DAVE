@@ -13,6 +13,7 @@ from astroquery.mast import Tesscut
 from astroquery.mast import Catalogs
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
+import astropy.units as u
 
 
 class TessAstroqueryArchive(object):
@@ -55,9 +56,8 @@ class TessAstroqueryArchive(object):
         obs_query_string = "tess*-s%04i-%016i*" % (sector, ticid)
         obsTable = Observations.query_criteria(mission="TESS", obs_id=obs_query_string)
         
-
-#	print obsTable#['obs_id']
-#	xxxx
+#        print(obsTable)#['obs_id']
+#        xxxx
 
         #@todo check only one element returned
         #self.obsid = obsTable['obsid']
@@ -77,7 +77,7 @@ class TessAstroqueryArchive(object):
                              % fileType)
         
         obsid = self.getPostageStampObservationId(sector, ticid)
-        
+
         manifest=Observations.download_products(obsid,\
                                             productSubGroupDescription=[fileType],\
                                             mrp_only=False,extension="fits",
@@ -164,20 +164,26 @@ class TessAstroqueryArchive(object):
         
         manifest = Tesscut.get_cutouts(self.coord, size)
         
-        
-    
-    def getFfiCutout(self,ticid, sector, size, *args, **kwargs):
+            
+    def getFfiCutout(self, ticid, sector, size, *args, **kwargs):
         """
         Ask for astroquery Tesscut target pixel file.
         sizew needs to be in pixels.
         """
         
-        coord = self.getRaDec(ticid)
+        cutout_coord = self.getRaDec(ticid)
 
-        if not self.checkCoordInSector(coord,sector):
+        if not self.checkCoordInSector(cutout_coord,sector):
             raise ValueError("Requested TIC not in Requested Sector.")
 
-
-        manifest = Tesscut.get_cutouts(coord, size)
+        hdulist = Tesscut.get_cutouts(cutout_coord, size)[0]
+        cutout_table = hdulist[1].data
+        tpf = cutout_table['FLUX']
+        tpf_header = hdulist[1].header#cutout_table.columns
+        
+#        print(cutout_coord, size)
+#        manifest = Tesscut.download_cutouts(cutout_coord, [size_arcmin_, size_arcmin_]*u.arcmin)
+#        print(manifest[0])
+#        print(tpf_header)
                 
-        return# self.getTessCut(coord, size)
+        return tpf, tpf_header# self.getTessCut(coord, size)

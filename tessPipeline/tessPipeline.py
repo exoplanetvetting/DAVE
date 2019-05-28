@@ -87,9 +87,12 @@ def serveTask(clip):
  
     if source_ == "tess_2min":
 
-        dvt, hdr, tpf_, hdr_tpf = tessfunc.serve(sector, tic, planNum, localPath)
+        dvt, hdr, tpf_, hdr_tpf = tessfunc.serve(sector, tic, planNum, localPath, source_)
 
         cube = tpf.getTargetPixelArrayFromFits(tpf_, hdr_tpf)
+
+#        print(hdr)
+#        xxxxx
 
         out = dict()
         out['time'] = dvt['TIME']
@@ -135,17 +138,18 @@ def serveTask(clip):
 
         out = dict()
         out['time'] = dvt['TIME']
-        out['rawLightcurve'] = dvt['LC_DETREND']
+        out['rawLightcurve'] = dvt['LC_DETREND']#LC_INIT
         clip['extract'] = out
         clip['extract.time']
         clip['extract.rawLightcurve']
 
 
-    if source_ == "tess_FFI":
+    elif source_ == "tess_FFI":
 
-        lc, hdr, tpf_, hdr_tpf = tessfunc.serve_TESS_FFI(sector, tic, planNum, localPath)
+        lc, hdr, tpf_, hdr_tpf = tessfunc.serve(sector, tic, planNum, localPath, source_)
+#        lc, hdr, tpf_, hdr_tpf = tessfunc. serve_TESS_FFI(sector, tic, planNum, localPath)
 
-        cube = tpf.getTargetPixelArrayFromFits(tpf_, hdr_tpf)
+        cube = tpf_ #tpf.getTargetPixelArrayFromFits(tpf_, hdr_tpf)
 
         out = dict()
         out['time'] = lc['TIME']
@@ -558,8 +562,8 @@ def trapezoidFitTask(clip):
         period_days, phase_bkjd, duration_hrs, depth_frac)
 
     assert(len(time_days) == len(out['bestFitModel']))
+
     clip['trapFit'] = out
-  
     clip['trapFit.period_days']
     clip['trapFit.epoch_bkjd']
     clip['trapFit.duration_hrs']
