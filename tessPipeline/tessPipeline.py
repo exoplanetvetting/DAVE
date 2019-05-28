@@ -467,7 +467,7 @@ def blsTask(clip):
     	flux_norm[flags] = 0
 
     min_period_ = 0.5
-    max_period_ = int((0.3*(max(time_days) - min(time_days))))
+    max_period_ = 50.#int((0.3*(max(time_days) - min(time_days))))
     period_grid = np.exp(np.linspace(np.log(min_period_), np.log(max_period_), 50000))
     durations_ = 0.1+0.05*np.linspace(0,3,4)
   
@@ -561,6 +561,7 @@ def modshiftTask(clip):
     if clip['config.detrendType'] == "tess_2min":
         flux = clip['serve.detrendFlux']
         model = clip['serve.modelFlux']
+        model = clip['trapFit.bestFitModel']
     elif clip['config.detrendType'] == "eleanor":
         flux = clip['detrend.flux_frac']
         model = clip['trapFit.bestFitModel']
