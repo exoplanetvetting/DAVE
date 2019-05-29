@@ -74,7 +74,6 @@ cm_data = [[0.2081, 0.1663, 0.5292], [0.2116238095, 0.1897809524, 0.5776761905],
 
 parula_map = LinearSegmentedColormap.from_list('parula', cm_data)
 
-
 def plotWrapper(clip):
     """Wrapper function for difference image centroid diagnostic plots
 
@@ -132,7 +131,7 @@ def plotWrapper(clip):
         except ValueError as e:
             titleStr = "Error: %s" %(e)
 
-    else:#if clip['config.detrendType'] == "tess":
+    elif clip['config.detrendType'] == "tess_2min":
         idx_arr_tmp_ = np.asarray(inTransitIndices)
         goodCentroidIndices = np.linspace(0,len(idx_arr_tmp_), len(idx_arr_tmp_)+1)
         goodCentroidIndices = goodCentroidIndices[:-1]
@@ -408,8 +407,8 @@ def PLOT_CENTROIDS_TESS(clip):
 
     itrCol_psf, itrRow_psf, ootCol_psf, ootRow_psf, diffCol_psf, diffRow_psf = psfCentroids_vbk(clip)
 
-    diffCol_prf, diffRow_prf = diffCol_psf, diffRow_psf
-    ootCol_prf, ootRow_prf = ootCol_psf, ootRow_psf
+#    diffCol_prf, diffRow_prf = diffCol_psf, diffRow_psf
+#    ootCol_prf, ootRow_prf = ootCol_psf, ootRow_psf
 
     diffC = (ootCol_prf - diffCol_prf)
     diffR = (ootRow_prf - diffRow_prf)
@@ -426,7 +425,7 @@ def PLOT_CENTROIDS_TESS(clip):
     ss_ = itr_mean_img_.shape
 
     extent_ = [0, ss_[1],0, ss_[0]]
-    disp = lambda x: mp.imshow(x, cmap = parula_map, origin = "bottom", interpolation = "nearest")#, extent = extent_)
+    disp = lambda x: mp.imshow(x, cmap = parula_map, origin = "bottom", interpolation = "nearest", extent = extent_)
 
     mp.subplot(221)
 
@@ -764,16 +763,13 @@ def PLOT_INDIV_IMG_TESS(clip):
 
     itrCol_psf, itrRow_psf, ootCol_psf, ootRow_psf, diffCol_psf, diffRow_psf = psfCentroids_vbk(clip)
 
-
-    diffCol_prf, diffRow_prf = diffCol_psf, diffRow_psf
-    ootCol_prf, ootRow_prf = ootCol_psf, ootRow_psf
-
+#    diffCol_prf, diffRow_prf = diffCol_psf, diffRow_psf
+#    ootCol_prf, ootRow_prf = ootCol_psf, ootRow_psf
 
     ss_ = itr_mean_img_.shape
 
     extent_ = [0, ss_[1],0, ss_[0]]
-    disp = lambda x: mp.imshow(x, cmap= parula_map, origin = "bottom", interpolation = "nearest")#, extent = extent_)
-
+    disp = lambda x: mp.imshow(x, cmap= parula_map, origin = "bottom", interpolation = "nearest", extent = extent_)
 
 #
 # PLOT IN-TRANSIT, BEFORE TRANSIT, AND AFTER TRANSIT IMAGES ON A 3x3 GRID	
@@ -1035,7 +1031,7 @@ def plotCentroidOffsets_TESS(clip):
     extent_ = [0, ss_[1],0, ss_[0]]
     disp = lambda x: mp.imshow(x, cmap= parula_map, origin = "bottom", interpolation = "nearest", extent = extent_)
 
-    disp(diff_mean_img_)
+    disp(oot_mean_img_)
 
     mp.plot(np.mean(diffCol_prf), np.mean(diffRow_prf), 'r*', ms = 12, mec = 'k', label="Diff")
     mp.plot(diffCol_prf, diffRow_prf, 'r*')#, label="Indiv Diff")
