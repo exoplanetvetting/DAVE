@@ -55,8 +55,8 @@ def createConfig(detrendType, sector, tic, planetNum, period, tepoch, tdepth, td
     #TODO Need modshift paths
     cfg['lppMapFile'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/LPP_map/combMapDR25AugustMapDV_6574.mat"
 
-    cfg['modshiftBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"      
-    cfg['onepageBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"
+    cfg['modshiftBasename'] = os.getcwd()    
+    cfg['onepageBasename'] = os.getcwd()
 
     if detrendType == 'tess_2min':
         cfg['taskList'] = ['serveTask','blsTask','trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
