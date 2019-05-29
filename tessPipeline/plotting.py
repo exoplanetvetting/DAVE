@@ -85,7 +85,7 @@ def plotData(clip, nPanel=3):
             plt.plot(time[~fl], flux[~fl], 'ko', ms=1, alpha=.8)
             plt.ylabel("PDC SAP FLUX")
 #            print(clip['trapFit.depth_frac'])#['config.tdep'])
-            plt.ylim(-1.5*clip['trapFit.depth_frac'], 1.5*clip['trapFit.depth_frac'])
+#            plt.ylim(-1.5*clip['trapFit.depth_frac'], 1.5*clip['trapFit.depth_frac'])
             if markTransits:
                 plotTransitRegions(time[~fl], per, epc, dur_days)
             plt.xlim(start + i*deltaT, start + (i+1)*deltaT)
