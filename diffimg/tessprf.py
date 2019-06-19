@@ -10,6 +10,7 @@ from __future__ import division
 from AbstractPrfLookup import AbstractPrfLookup
 from pdb import set_trace as debug
 import scipy.io as spio
+from glob import glob
 import numpy as np
 import os
 
@@ -320,11 +321,12 @@ class TessPrf(AbstractPrfLookup):
 
     def readPrfFile(self, ccd, camera, sector):
 
-        if camera != 1:
-            raise ValueError("Only camera 1 currently available")
+        if sector > 5:
+            raise ValueError("Code needs to be adapted for sectors 6 and above")
 
-        fn = "tess2018243163600-00072_035-%i-%i-characterized-prf.mat" %(ccd, camera)
+        fn = "tess*-00072_035-%i-%i-characterized-prf.mat" %(camera, ccd)
         path = os.path.join(self.path, fn)
+        path = glob(path)[0]
 
         obj = spio.matlab.loadmat(path, struct_as_record=False, squeeze_me=True)
         prfObj = obj['prfStruct']
