@@ -89,18 +89,33 @@ def serveTask(clip):
 
         dvt, hdr, tpf_, hdr_tpf = tessfunc.serve(sector, tic, planNum, localPath, source_)
 
+
+#        print(hdr)
+#        xxxx
+#        print(hdr_tpf)
+#        xxxx
+
         cube = tpf.getTargetPixelArrayFromFits(tpf_, hdr_tpf)
 
 #        print(hdr)
-#        xxxxx
+#        print(dvt.shape)
+#        print(cube.shape)
+#        xxxx
 
         out = dict()
         out['time'] = dvt['TIME']
         out['cube'] = cube
         out['tpfHeader'] = hdr_tpf
-        out['detrendFlux'] = dvt['LC_DETREND']
-        out['flags'] = np.isnan(dvt['LC_DETREND'])
-        out['modelFlux'] = dvt['MODEL_INIT']
+        try:
+            out['detrendFlux'] = dvt['LC_DETREND']
+            flux_tmp = dvt['LC_DETREND']
+            out['modelFlux'] = dvt['MODEL_INIT']
+        except:
+            out['detrendFlux'] = (dvt['PDCSAP_FLUX']/np.nanmedian(dvt['PDCSAP_FLUX'])) - 1.
+            flux_tmp = (dvt['PDCSAP_FLUX']/np.nanmedian(dvt['PDCSAP_FLUX'])) - 1.
+            out['modelFlux'] = (dvt['PDCSAP_FLUX']/np.nanmedian(dvt['PDCSAP_FLUX'])) - 1.
+
+        out['flags'] = np.isnan(flux_tmp)
         
         par = dict()
         par['orbitalPeriod_days'] = clip['config.period']#hdr['TPERIOD']#
@@ -123,8 +138,8 @@ def serveTask(clip):
         clip['serve.param.transitDuration_hrs']
 
         out = dict()
-        out['flux_frac'] = dvt['LC_DETREND']
-        out['flags'] = np.isnan(dvt['LC_DETREND'])
+        out['flux_frac'] = flux_tmp
+        out['flags'] = np.isnan(flux_tmp)
         clip['detrend'] = out
         clip['detrend.flux_frac']
         clip['detrend.flags']
@@ -138,7 +153,7 @@ def serveTask(clip):
 
         out = dict()
         out['time'] = dvt['TIME']
-        out['rawLightcurve'] = dvt['LC_DETREND']#LC_INIT
+        out['rawLightcurve'] = flux_tmp
         clip['extract'] = out
         clip['extract.time']
         clip['extract.rawLightcurve']
@@ -404,18 +419,20 @@ def serveTask(clip):
 def detrendTask(clip):
 
     out = dict()
-    time_days = clip['serve.time']
-    flux_norm = clip['serve.detrendFlux']
+
+    x = clip['serve.time']
+    y = clip['serve.detrendFlux']/np.nanmedian(clip['serve.detrendFlux'])
     flags = clip['serve.flags']
+    
+    mu = np.median(y)
+    y = (y / mu - 1)
 
 # Identify outliers
-    m = np.ones(len(flux_norm), dtype=bool)
-#    m = np.zeros(len(flux_norm), dtype=bool)
-
+    m = np.ones(len(y), dtype=bool)
     for i in range(10):
-        y_prime = np.interp(time_days, time_days[m], flux_norm[m])
-        smooth = savgol_filter(y_prime, 501, polyorder=3)
-        resid = flux_norm - smooth
+        y_prime = np.interp(x, x[m], y[m])
+        smooth = savgol_filter(y_prime, 121, polyorder=3)
+        resid = y - smooth
         sigma = np.sqrt(np.mean(resid**2))
         m0 = np.abs(resid) < 3*sigma
         if m.sum() == m0.sum():
@@ -423,31 +440,31 @@ def detrendTask(clip):
             break
         m = m0
 
-#    print(np.where(m==False))
-#    tmp_flag_ = ~m
-#    print(np.where(tmp_flag_==True))
-
 # Only discard positive outliers
-#    m = resid < 3*sigma
-# REMOVE DATA AROUND DATA GAPS!!!!
-#    m[(x - np.min(x) >= 13.25) & (x - np.min(x) <= 15.)] = False
-    m[(time_days - np.min(time_days) >= 23.) & (time_days - np.min(time_days) <= 24.)] = False
-    m[(time_days - np.min(time_days) >= 12.5) & (time_days - np.min(time_days) <= 15.5)] = False
-#
-# Make sure that the data type is consistent
-#    time_days = np.ascontiguousarray(time_days[~m], dtype=np.float64)
-#    flux_norm = np.ascontiguousarray(flux_norm[~m], dtype=np.float64)
-#    smooth = np.ascontiguousarray(smooth[~m], dtype=np.float64)
-#    print(m.shape, time_days[~m].shape, flux_norm[~m].shape)
-#    xxx
+    m = (resid < 3*sigma) & (resid > -5*sigma)
 
-#    time_days = time_days
-    detrendFlux = flux_norm - smooth
+# REMOVE DATA AROUND DATA GAPS/DISCONTINUITIES!!!!
+    m[(x - np.min(x) >= 12.5) & (x - np.min(x) <= 15.5)] = False
+#
+# Shift the data so that it starts at t=0. This tends to make the fit
+# better behaved since t0 covaries with period.
+    x_ref = np.min(x[m]) if sector != 3 else np.min(x)
+
+# Make sure that the data type is consistent
+    x_bak_, y_bak_ = x, y
+    x = np.ascontiguousarray(x[m], dtype=np.float64)
+    y = np.ascontiguousarray(y[m], dtype=np.float64)
+    smooth = np.ascontiguousarray(smooth[m], dtype=np.float64)
+
+    x_detrend_ = x
+    y_detrend_ = y - smooth
+
+    detrendFlux = y - smooth
 
     out = dict()
     out['time'] = time_days
     out['flux_frac'] = detrendFlux
-    out['flags'] = ~m#flags#
+    out['flags'] = ~m
 
     clip['detrend'] = out
     clip['detrend.flux_frac']
@@ -467,13 +484,15 @@ def blsTask(clip):
     	flux_norm[flags] = 0
 
     min_period_ = 0.5
-    max_period_ = 50.#int((0.3*(max(time_days) - min(time_days))))
+    max_period_ = int((0.8*(max(time_days) - min(time_days))))
     period_grid = np.exp(np.linspace(np.log(min_period_), np.log(max_period_), 50000))
-    durations_ = 0.1+0.05*np.linspace(0,3,4)
+    durations_ = 0.05+0.05*np.linspace(0,4,5)
   
     time_days_ref_ = min(time_days)
     time_days -= time_days_ref_
-#    print(np.mean(flux_norm), max(flux_norm), min(flux_norm))
+#    print(np.nanmean(flux_norm), max(flux_norm), min(flux_norm))
+#    print(min(time_days))
+#    xxxxx
 
     bls = BoxLeastSquares(time_days, flux_norm)
     bls_power = bls.power(period_grid, durations_, oversample=20)
@@ -486,11 +505,11 @@ def blsTask(clip):
     bls_model = bls.model(time_days, period, duration_hrs/24., epoch)
 
     out = clipboard.Clipboard()
-    out['period'] = period
-    out['epoch'] = epoch + time_days_ref_
-    out['duration'] = duration_hrs
+    out['period'] = period#clip['serve.param.orbitalPeriod_days']#
+    out['epoch'] = epoch + time_days_ref_#clip['serve.param.epoch_btjd']#
+    out['duration'] = duration_hrs#clip['serve.param.transitDuration_hrs']#
     out['model'] = bls_model
-    out['depth'] = depth * 1e6
+    out['depth'] = depth * 1e6#clip['serve.param.transitDepth_ppm']/1e6#
 
     clip['bls'] = out
 
@@ -512,10 +531,12 @@ def trapezoidFitTask(clip):
     flux_norm = clip['serve.detrendFlux'] if clip['config.detrendType'] == "tess_2min" else clip['detrend.flux_frac']
     flags = clip['serve.flags'] if clip['config.detrendType'] == "tess_2min" else clip['detrend.flags']
 
-    period_days = clip['bls.period']#clip['serve.param.orbitalPeriod_days']
-    duration_hrs = clip['bls.duration']#clip['serve.param.transitDuration_hrs']
-    phase_bkjd = clip['bls.epoch']#clip['serve.param.epoch_btjd']
-    depth_frac = clip['bls.depth']/1e6#clip['serve.param.transitDepth_ppm']/1e6
+    period_days = clip['bls.period']#clip['serve.param.orbitalPeriod_days']#
+    duration_hrs = clip['bls.duration']#clip['serve.param.transitDuration_hrs']#
+    phase_bkjd = clip['bls.epoch']#clip['serve.param.epoch_btjd']#
+    depth_frac = clip['bls.depth']#clip['serve.param.transitDepth_ppm']/1e6#
+
+#    print(period_days, duration_hrs, phase_bkjd, depth_frac)
 
     #We don't know these values.
     unc = np.ones_like(flux_norm)
@@ -670,12 +691,12 @@ def centroidsTask(clip):
     period_days = clip['trapFit.period_days']#clip['serve.param.orbitalPeriod_days']
     epoch_btjd = clip['trapFit.epoch_bkjd']#clip['serve.param.epoch_btjd']
     duration_hrs = clip['trapFit.duration_hrs']#clip['serve.param.transitDuration_hrs']  
-   
-#    print clip['serve.param.orbitalPeriod_days'],  clip['serve.param.epoch_btjd'], clip['serve.param.transitDuration_hrs'] 
-#    print clip['trapFit.period_days'], clip['trapFit.epoch_bkjd'], clip['trapFit.duration_hrs'], clip['trapFit.ingress_hrs'], clip['trapFit.depth_frac']
-#    xxxx
 
     duration_days = duration_hrs / 24.
+   
+#    print(period_days, epoch_btjd, duration_days)
+#    xxxx
+
     res = measurePerTransitCentroids(time, cube, period_days, epoch_btjd, duration_days, plotFilePattern=None)
 
     res['method'] = "Fast Gaussian PSF fitting"

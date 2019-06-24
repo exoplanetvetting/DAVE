@@ -289,7 +289,8 @@ def indivTransitPlot(clip,ndur):
             plt.subplot(3,3,c)
             plt.plot(time,flux,'k.')
             plt.xlim(posBegEpochs[idx[0]],posEndEpochs[idx[0]])
-            plt.ylim(-2*depth,0.9*depth)
+            plt.ylim(-5*depth,3.*depth)
+#            plt.ylim(-1.5*clip['trapFit.depth_frac'], 1.5*clip['trapFit.depth_frac'])
             plt.plot(time_days[therms],0.86*depth*np.ones((len(therms[therms]),1)),'rv',ms=13)
             ax=plt.gca()
             plt.text(.1,.1, str(i),transform=ax.transAxes,color='m',fontsize=13)
@@ -305,7 +306,7 @@ def indivTransitPlot(clip,ndur):
             plt.plot(time-i*period,flux,'k.')
 
     plt.xlim(posBegEpochs[nt],posEndEpochs[nt])
-    plt.ylim(-2*depth,0.9*depth)
+    plt.ylim(-5*depth,3.*depth)
     plt.plot((mid-0.5*dur/24,mid+0.5*dur/24),(-1*depth,-1*depth),'c-',linewidth=3)
     ax=plt.gca()
     plt.text(.1,.1, 'Odd',transform=ax.transAxes,color='m',fontsize=13)
@@ -316,7 +317,7 @@ def indivTransitPlot(clip,ndur):
         if np.mod(i,2)==0:
             plt.plot(time-i*period,flux,'k.')
     plt.xlim(posBegEpochs[nt],posEndEpochs[nt])
-    plt.ylim(-2*depth,0.9*depth)
+    plt.ylim(-5*depth,3.*depth)
     plt.plot((mid-0.5*dur/24,mid+0.5*dur/24),(-1*depth,-1*depth),'c-',linewidth=3)
     ax=plt.gca()
     plt.text(.1,.1, 'Even',transform=ax.transAxes,color='m',fontsize=13)
@@ -327,7 +328,7 @@ def indivTransitPlot(clip,ndur):
         if np.mod(i,1)==0:
             plt.plot(time-i*period/2,flux,'k.')
     plt.xlim(posBegEpochs[nt],posEndEpochs[nt])
-    plt.ylim(-2*depth,0.9*depth)
+    plt.ylim(-5*depth,2.*depth)
     plt.plot((mid-0.5*dur/24,mid+0.5*dur/24),(-1*depth,-1*depth),'c-',linewidth=3)
     ax=plt.gca()
     plt.text(.1,.1, 'half Period',transform=ax.transAxes,color='m',fontsize=13)

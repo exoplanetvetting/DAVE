@@ -56,7 +56,7 @@ class TessAstroqueryArchive(object):
         obs_query_string = "tess*-s%04i-%016i*" % (sector, ticid)
         obsTable = Observations.query_criteria(mission="TESS", obs_id=obs_query_string)
         
-#        print(obsTable)#['obs_id']
+#        print(obsTable)#['obs_id'])
 #        xxxx
 
         #@todo check only one element returned
@@ -80,11 +80,13 @@ class TessAstroqueryArchive(object):
 
         manifest=Observations.download_products(obsid,\
                                             productSubGroupDescription=[fileType],\
-                                            mrp_only=False,extension="fits",
+                                            mrp_only=False, extension="fits",
                                             download_dir=self.cachePath)
-        
-        localUrl=manifest['Local Path'][0]
-        
+
+        localUrl=manifest['Local Path'][0]# if fileType == 'TP' else manifest['Local Path'][1]
+
+#        print(fileType, obsid)
+
         return self.parse(localUrl, *args, **kwargs)
     
     

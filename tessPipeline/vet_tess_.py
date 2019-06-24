@@ -49,14 +49,16 @@ def createConfig(detrendType, sector, tic, planetNum, period, tepoch, tdepth, td
     cfg['tdepth'] = tdepth
     cfg['tdur'] = tdur
 
+    cfg['stellarFile']='/Users/vkostov/Desktop/Ideas_etc/DAVE_test/dave/etc/TESSCatalogStellar.txt'
+
     #TODO This shouldn't be hardcoded, but passed as a parameter
     cfg['dvtLocalPath'] = "/Users/vkostov/.eleanor/"
     
     #TODO Need modshift paths
     cfg['lppMapFile'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/LPP_map/combMapDR25AugustMapDV_6574.mat"
 
-    cfg['modshiftBasename'] = os.getcwd()    
-    cfg['onepageBasename'] = os.getcwd()
+    cfg['modshiftBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"      
+    cfg['onepageBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"
 
     if detrendType == 'tess_2min':
         cfg['taskList'] = ['serveTask','blsTask','trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
@@ -143,8 +145,9 @@ def runExport(clip,output):
     per=np.round(clip['serve.param.orbitalPeriod_days']*10)
     epoch=np.round(clip['serve.param.epoch_btjd'])
     basedir=clip.config['onepageBasename']
+
     try:
-        clip['config']['stellarPar']=['Mass','Rad','Teff','dis','rho','prov','logg']
+        clip['config']['stellarPar']=['Mass','Rad','Teff']#,'dis','rho','prov','logg']
         clip=stel.addStellarToClip(clip)
         clip=stel.estimatePlanetProp(clip)
     except:

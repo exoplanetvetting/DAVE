@@ -53,23 +53,22 @@ def measurePerTransitCentroids(time, cube, period_days, epoch_days, duration_day
     
 #    if plotFilePattern is not None:
 #        raise NotImplementedError("Plots not implemented yet")
-        
-        
+               
     isnan = np.isnan(time)
     time = time[~isnan]
     cube = cube[~isnan]
 
     out = dict()
     transits = getIngressEgressCadences(time, period_days, epoch_days, duration_days)
+
     for i in range(len(transits)):
         cin = transits[i]
         res = measureCentroidShift(cube, cin, plot)
         out['transit-%04i' %(i)] = res
-        
 
         if plotFilePattern is not None:
-            plt.suptitle('%s-trans%02i' %(plotFilePattern , i))   
-            plt.savefig('%s-trans%02i.png' %(plotFilePattern , i))
+             plt.suptitle('%s-trans%02i' %(plotFilePattern , i))   
+             plt.savefig('%s-trans%02i.png' %(plotFilePattern , i))
 
     results = np.zeros( (len(transits), 6) )
     for i in range(len(transits)):
@@ -77,11 +76,10 @@ def measurePerTransitCentroids(time, cube, period_days, epoch_days, duration_day
         results[i,:2] = out[key]['beforeCentroid']
         results[i,2:4] = out[key]['diffCentroid']
         results[i,4:6] = out[key]['afterCentroid']
-        
+
     out['results'] = results
     return out
     
-
 def getIngressEgressCadences(time, period_days, epoch_btjd, duration_days):
     """Get a list of transit start and end times in units of cadence number
     
@@ -94,6 +92,7 @@ def getIngressEgressCadences(time, period_days, epoch_btjd, duration_days):
     A 2d numpy array. zeroth column is cadence number of transit starts, first column is cadence
     number of transit ends.
     """
+
     assert np.all(np.isfinite(time))
 
     idx = kplrfits.markTransitCadences(time, period_days, epoch_btjd, duration_days)
@@ -104,8 +103,7 @@ def getIngressEgressCadences(time, period_days, epoch_btjd, duration_days):
 
 def measureCentroidShift(cube, cin, plot=True):
     """
-    
-    
+        
     Todo
     ---------
     * Adapt this code so it can be parameterised to accept different fitting algorithms, instead
@@ -113,6 +111,9 @@ def measureCentroidShift(cube, cin, plot=True):
     """
     
     before, after, diff = generateDiffImg(cube, cin, plot=plot)
+
+#    if (np.isnan(np.nanmean(before)) == True) or (np.isnan(np.nanmean(after)) == True) or (np.isnan(np.nanmean(diff)) == True):
+#        print('Transit bad')
 
     guess = pickInitialGuess(before)
     beforeSoln = ddf.fastGaussianPrfFit(before, guess)
@@ -122,9 +123,11 @@ def measureCentroidShift(cube, cin, plot=True):
 
     guess = pickInitialGuess(after)
     afterSoln = ddf.fastGaussianPrfFit(after, guess)
-
+    
+#    plot = True
     if plot:
-        generateDiffImgPlot(before, diff, after, beforeSoln, diffSoln, afterSoln)
+         fig = plt.figure(figsize=(15,10))
+         generateDiffImgPlot(before, diff, after, beforeSoln, diffSoln, afterSoln)
         
     out = dict()
     error = 0
@@ -216,34 +219,41 @@ def pickInitialGuess(img):
 
 def generateDiffImgPlot(before, diff, after, beforeSoln, diffSoln, afterSoln):
     """Generate a difference image plot"""
-    
+#    
     kwargs = {'origin':'bottom', 'interpolation':'nearest', 'cmap':plt.cm.YlGnBu_r}
-    
+#
+#    
     plt.clf()
     plt.subplot(221)
     plt.imshow(before, **kwargs)
     plt.title("Before")
     plt.colorbar()
-
+#
+#
     plt.subplot(222)
     plt.imshow(after, **kwargs)
     plt.title("After")
     plt.colorbar()
-
+#
+#
     plt.subplot(223)
     kwargs['cmap'] = plt.cm.RdBu_r
     img = after - before
+#    img = 0.5*(after + before)
+#    oot = 0.5*(afterSoln.x[:2] + beforeSoln.x[:2])
+#    plt.plot(oot[1], oot[0], 'ms', ms=8, label="OOT")
     plt.imshow(img, **kwargs)
     plt.title("After - Before")
     vm = max( np.fabs([np.min(img), np.max(img)]) )
-    plt.clim(-vm, vm)
+#    plt.clim(-vm, vm)
     plt.colorbar()
-
+#
+#
     plt.subplot(224)
     plt.imshow(diff, **kwargs)
-    vm = max( np.fabs([np.min(img), np.max(img)]) )
-    plt.clim(-vm, vm)
-    
+    vm = max( np.fabs([np.min(diff), np.max(diff)]) )
+#    plt.clim(-vm, vm)
+
     plotCentroidLocation(beforeSoln, 's', ms=8, label="Before")
     plotCentroidLocation(afterSoln, '^', ms=8, label="After")
     plotCentroidLocation(diffSoln, 'o', ms=12, label="Diff")
@@ -260,7 +270,6 @@ def plotCentroidLocation(soln, *args, **kwargs):
     """
     col, row = soln.x[:2]
     ms = kwargs.pop('ms', 8)
-    
 
     kwargs['color'] = 'w'
     plt.plot([col], [row], *args, ms=ms+1, **kwargs)

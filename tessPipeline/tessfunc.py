@@ -27,8 +27,11 @@ def serve(sector, tic, planetNum, localPath, source_):
 #    ar = TessDvtLocalArchive(localPath)
         
     if source_ == "tess_2min":
-        dvt, hdr = ar.getDvt(tic, sector, ext=planetNum, header=True)
-#    dvt, hdr = ar.getLightcurve(tic, sector, ext=planetNum, header=True)
+        try:
+            dvt, hdr = ar.getDvt(tic, sector, ext=planetNum, header=True)
+        except:
+            dvt, hdr = ar.getLightcurve(tic, sector, ext=planetNum, header=True)
+
         tpf, hdr_tpf = ar.getTPF(tic, sector, ext=planetNum, header=True)
 
     elif source_ == "tess_FFI":
