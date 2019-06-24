@@ -49,16 +49,16 @@ def createConfig(detrendType, sector, tic, planetNum, period, tepoch, tdepth, td
     cfg['tdepth'] = tdepth
     cfg['tdur'] = tdur
 
-    cfg['stellarFile']='/Users/vkostov/Desktop/Ideas_etc/DAVE_test/dave/etc/TESSCatalogStellar.txt'
+    cfg['stellarFile']='PATH_TO_STELLAR_PARAM_CATALOG/etc/TESSCatalogStellar.txt'
 
     #TODO This shouldn't be hardcoded, but passed as a parameter
-    cfg['dvtLocalPath'] = "/Users/vkostov/.eleanor/"
+    cfg['dvtLocalPath'] = "PATH_TO_DOWNLOADED_FILES_FROM_MAST"
     
     #TODO Need modshift paths
-    cfg['lppMapFile'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/LPP_map/combMapDR25AugustMapDV_6574.mat"
+    cfg['lppMapFile'] = "PATH_TO_LPP_MAP/LPP_map/combMapDR25AugustMapDV_6574.mat"
 
-    cfg['modshiftBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"      
-    cfg['onepageBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"
+    cfg['modshiftBasename'] = "PATH_TO_WORKING_DIRECTORY/justVet/"      
+    cfg['onepageBasename'] = "PATH_TO_WORKING_DIRECTORY/justVet/"
 
     if detrendType == 'tess_2min':
         cfg['taskList'] = ['serveTask','blsTask','trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
