@@ -39,6 +39,7 @@ from numba.types import CPointer, float64, intc
 from scipy.special import erf
 import numpy as np
 
+import dave.diffimg.tessprf as tessprf
 
 def fastGaussianPrfFit(img, guess):
     """Fit a Symmetric Gaussian PSF to an image, really quickly
@@ -70,8 +71,45 @@ def fastGaussianPrfFit(img, guess):
     assert len(guess) == 5
     
     mask = None
-    soln = spOpt.minimize(costFunc, guess,args=(img,mask), method='Nelder-Mead', bounds=None)
+    soln = spOpt.minimize(costFunc, guess, args=(img, mask), method='Nelder-Mead', bounds=None)
     return soln
+
+def prfTess():
+    """Compute difference between image and its model for given model params
+
+    Inputs
+    ----------
+    arglist
+        (tuple or array) Tunable parameters of model
+    func
+        (function) Model to fit
+    img
+        (2d np array) Image to fit
+
+    Optional Inputs
+    ----------------
+    mask
+        (2d np array) Zero elements of mask indicate bad data which should not be
+        included in the fit
+
+
+    Returns
+    ----------
+    float
+    """
+
+    prfPath = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/TESS_PRF/"
+    prfObj = tessprf.TessPrf(prfPath)
+
+    ccd, camera = 2, 1
+    column, row = 455, 456
+    sector = 2
+
+    prfTess_ = prfObj.getPrfAtColRow(column, row, ccd, camera, sector)
+#    model = prfTess_[1:-1,1:-1]]
+#    model /= np.max(model)
+  
+    return prfTess_[1:-1,1:-1]
 
 
 def costFunc(arglist, img, mask=None):
@@ -101,6 +139,12 @@ def costFunc(arglist, img, mask=None):
 
     nr, nc = img.shape
     model = computeModel(nc, nr, arglist)
+
+#    gaussian_ = computeModel(nc, nr, arglist)
+#    model = prfTess()
+#    model /= np.nanmax(model)
+#    model *= np.nanmax(img)#gaussian_)
+
     diff = img - model
 
     if mask is not None:
@@ -109,6 +153,8 @@ def costFunc(arglist, img, mask=None):
         img[~mask] = 0  #In case bad values are set to Nan
 
     cost = np.sqrt( np.sum(diff**2) )
+#    print(cost)
+#    print(np.max(model), np.min(model), cost)
     return cost
 
 

@@ -12,6 +12,9 @@ import dave.misc.covar as covar
 import dave.diffimg as diffimg
 import dave.fileio.mastio as mastio
 from dave.diffimg.generate_images import generateImages
+from dave.tessPipeline.pertransitcentroids import generateDiffImg
+from dave.tessPipeline.pertransitcentroids import getIngressEgressCadences
+from dave.tessPipeline.pertransitcentroids import measureCentroidShift
 from dave.diffimg.psfFit_vbk import psfCentroids_vbk
 import astropy.coordinates as coord
 import astropy.units as u
@@ -405,6 +408,9 @@ def PLOT_CENTROIDS_TESS(clip):
     ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
     diffCol_prf, diffRow_prf = centroids[:,2], centroids[:,3]
 
+#    print(ootCol_prf, ootRow_prf)
+#    print(diffCol_prf, diffRow_prf)
+
     itrCol_psf, itrRow_psf, ootCol_psf, ootRow_psf, diffCol_psf, diffRow_psf = psfCentroids_vbk(clip)
 
 #    diffCol_prf, diffRow_prf = diffCol_psf, diffRow_psf
@@ -415,6 +421,37 @@ def PLOT_CENTROIDS_TESS(clip):
 
     itr_mean_img_, oot_mean_img_, diff_mean_img_, itr_mean_cube_, oot_mean_cube_, diff_mean_cube_, transit_number_ = generateImages(clip)
     itr_mean_img_, oot_mean_img_, diff_mean_img_ = np.asarray(itr_mean_img_), np.asarray(oot_mean_img_), np.asarray(diff_mean_img_)
+
+    cube = clip['serve.cube']
+    time = clip['serve.time']
+    period_days = clip['trapFit.period_days']
+    epoch_days = clip['trapFit.epoch_bkjd']
+    duration_days = clip['trapFit.duration_hrs']/24.
+
+    isnan = np.isnan(time)
+    time = time[~isnan]
+    cube = cube[~isnan]
+
+
+    transits = getIngressEgressCadences(time, period_days, epoch_days, duration_days)
+
+    oot_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
+    diff_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
+
+    for jj in range(len(transits)):
+        cin = transits[jj]
+        plot = False
+        before, after, diff = generateDiffImg(cube, cin, plot=plot)
+        diff_img_[jj,:,:] = diff
+        oot_img_[jj,:,:] = 0.5*(before + after)
+
+
+    oot_mean_img_ = np.nanmean(oot_img_, axis = 0)
+    diff_mean_img_ = np.nanmean(diff_img_, axis = 0)
+
+    itr_mean_img_ = oot_mean_img_
+#    print(diff_img_.shape, oot_img_.shape, oot_mean_img_.shape, diff_mean_img_.shape)
+#    xxxx
 
     hdr_ = clip['serve.tpfHeader']    
 
@@ -766,10 +803,42 @@ def PLOT_INDIV_IMG_TESS(clip):
 #    diffCol_prf, diffRow_prf = diffCol_psf, diffRow_psf
 #    ootCol_prf, ootRow_prf = ootCol_psf, ootRow_psf
 
+
+    cube = clip['serve.cube']
+    time = clip['serve.time']
+    period_days = clip['trapFit.period_days']
+    epoch_days = clip['trapFit.epoch_bkjd']
+    duration_days = clip['trapFit.duration_hrs']/24.
+
+    isnan = np.isnan(time)
+    time = time[~isnan]
+    cube = cube[~isnan]
+
+
+    transits = getIngressEgressCadences(time, period_days, epoch_days, duration_days)
+
+    oot_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
+    diff_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
+
+    for jj in range(len(transits)):
+        cin = transits[jj]
+        plot = False
+        before, after, diff = generateDiffImg(cube, cin, plot=plot)
+        diff_img_[jj,:,:] = diff
+        oot_img_[jj,:,:] = 0.5*(before + after)
+
+
+    oot_mean_img_ = np.nanmean(oot_img_, axis = 0)
+    diff_mean_img_ = np.nanmean(diff_img_, axis = 0)
+
+    itr_mean_img_ = oot_mean_img_
+
+
+
     ss_ = itr_mean_img_.shape
 
     extent_ = [0, ss_[1],0, ss_[0]]
-    disp = lambda x: mp.imshow(x, cmap= parula_map, origin = "bottom", interpolation = "nearest", extent = extent_)
+#    disp = lambda x: mp.imshow(x, cmap= parula_map, origin = "bottom", interpolation = "nearest", extent = extent_)
 
 #
 # PLOT IN-TRANSIT, BEFORE TRANSIT, AND AFTER TRANSIT IMAGES ON A 3x3 GRID	
@@ -777,6 +846,8 @@ def PLOT_INDIV_IMG_TESS(clip):
 #	subplot_ = 330 + int(ii+1)#10*(int(float(ii)//3.) + 1) + int(ii+1)
 
     n_columns_ = 3
+
+    transit_number_ = len(transits)
 
     if transit_number_ > 12:
         transit_number_ = 12
@@ -810,9 +881,11 @@ def PLOT_INDIV_IMG_TESS(clip):
             mp.plot(time[idx_after], flux[idx_after], 'k.')
 
         elif plot_ == 'plot_images_':
-
-            disp(cube_diff_mean_[ii,:,:])
-            mp.plot(diffCol_prf[ii], diffRow_prf[ii], 'r*')
+            kwargs = {'origin':'bottom', 'interpolation':'nearest','cmap':parula_map, 'extent':[0, ss_[1],0, ss_[0]]}
+#            disp(cube_diff_mean_[ii,:,:])
+            mp.imshow(diff_img_[ii,:,:], **kwargs)
+            mp.plot(diffCol_prf[ii], diffRow_prf[ii], 'ro', ms = 6)
+            mp.plot(ootCol_prf[ii], ootRow_prf[ii], 'ks', ms = 4)
             mp.colorbar()
 #		mp.tight_layout()
 
@@ -1025,6 +1098,35 @@ def plotCentroidOffsets_TESS(clip):
     if clip['config.detrendType'] == "eleanor":
     	col_zero_, row_zero_ = int(hdr_['CRPIX1']), int(hdr_['CRPIX2'])
     	epic_Col, epic_Row = col_zero_ + int(hdr_['TPF_W']), row_zero_ + int(hdr_['TPF_H'])
+
+
+    cube = clip['serve.cube']
+    time = clip['serve.time']
+    period_days = clip['trapFit.period_days']
+    epoch_days = clip['trapFit.epoch_bkjd']
+    duration_days = clip['trapFit.duration_hrs']/24.
+
+    isnan = np.isnan(time)
+    time = time[~isnan]
+    cube = cube[~isnan]
+
+    transits = getIngressEgressCadences(time, period_days, epoch_days, duration_days)
+
+    oot_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
+    diff_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
+
+    for jj in range(len(transits)):
+        cin = transits[jj]
+        plot = False
+        before, after, diff = generateDiffImg(cube, cin, plot=plot)
+        diff_img_[jj,:,:] = diff
+        oot_img_[jj,:,:] = 0.5*(before + after)
+
+
+    oot_mean_img_ = np.nanmean(oot_img_, axis = 0)
+    diff_mean_img_ = np.nanmean(diff_img_, axis = 0)
+
+    itr_mean_img_ = oot_mean_img_
 
     ss_ = itr_mean_img_.shape
 
