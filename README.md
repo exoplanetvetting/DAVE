@@ -30,7 +30,7 @@ python checkRequirements.py
 
 ## Example use for TESS
 1. from dave.tessPipeline import vet_tess_
-2. detrendType_ = "tess"
+2. detrendType_ = "tess_2min"
 3. clip = vet_tess_.runOneDv(detrendType, 2, 307210830, 1, 3.690613, 1356.2038, 1863, 1.27)
 4. vet_tess_.runExport(clip,"tmp.txt")
 
@@ -38,7 +38,7 @@ python checkRequirements.py
 where input for runOneDv is:
 Sector, TIC ID, Planet Number, Period, BTJD, Transit Depth [ppm], Transit Duration [hours]. 
 
-Currently supported "detrendType" are "tess" and "eleanor", where "tess" refers to the [SPOC short-cadence data](https://archive.stsci.edu/prepds/tess-data-alerts/), and "eleanor" refers to [eleanor-generated FFI lightcurves](http://adina.feinste.in/eleanor/)
+Currently supported "detrendType" are "tess_2min" and "eleanor", where "tess" refers to the [SPOC short-cadence data](https://archive.stsci.edu/prepds/tess-data-alerts/), and "eleanor" refers to [eleanor-generated FFI lightcurves](http://adina.feinste.in/eleanor/)
 
 ## Additional requirements
 To get DAVE to work for K2, you will have to create a directory called `.mastio/k2` in your home directory.
