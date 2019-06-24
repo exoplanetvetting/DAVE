@@ -1,0 +1,4 @@
+# Stellar Classifications of TESS Targets
+#TIC|Teff|Rad|Mass
+364395234|5818|1.05|1.09
+307210830|3400|0.3|0.3
