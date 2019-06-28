@@ -1,7 +1,7 @@
 
 """
 Abstract classes for interfacing with the Mast Kepler Data archives.
- 
+
 Used by mastio.py
 """
 
@@ -25,7 +25,7 @@ class MastArchive():
         if not os.path.exists(localDir):
             try:
                 os.mkdir(localDir)
-            except IOError, e:
+            except IOError as e:
                 msg = "Local path %s does not exist and can't be created: %s" \
                     %(localDir, e)
                 raise IOError(e)
@@ -49,7 +49,7 @@ class MastArchive():
 
         return self.parse(localUrl, *args, **kwargs)
 
-    
+
     def download(self, remoteUrl, localUrl, clobber=True, verbose=False):
         """Download data from MAST archive for a given filename and a
         given quarter.
@@ -77,16 +77,16 @@ class MastArchive():
 
         try:
             (f,h) = urllib.urlretrieve(remoteUrl, localUrl)
-        except IOError, e:
+        except IOError as e:
             raise(e)
 
 
         if verbose:
-            print h
-    
+            print(h)
+
     def parse(self, localUrl, *args, **kwargs):
         """Load data using favourite IO class
-        
+
         Assumes that localUrl exists on disk. Default file format
         for MAST is FITS, but sub-classes can override this method
         for other file types as necessary
@@ -94,12 +94,12 @@ class MastArchive():
         if 'ext' in kwargs and kwargs['ext'] == 0:
             try:
                 retVal = pyfits.getheader(localUrl, *args, **kwargs)
-            except IOError, e:
+            except IOError as e:
                 raise e
         else:
             try:
                 retVal = pyfits.getdata(localUrl, *args, **kwargs)
-            except IOError, e:
+            except IOError as e:
                 raise e
 
         return retVal
@@ -109,22 +109,22 @@ class MastArchive():
 
 class KeplerAbstractClass(MastArchive):
     """Base class for classes interacting with Kepler/K2 data.
-    
-    This class contains methods for querying for Lightcurve and 
+
+    This class contains methods for querying for Lightcurve and
     TPF files in either short or long cadence.
-    
+
     Example daughter classes are KeplerArchive and K2Archive.
     Daughter classes must, at a minimum, reimplement getFilename()
     and makeRemoteUrl(). You may want to write your own init, too.
-    
+
     """
-    
+
     def __init__(self, localDir, remoteServer, remoteFluxPath, remoteTpfPath):
         MastArchive.__init__(self, localDir, remoteServer)
         self.remoteFluxPath = remoteFluxPath
         self.remoteTpfPath = remoteTpfPath
 
-        
+
     def getLocalDir(self, quarter, kepid, quarterPrefix="Q"):
         quarterDir = "%s%s" %(quarterPrefix, quarter)
 
@@ -132,7 +132,7 @@ class KeplerAbstractClass(MastArchive):
         if not os.path.exists(localDir):
             try:
                 os.mkdir(localDir)
-            except OSError, e:
+            except OSError as e:
                 #Re-raising an exception makes the error easier to read
                 raise e
 
@@ -141,7 +141,7 @@ class KeplerAbstractClass(MastArchive):
         if not os.path.exists(localDir):
             try:
                 os.makedirs(localDir)
-            except OSError. e:
+            except OSError as e:
                 #Re-raising an exception makes the error easier to read
                 raise e
 
@@ -224,7 +224,7 @@ class KeplerAbstractClass(MastArchive):
 
     def makeRemoteUrl(self, remotePath, kepid, quarter, filename, compressedOnServer):
         """Figure out the URL where the desired file is stored.
-        
+
         Returns a string, typically similar to
         http://archive.stsci.edu/$remotePath/.../$filename
         """
@@ -232,8 +232,7 @@ class KeplerAbstractClass(MastArchive):
 
     def getFilename(self, kepid, quarter, isFluxFile, isShortCadence):
         """Figure out the name of the file you want to download
-        
+
         (But not its path)
         """
         raise NotImplementedError("Not Implemented in Base Class")
-

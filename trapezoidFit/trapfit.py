@@ -41,7 +41,7 @@ class trp_parameters:
 
     def __str__(self):
         for k in self.__dict__:
-            print k, self.__dict__[k]
+            print(k, self.__dict__[k])
         return ''
 
 class trp_originalestimates:
@@ -61,7 +61,7 @@ class trp_originalestimates:
 
     def __str__(self):
         for k in self.__dict__:
-            print k, self.__dict__[k]
+            print(k, self.__dict__[k])
         return ''
 
 class trp_planetestimates:
@@ -105,7 +105,7 @@ class trp_planetestimates:
         self.depth = 0.0
     def __str__(self):
         for k in self.__dict__:
-            print k, self.__dict__[k]
+            print(k, self.__dict__[k])
         return ''
 
 class trp_ioblk:
@@ -148,7 +148,7 @@ class trp_ioblk:
 
     def __str__(self):
         for k in self.__dict__:
-            print k, self.__dict__[k]
+            print(k, self.__dict__[k])
         return ''
 
 def boundedvals(ioblk):
@@ -164,9 +164,9 @@ def boundedvals(ioblk):
     datamindelta = ioblk.physvals - ioblk.physval_mins
     ioblk.boundedvals = -np.log( maxmindelta / datamindelta - 1.0)
     if ~np.isfinite(ioblk.boundedvals).all():
-        print "Bounded Vals Bad"
-        print ioblk.boundedvals
-        print ioblk.physvals
+        print("Bounded Vals Bad")
+        print(ioblk.boundedvals)
+        print(ioblk.physvals)
         err = 1
     return ioblk, err
 
@@ -184,9 +184,9 @@ def unboundedvals(ioblk):
                      (maxmindelta / (1.0 + np.exp( -ioblk.boundedvals )))
     #if np.sum( np.isfinite(ioblk.physvals) ) != np.size(ioblk.boundedvals) :
     if ~np.isfinite(ioblk.physvals).all():
-        print "UnBounded Vals Bad"
-        print ioblk.boundedvals
-        print ioblk.physvals
+        print("UnBounded Vals Bad")
+        print(ioblk.boundedvals)
+        print(ioblk.physvals)
         err = 1
     return ioblk, err
 
@@ -364,7 +364,7 @@ def trp_setup(ioblk):
     ioblk.fixed = np.array([0, 0, 0, 0])
     ioblk.physvals = np.array([0.0, depth, durday, 0.2])
     ioblk.nparm = np.size(ioblk.fixed)
-    
+
     # Validate trapezoid fit inputs look reasonable
     trp_validate(ioblk)
 
@@ -387,12 +387,12 @@ def trp_setup(ioblk):
 def trp_validate(ioblk):
     # Check that physvals are within limits
     if (np.any(np.greater_equal(ioblk.physvals, ioblk.physval_maxs))):
-        print 'physvals: {} is greater than physval_maxs: {}'.format( \
-                ioblk.physvals,ioblk.physval_maxs)
+        print('physvals: {} is greater than physval_maxs: {}'.format( \
+                ioblk.physvals,ioblk.physval_maxs))
         raise ValueError("TrapFit: physvals has value greater than physval_maxs")
     if (np.any(np.less_equal(ioblk.physvals, ioblk.physval_mins))):
-        print 'physvals: {} is less than physval_mins: {}'.format( \
-                ioblk.physvals,ioblk.physval_mins)
+        print('physvals: {} is less than physval_mins: {}'.format( \
+                ioblk.physvals,ioblk.physval_mins))
         raise ValueError("TrapFit: physvals has value less than physval_mins")
     # Check for NaNs in input data series
     if (np.any(np.isnan(ioblk.normlc))):
@@ -401,11 +401,11 @@ def trp_validate(ioblk):
         raise ValueError("TrapFit: Input uncertainty estimate contains NaN")
     if (np.any(np.isnan(ioblk.normots))):
         raise ValueError("TrapFit: Input time data contains NaN")
-    # Check for input data series that has negative flux data should be 
+    # Check for input data series that has negative flux data should be
     #  normalized to 1.0
     if (np.any(np.less(ioblk.normlc,0.0))):
         raise ValueError("TrapFit: Negative Flux in light curve")
-    
+
 def trp_likehood(pars,ioblk):
     """Return a residual time series of data minus model
        trp_setup(ioblk) should be called before this function is called
@@ -493,8 +493,8 @@ def trp_iterate_solution(ioblk, nIter):
         chi2min = allOutput['fun']
         if ioblk.parm.debugLevel > 0:
             strout = "%s %d %s %f" % ("It: ",i," Chi2: ",chi2min)
-            print strout
-            print ioblk.physvals
+            print(strout)
+            print(ioblk.physvals)
         if np.isfinite(ioblk.physvals).all():
             gdFits[i] = True
             bestChi2s[i] = chi2min
@@ -509,8 +509,8 @@ def trp_iterate_solution(ioblk, nIter):
     ioblk.bestboundedvals = ioblk.boundedvals
     if ioblk.parm.debugLevel > 0:
         strout = "%s %f" % ("Overall Best Chi2 Min: ",ioblk.chi2min)
-        print strout
-        print ioblk.physvals
+        print(strout)
+        print(ioblk.physvals)
     ioblk.minimized = True
     return ioblk
 
@@ -522,7 +522,7 @@ def trp_estimate_planet(ioblk):
     if not ioblk.minimized:
         strout = "Warning getting planet estimates for non converged \
                   trapezoid fit.  Do not trust results"
-        print strout
+        print(strout)
     ioblk.planetests.period = ioblk.origests.period
     ioblk.planetests.epoch = ioblk.timezpt + ioblk.bestphysvals[0]
     ioblk.planetests.bigT = ioblk.bestphysvals[2]
@@ -607,7 +607,7 @@ def trapezoid_fit(timeSeries, dataSeries, errorSeries, \
     ioblk = trp_iterate_solution(ioblk,fitTrialN)
     # Convert the trapezoid fit solution into a pseudo planet model parameters
     ioblk = trp_estimate_planet(ioblk)
-    
+
     # Raise an exception if final model is consistent with flat
     if (np.all(np.abs(ioblk.modellc - ioblk.modellc[0]) \
                 < (10.0 * sys.float_info.epsilon))):
@@ -615,7 +615,7 @@ def trapezoid_fit(timeSeries, dataSeries, errorSeries, \
     # Check for NaNs in output model
     if (np.any(np.isnan(ioblk.modellc))):
         raise ValueError("TrapFit: Output Model light curve contains NaN")
-   
+
 
     return ioblk
 
@@ -668,7 +668,7 @@ if __name__ == "__main__":
                   signalDepth*1.1, \
                   fitTrialN=2, fitRegion=4.0, errorScale=1.0, debugLevel=3,
                   sampleN=15, showFitInterval=30)
-    print ioblk
+    print(ioblk)
     # test generating model
     newioblk = trapezoid_model_onemodel(timeSeries, signalPeriod, \
                     signalEpoch, signalDepth, signalDurationHours, \

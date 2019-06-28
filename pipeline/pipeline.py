@@ -25,8 +25,8 @@ except (ImportError, OSError):
     print("Warn: LPP can't be imported")
 
 import dave.fileio.mastio as mastio
-import dave.fileio.tessmastio as tessmastio
-import dave.pipeline.tessfunc as tessfunc
+#import dave.fileio.tessmastio as tessmastio
+#import dave.pipeline.tessfunc as tessfunc
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
 import dave.pipeline.task as task
@@ -230,7 +230,7 @@ def extractLightcurveTask(clip):
 
     mask = kplrfits.getMaskForBadK2Data()
     flags = (flagValues & mask).astype(bool) if clip.config.detrendType != "tess" else flagValues.astype(bool)
-    
+
     flags |= ~np.isfinite(time)
     flags |= ~np.isfinite(flux)
     #flags[flux<1] = True
@@ -305,13 +305,13 @@ def detrendDataTask(clip):
     medianDetrend = np.zeros_like(flux)
     medianDetrend[~flags] = flux[~flags] - trend if clip.config.detrendType != "tess" else flux[~flags]
 
-    flags |= (medianDetrend < -1)    
+    flags |= (medianDetrend < -1)
 
     clip['detrend'] = dict()
     clip['detrend.flux_frac'] = medianDetrend
     clip['detrend.flags'] = flags
     clip['detrend.source'] = "Simple Median detrend"
-    
+
     return clip
 
 @task.task
@@ -567,7 +567,7 @@ def trapezoidFitTask(clip):
 import dave.vetting.ModShift as ModShift
 @task.task
 def modshiftTask(clip):
-    
+
     time = clip['serve.time']
     flux = clip['detrend.flux_frac']
     fl = clip['detrend.flags']
@@ -885,7 +885,7 @@ def saveClip(clip):
             else:
                 sh[k] = clip[k]
         sh.close()
-    
+
     except Exception as e:
         print("WARN: Error in saveClip: %s" %(e))
         clip['exception'] = str(e)
@@ -919,10 +919,10 @@ def loadTpfAndLc(k2id, campaign, ar, detrendType):
     #Load lightcurves from a specific detrending, and replace
     #the pdc time series with the new detrending
     key = detrendType.upper()
-    
+
     if key == "PDC":
         pass
-    
+
     elif key == "TESS":
         pass
 
@@ -1134,5 +1134,3 @@ def extractLightcurveFromTpfTask(clip):
     clip['extract.rawLightcurve']
     clip['extract.flags']
     return clip
-
-    

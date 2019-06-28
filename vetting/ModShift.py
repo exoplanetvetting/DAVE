@@ -25,8 +25,8 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch,modplotint):
         The epoch of the system in days.
     modplotint
        If modplotint==1, then plot will be produced, else it won't
-    
-    
+
+
     Returns:
     -------------
     A dictionary containing the following keys:
@@ -96,7 +96,7 @@ def runModShift(time,flux,model,plotname,objectname,period,epoch,modplotint):
 
     try:
         modshiftcmdout = check_output(cmd)
-    except CalledProcessError, e:
+    except CalledProcessError as e:
         os.close(fpNum)
         os.remove(tmpFilename)
 
