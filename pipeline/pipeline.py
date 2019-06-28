@@ -25,8 +25,8 @@ except (ImportError, OSError):
     print("Warn: LPP can't be imported")
 
 import dave.fileio.mastio as mastio
-#import dave.fileio.tessmastio as tessmastio
-#import dave.pipeline.tessfunc as tessfunc
+import dave.tessPipeline.tessmastio as tessmastio
+import dave.tessPipeline.tessfunc as tessfunc
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
 import dave.pipeline.task as task

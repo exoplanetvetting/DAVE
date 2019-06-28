@@ -49,16 +49,16 @@ def createConfig(detrendType, sector, tic, planetNum, period, tepoch, tdepth, td
     cfg['tdepth'] = tdepth
     cfg['tdur'] = tdur
 
-    cfg['stellarFile']='/Users/vkostov/Desktop/Ideas_etc/DAVE_test/dave/etc/TESSCatalogStellar.txt'
+    cfg['stellarFile']='../stellar/TESSCatalogStellar.txt'
 
     #TODO This shouldn't be hardcoded, but passed as a parameter
-    cfg['dvtLocalPath'] = "/Users/vkostov/.eleanor/"
-    
-    #TODO Need modshift paths
-    cfg['lppMapFile'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/LPP_map/combMapDR25AugustMapDV_6574.mat"
+    cfg['dvtLocalPath'] = ""
 
-    cfg['modshiftBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"      
-    cfg['onepageBasename'] = "/Users/vkostov/Desktop/Ideas_etc/DAVE_test/TESSting/justVet/"
+    #TODO Need modshift paths
+    cfg['lppMapFile'] = "/Users/briannagalgano/Desktop/combMapDR25AugustMapDV_6574.mat"
+
+    cfg['modshiftBasename'] = os.getcwd()
+    cfg['onepageBasename'] = os.getcwd()
 
     if detrendType == 'tess_2min':
         cfg['taskList'] = ['serveTask','blsTask','trapezoidFitTask','modshiftTask', 'sweetTask', 'lppMetricTask','centroidsTask', 'dispositionTask']
@@ -70,64 +70,64 @@ def createConfig(detrendType, sector, tic, planetNum, period, tepoch, tdepth, td
         cfg['taskList'] = ['serveTask', 'trapezoidFitTask','modshiftTask']
 
     clip = clipboard.Clipboard(cfg)
-    
+
     return clip
-    
+
 
 def outputInfo(clip):
     """Create a  text string to output to a file
-    """     
+    """
     header="tic,planetNum"
-    
+
     text = "%i" % (clip.config.tic)
     text = "%s,%i" % (text, clip.config.planetNum)
-    
+
     for k in clip.serve.param.keys():
         text = "%s,%f" % (text, clip['serve']['param'][k])
         header = "%s,%s" % (header, k)
 
     text = "%s,%f" % (text, clip.lpp.TLpp)
-    header = "%s,Tlpp" % (header) 
-    
+    header = "%s,Tlpp" % (header)
+
     if "modshiftTask" in clip.config.taskList:
-        for k in clip.modshift.keys():    
+        for k in clip.modshift.keys():
             text = "%s,%f" % (text, clip['modshift'][k])
             header = "%s,%s" % (header, k)
-    
+
     for k in clip.robovet.keys():
         text = "%s, %s" % (text, str(clip['robovet'][k]))
         header = "%s,rv_%s" % (header, k)
-    
+
     return text,header
 
 
 def runOneDv(detrendType , sector, tic, planetNum, period, epoch, tdepth, tdur, debugMode=True):
-    
+
     cfg = createConfig(detrendType, sector, tic, planetNum, period, epoch, tdepth, tdur, debugMode=True)
- 
+
     clip = tessPipeline.runOne(cfg,returnClip=True)
-    
+
     out = clipboard.Clipboard(isSignificantEvent=True, isCandidate=True, reasonForFail="None")
     # This is an attempt at quickly vetting the signals.
     # This should be its own task.
-    
+
     return clip
-    
+
 def runAllTces(tceFile,sector,outfile):
     """
     Run for all TCEs
     """
     df=p.read_csv(tceFile,comment='#')
-    
+
     for index,row in df[37:38].iterrows():
 
         clip = runOneDv(sector,row.ticid,row.planetNumber)
         text,header = outputInfo(clip)
-        
+
         #Write out decision
         with open(outfile,"a") as fp:
             if index == 0:
-                fp.write(header+"\n")                
+                fp.write(header+"\n")
             fp.write(text + "\n")
 #	except:
 #		print "Error"
@@ -152,34 +152,34 @@ def runExport(clip,output):
         clip=stel.estimatePlanetProp(clip)
     except:
         print('No Stellar Values')
-        
+
     outstr,header=ex.createExportString(clip, delimiter=" ", badValue="nan")
 
-    fid=open(output,'a') 
+    fid=open(output,'a')
     #fid.write("%s\n" % header)
     fid.write("%s\n" % outstr)
-    fid.close()    
+    fid.close()
 
     tag="%i-%02i-%04i-%s" % (clip.config.value,per,epoch,clip.config.detrendType)
     outfile="%s/%i/jvet%s" % (basedir,int(clip.config.value),tag)
-    
+
     thedir=basedir + str(int(clip.config.value))
     try:
         os.mkdir(thedir)
     except OSError:
         donothing = -999.
 #        print "Cannot create directory " + thedir
-    
+
     date=datetime.datetime.now()
 
     if ('disposition' not in clip.keys()):
         clip['disposition'] = 'No Disposition Determined'
         clip.disposition.isCandidate = 0
         clip.disposition.isSignificantEvent = 0
-       
+
     clip['value'] = clip.config.value
 
     mpp.plot_multipages(outfile, clip, date)
 
-        
+
     return outfile
