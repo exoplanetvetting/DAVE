@@ -24,7 +24,8 @@ __URL__ = "$URL$"
 from scipy.signal import savgol_filter
 import matplotlib.pyplot as mp
 import numpy as np
-import fft
+#import fft
+import dave.misc.fft as fft
 
 keplerLongCadence_s = 1765.4679
 keplerLongCadence_days = keplerLongCadence_s / float(86400)
@@ -118,7 +119,7 @@ def computeSgCdpp_ppm(y, transitDuration_cadences=13, plot=False):
     polyorder=2
     noiseNorm = 1.40
     #Name change for consistency with original algorithm
-    cadencesPerTransit = transitDuration_cadences
+    cadencesPerTransit = int(transitDuration_cadences)
 
     if cadencesPerTransit < 4:
         raise ValueError("Cadences per transit must be >= 4")

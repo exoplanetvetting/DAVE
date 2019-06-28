@@ -1,5 +1,6 @@
 
-import sincfilter
+#import sincfilter
+import dave.misc.sincfilter as sincfilter
 import numpy as np
 
 def indexOfOutliers(a, threshold_sigma=4, normFreq=.45):

@@ -164,7 +164,7 @@ def plotTpfLc(cube, hdr, *args, **kwargs):
 
     nCin, nR, nC = cube.shape
 
-    print nCin, nR, nC
+    print(nCin, nR, nC)
     nPix = nR*nC
 
     #Prevent automatic plotting of really big masks.

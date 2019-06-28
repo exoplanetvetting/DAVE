@@ -19,7 +19,7 @@ def example():
     mp.plot(0,0, 'ko', ms=12)
 
     plotErrorEllipse(x, y)
-    print computeProbabilityOfObservedOffset(x, y)
+    print(computeProbabilityOfObservedOffset(x, y))
     mp.grid()
     mp.axis([-15, 105, -60, 160])
 
