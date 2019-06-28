@@ -4,8 +4,8 @@
 #Note: binData is imported later in the file.
 #This allows me a fall back to the slow code if it can't be found.
 import numpy as np
-import nca
-
+#import nca
+from metric_learn import nca
 
 
 #Column definitions for the flux fits files. You no longer have to remember
@@ -171,8 +171,8 @@ class KeplerQuarter():
 def loadMultiQuarterPdc(archive, kepid, quarterList, \
     fitCubic=True, removeEarthPoint=False):
 
-    print "WARNING loadMultiQuarterPdc deprecated. Use"
-    print "loadMultiQuarter() instead"
+    print("WARNING loadMultiQuarterPdc deprecated. Use")
+    print("loadMultiQuarter() instead")
     return loadMultiQuarter(archive, kepid, quarterList, fitCubic=fitCubic, \
         removeEarthPoint=removeEarthPoint)
 
@@ -226,9 +226,9 @@ def loadMultiQuarter(archive, kepid, quarterList, \
         #Load file
         try:
             fits = archive.getLongCadence(kepid, q)
-        except IOError, e:
-            print "WARN: Failed to load data for %i Q%i" %(int(kepid), q)
-            print e
+        except IOError as e:
+            print("WARN: Failed to load data for %i Q%i" %(int(kepid), q))
+            print(e)
             continue
 
         data = getNumpyArrayFromFitsRec(fits)
@@ -546,7 +546,7 @@ def old_foldAndBinData(x, y, period, epoch, expTime, numBins):
 try:
     from binData import foldAndBinData
 except ImportError:
-    print "INFO: binData.so not found. Falling back on old_foldAndBinnedData"
+    print("INFO: binData.so not found. Falling back on old_foldAndBinnedData")
     foldAndBinData = old_foldAndBinData
 
 
@@ -610,7 +610,7 @@ def markTransitCadences(time, period_days, epoch_bkjd, duration_days,\
             .5*duration_days*numberOfDurations)
 
     if not np.any(idx):
-        print "WARN: No cadences found matching transit locations"
+        print("WARN: No cadences found matching transit locations")
     return idx
 
 

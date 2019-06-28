@@ -4,6 +4,8 @@ __URL__ = "$URL: svn+ssh://flux/home/fmullall/svn/kepler/py/mastio.py $"
 
 
 from dave.fileio.AbstractMast import KeplerAbstractClass
+from dave.fileio.AbstractMast_TESS import TESSAbstractClass
+from astroquery.mast import Observations
 import numpy as np
 import math
 import os
@@ -255,7 +257,7 @@ class K2Archive(KeplerAbstractClass):
 
         #Traps the case of attempting to download a lightcurve file for the
         #first three quarters, for which no lightcurve files were created.
-        if campaign < 3 and isFluxFile:
+        if campaign < 1 and isFluxFile:
             raise ValueError("No lightcurve files were created for Campaigns 0,1 or 2")
 
         return KeplerAbstractClass.getFile(self, kepid, campaign, isFluxFile,
@@ -286,18 +288,18 @@ class K2Archive(KeplerAbstractClass):
         subdir2 = "%i" %(1e5*math.floor( int(k2id)/1e5))
         subdir3 = int(kidStr[-5:])
 
+#        if int(campaign) < 3:
+#            subdir3 = "%i" %( 1e3*math.floor( subdir3/1e3))
+#        else:
+#            subdir3 = "%05i" %( 1e3*math.floor( subdir3/1e3))
 
-        if int(campaign) < 3:
-            subdir3 = "%i" %( 1e3*math.floor( subdir3/1e3))
-        else:
-            subdir3 = "%05i" %( 1e3*math.floor( subdir3/1e3))
+        subdir3 = "%05i" % int(1e3*math.floor( subdir3/1e3))
 
-        url = "%s/%s/%s/%s/%s/%s" %(self.remoteServer, remotePath, \
-                subdir1, subdir2, subdir3, filename)
-
+        url = "%s/%s/%s/%s/%s/%s" %(self.remoteServer, remotePath, subdir1, subdir2, subdir3, filename)
 
         if compressed:
             url = url + '.gz'
+        
         return url
 
 
@@ -351,8 +353,8 @@ class VanderburgArchive(KeplerAbstractClass):
         subdir3 = "%05i" %(int(kidStr[-5:]))
 
         #Note sure this is necessary
-        if int(campaign) < 3:
-            subdir3 = "%i" %( 1e3*math.floor( subdir3/1e3))
+#        if int(campaign) < 3:
+#            subdir3 = "%i" %( 1e3*math.floor( subdir3/1e3))
 
         url = "%s/%s/%s/%s/%s/%s" %(self.remoteServer, remotePath, \
                 subdir1, subdir2, subdir3, filename)
@@ -446,7 +448,7 @@ class K2SCArchive(KeplerAbstractClass):
         if localDir is None:
             localDir = os.path.join(os.environ['HOME'], '.mastio', 'k2sc')
 
-        remoteFluxPath = 'missions/hlsp/k2sc'
+        remoteFluxPath = 'missions/hlsp/k2sc/v2'
         remoteTpfPath = 'NoK2ScTpfFiles'  #No TPFs for K2Sc
         KeplerAbstractClass.__init__(self, localDir, remoteServer, remoteFluxPath, remoteTpfPath)
 
@@ -463,7 +465,7 @@ class K2SCArchive(KeplerAbstractClass):
         if not isFluxFile:
             raise ValueError("K2SC doesn't produce TPF files")
 
-        version = 1
+        version = 2
         #hlsp_k2sc_k2_llc_200004466-c03_kepler_v1_lc.fits
         fn = "hlsp_k2sc_k2_llc_%09i-c%02i_kepler_v%i_lc.fits"\
                 %(epic, campaign, version)
@@ -501,7 +503,7 @@ class EverestArchive(KeplerAbstractClass):
         if localDir is None:
             localDir = os.path.join(os.environ['HOME'], '.mastio', 'everest')
 
-        remoteFluxPath = 'missions/hlsp/everest'
+        remoteFluxPath = 'missions/hlsp/everest/v2'
         remoteTpfPath = 'NoEverestTpfFiles'  #No TPFs for Everest
         KeplerAbstractClass.__init__(self, localDir, remoteServer, remoteFluxPath, remoteTpfPath)
 
@@ -518,7 +520,7 @@ class EverestArchive(KeplerAbstractClass):
         if not isFluxFile:
             raise ValueError("Everest doesn't produce TPF files")
 
-        version = 1
+        version = 2 
         #eg hlsp_everest_k2_llc_206103150-c03_kepler_v1.0_lc.fits
         fn = "hlsp_everest_k2_llc_%09i-c%02i_kepler_v%3.1f_lc.fits"\
                 %(epic, campaign, version)
@@ -538,5 +540,171 @@ class EverestArchive(KeplerAbstractClass):
 
         if compressed:
             url = url + '.gz'
+        return url
+
+
+#############################################################################
+#############################################################################
+#############################################################################
+
+class TESSArchive(TESSAbstractClass):
+    def __init__(self, localDir=None, remoteServer="http://archive.stsci.edu"):
+#        """Download K2 target pixel files from the MAST archive
+#
+#        Input args:
+#        localDir   (str) Where to cache data
+#
+#        Optional Input Args:
+#        remoteServer:   (str) If MAST ever change the location of
+#                        their server, the new url can be passed.
+#
+#        Usage:
+#        #Create an archive object
+#        archive = TESSArchive("/large_disk/TESS")
+#
+#        tpf, hdr = archive.getTargetPixelFile(k2id, c, header=True)
+#        sc = archive.getTargetPixelFile(k2id, c, sc=True)
+#
+#
+#        Note:
+#        Only target pixel files are available from MAST at the moment
+#        The interface is a little different from KeplerArchive()
+#        """
+
+#        if localDir is None:
+#            localDir = os.path.join(os.environ['HOME'], '.mastio', 'tess')
+        localDir = os.path.join(os.environ['HOME'], '.mastio', 'tess')
+
+        remoteFluxPath = 'hlsps/tess-data-alerts'
+        remoteTpfPath = 'hlsps/tess-data-alerts'
+        TESSAbstractClass.__init__(self, localDir, remoteServer, remoteFluxPath, remoteTpfPath)
+
+
+#https://archive.stsci.edu/hlsps/tess-data-alerts/hlsp_tess-data-alerts_tess_phot_00281459670-s01_tess_v1_tp.fits
+
+    def getFile(self, kepid, campaign, isFluxFile, month=None, *args, **kwargs):
+        """See KeplerAbstractClass.getFile()"""
+        #Traps the case of attempting to download a lightcurve file for the
+        #first three quarters, for which no lightcurve files were created.
+        if campaign < 1 and isFluxFile:
+            raise ValueError("No lightcurve files were created for Campaigns 0,1 or 2")
+
+        return TESSAbstractClass.getFile(self, kepid, campaign, isFluxFile,
+                                                month, *args, **kwargs)
+
+    def getFilename(self, toi, campaign, isFluxFile, isShortCadence=False):
+
+#	print isFluxFile
+
+        if not isShortCadence:
+            #Long cadence
+            fType = 'tp'
+            if isFluxFile:
+                fType = 'lc'
+        else:
+            fType = 'spd-targ'
+            if isFluxFile:
+                fType = 'slc'
+
+        version = 1
+        fn = "hlsp_tess-data-alerts_tess_phot_%011i-s%02i_tess_v%1i_%s.fits" %(toi, campaign, version, fType)
+        
+        return fn
+
+    def makeRemoteUrl(self, remotePath, toi, campaign, filename, compressed):
+
+        url = "%s/%s/%s" %(self.remoteServer, remotePath, filename)
+
+#        if compressed:
+#            url = url + '.gz'
+        return url
+#############################################################################
+#############################################################################
+#############################################################################
+
+class TESSArchive_AllData(TESSAbstractClass):
+    def __init__(self, localDir=None, remoteServer="https://mast.stsci.edu"):#"https://archive.stsci.edu/"):#
+#        """Download K2 target pixel files from the MAST archive
+#
+#        Input args:
+#        localDir   (str) Where to cache data
+#
+#        Optional Input Args:
+#        remoteServer:   (str) If MAST ever change the location of
+#                        their server, the new url can be passed.
+#
+#        Usage:
+#        #Create an archive object
+#        archive = TESSArchive("/large_disk/TESS")
+#
+#        tpf, hdr = archive.getTargetPixelFile(k2id, c, header=True)
+#        sc = archive.getTargetPixelFile(k2id, c, sc=True)
+#
+#
+#        Note:
+#        Only target pixel files are available from MAST at the moment
+#        The interface is a little different from KeplerArchive()
+#        """
+
+#        if localDir is None:
+#            localDir = os.path.join(os.environ['HOME'], '.mastio', 'tess')
+        localDir = os.path.join(os.environ['HOME'], '.mastio', 'tess')
+
+        remoteFluxPath = 'api/v0.1/Download/file/?uri=mast:TESS/product'#'missions/tess/tid/'#'hlsps/tess-data-alerts'
+        remoteTpfPath = 'api/v0.1/Download/file/?uri=mast:TESS/product'#'missions/tess/tid/'#'hlsps/tess-data-alerts'
+
+        TESSAbstractClass.__init__(self, localDir, remoteServer, remoteFluxPath, remoteTpfPath)
+
+    def getFile(self, toi, sector, isFluxFile, month=None, *args, **kwargs):
+        """See KeplerAbstractClass.getFile()"""
+        #Traps the case of attempting to download a lightcurve file for the
+        #first three quarters, for which no lightcurve files were created.
+        if sector < 1 and isFluxFile:
+            raise ValueError("No lightcurve files were created for Campaigns 0,1 or 2")
+
+        return TESSAbstractClass.getFile(self, toi, sector, isFluxFile, month, *args, **kwargs)
+
+    def getFilename(self, toi, sector, isFluxFile, isShortCadence=False):
+
+        if not isShortCadence:
+            #Long cadence
+            fType = 'tp'
+            if isFluxFile:
+                fType = 'lc'
+        else:
+            fType = 'spd-targ'
+            if isFluxFile:
+                fType = 'slc'
+
+        version = 1
+
+#awkward TESS file naming
+#
+        toi_id_, sector_, tmp_ = "%016i" % toi, "s%04i/" % sector, "s%04i-%016i" % (sector, toi)
+        prefix_ = "tess2018234235059-" if sector == 2 else "tess2018206045859-"
+        suffix_ = "-0121-s_" if sector == 2 else "-0120-s_"
+
+        fn = prefix_ + "s%04i-%016i" % (sector, toi) + suffix_+ "%s.fits" % fType 
+#	fn_ = "s%04i/" % sector + toi_id_[0:4] + "/" + toi_id_[4:8] + "/" + toi_id_[8:12] + "/" + toi_id_[12:] + "/"
+#	fn = fn_ + prefix_ + tmp_ + suffix_ + "%s.fits" % fType
+#
+#awkward TESS file naming
+#	fn = "api/v0.1/Download/file/?uri=mast:TESS/product/tess*-s%04i-%016i*_%s.fits" %(sector, toi, fType)
+#	fn = "s%04i/toi_id_[0:3]/toi_id_[4:7]/toi_id_[8:11]/toi_id_[12:-1]"
+#	fn = "hlsp_tess-data-alerts_tess_phot_%011i-s%02i_tess_v%1i_%s.fits" %(toi, sector, version, fType)
+
+#https://archive.stsci.edu/missions/tess/tid/s0002/0000/0000/3072/3470/tess2018234235059-s0002-0000000030723470-0121-s_lc.fits
+#https://archive.stsci.edu/missions/tess/tid/s0002/0000/0003/0721/0830/tess2018234235059-s0002-0000000307210830-0121-s_tp.fits
+#https://archive.stsci.edu/missions/tess/tid/s0001/0000/0003/0028/7949/tess2018206045859-s0001-0000000300287949-0120-s_lc.fits
+
+
+        return fn
+
+    def makeRemoteUrl(self, remotePath, toi, sector, filename, compressed):
+
+        url = "%s/%s/%s" %(self.remoteServer, remotePath, filename)
+
+#        if compressed:
+#            url = url + '.gz'
         return url
 
