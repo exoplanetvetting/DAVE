@@ -328,7 +328,7 @@ def indivTransitPlot(clip,ndur):
         if np.mod(i,1)==0:
             plt.plot(time-i*period/2,flux,'k.')
     plt.xlim(posBegEpochs[nt],posEndEpochs[nt])
-    plt.ylim(-5*depth,2.*depth)
+    plt.ylim(-5*depth,3.*depth)
     plt.plot((mid-0.5*dur/24,mid+0.5*dur/24),(-1*depth,-1*depth),'c-',linewidth=3)
     ax=plt.gca()
     plt.text(.1,.1, 'half Period',transform=ax.transAxes,color='m',fontsize=13)
