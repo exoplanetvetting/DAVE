@@ -411,16 +411,15 @@ def PLOT_CENTROIDS_TESS(clip):
 #    print(ootCol_prf, ootRow_prf)
 #    print(diffCol_prf, diffRow_prf)
 
-    itrCol_psf, itrRow_psf, ootCol_psf, ootRow_psf, diffCol_psf, diffRow_psf = psfCentroids_vbk(clip)
-
+#    itrCol_psf, itrRow_psf, ootCol_psf, ootRow_psf, diffCol_psf, diffRow_psf = psfCentroids_vbk(clip)
 #    diffCol_prf, diffRow_prf = diffCol_psf, diffRow_psf
 #    ootCol_prf, ootRow_prf = ootCol_psf, ootRow_psf
 
     diffC = (ootCol_prf - diffCol_prf)
     diffR = (ootRow_prf - diffRow_prf)
 
-    itr_mean_img_, oot_mean_img_, diff_mean_img_, itr_mean_cube_, oot_mean_cube_, diff_mean_cube_, transit_number_ = generateImages(clip)
-    itr_mean_img_, oot_mean_img_, diff_mean_img_ = np.asarray(itr_mean_img_), np.asarray(oot_mean_img_), np.asarray(diff_mean_img_)
+#    itr_mean_img_, oot_mean_img_, diff_mean_img_, itr_mean_cube_, oot_mean_cube_, diff_mean_cube_, transit_number_ = generateImages(clip)
+#    itr_mean_img_, oot_mean_img_, diff_mean_img_ = np.asarray(itr_mean_img_), np.asarray(oot_mean_img_), np.asarray(diff_mean_img_)
 
     cube = clip['serve.cube']
     time = clip['serve.time']
@@ -431,7 +430,6 @@ def PLOT_CENTROIDS_TESS(clip):
     isnan = np.isnan(time)
     time = time[~isnan]
     cube = cube[~isnan]
-
 
     transits = getIngressEgressCadences(time, period_days, epoch_days, duration_days)
 
@@ -444,7 +442,6 @@ def PLOT_CENTROIDS_TESS(clip):
         before, after, diff = generateDiffImg(cube, cin, plot=plot)
         diff_img_[jj,:,:] = diff
         oot_img_[jj,:,:] = 0.5*(before + after)
-
 
     oot_mean_img_ = np.nanmean(oot_img_, axis = 0)
     diff_mean_img_ = np.nanmean(diff_img_, axis = 0)
@@ -790,16 +787,15 @@ def PLOT_INDIV_IMG_TESS(clip):
 #    disp = lambda x: mp.imshow(x, cmap=mp.cm.YlGnBu_r, origin = "bottom", interpolation = "nearest")#, extent = extent_)
 #    disp = lambda x: mp.imshow(x, cmap=parula_map, origin="bottom",interpolation="nearest")
 
-    itr_mean_img_, oot_mean_img_, diff_mean_img_, cube_itr_mean_, cube_oot_mean_, cube_diff_mean_, transit_number_ = generateImages(clip)
-    itr_mean_img_, oot_mean_img_, diff_mean_img_ = np.asarray(itr_mean_img_), np.asarray(oot_mean_img_), np.asarray(diff_mean_img_)
+#    itr_mean_img_, oot_mean_img_, diff_mean_img_, cube_itr_mean_, cube_oot_mean_, cube_diff_mean_, transit_number_ = generateImages(clip)
+#    itr_mean_img_, oot_mean_img_, diff_mean_img_ = np.asarray(itr_mean_img_), np.asarray(oot_mean_img_), np.asarray(diff_mean_img_)
 
     centroids = clip['diffImgCentroids.results']
 
     ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
     diffCol_prf, diffRow_prf = centroids[:,2], centroids[:,3]
 
-    itrCol_psf, itrRow_psf, ootCol_psf, ootRow_psf, diffCol_psf, diffRow_psf = psfCentroids_vbk(clip)
-
+#    itrCol_psf, itrRow_psf, ootCol_psf, ootRow_psf, diffCol_psf, diffRow_psf = psfCentroids_vbk(clip)
 #    diffCol_prf, diffRow_prf = diffCol_psf, diffRow_psf
 #    ootCol_prf, ootRow_prf = ootCol_psf, ootRow_psf
 
@@ -832,8 +828,6 @@ def PLOT_INDIV_IMG_TESS(clip):
     diff_mean_img_ = np.nanmean(diff_img_, axis = 0)
 
     itr_mean_img_ = oot_mean_img_
-
-
 
     ss_ = itr_mean_img_.shape
 
@@ -1085,20 +1079,19 @@ def plotCentroidOffsets_TESS(clip):
     ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
     diffCol_prf, diffRow_prf = centroids[:,2], centroids[:,3]
 
-    itrCol_psf, itrRow_psf, ootCol_psf, ootRow_psf, diffCol_psf, diffRow_psf = psfCentroids_vbk(clip)
+#    itrCol_psf, itrRow_psf, ootCol_psf, ootRow_psf, diffCol_psf, diffRow_psf = psfCentroids_vbk(clip)
 
     diffC = (ootCol_prf - diffCol_prf)
     diffR = (ootRow_prf - diffRow_prf)
 
-    itr_mean_img_, oot_mean_img_, diff_mean_img_, itr_mean_cube_, oot_mean_cube_, diff_mean_cube_, transit_number_ = generateImages(clip)
-    itr_mean_img_, oot_mean_img_, diff_mean_img_ = np.asarray(itr_mean_img_), np.asarray(oot_mean_img_), np.asarray(diff_mean_img_)
+#    itr_mean_img_, oot_mean_img_, diff_mean_img_, itr_mean_cube_, oot_mean_cube_, diff_mean_cube_, transit_number_ = generateImages(clip)
+#    itr_mean_img_, oot_mean_img_, diff_mean_img_ = np.asarray(itr_mean_img_), np.asarray(oot_mean_img_), np.asarray(diff_mean_img_)
 
     hdr_ = clip['serve.tpfHeader']    
 
     if clip['config.detrendType'] == "eleanor":
     	col_zero_, row_zero_ = int(hdr_['CRPIX1']), int(hdr_['CRPIX2'])
     	epic_Col, epic_Row = col_zero_ + int(hdr_['TPF_W']), row_zero_ + int(hdr_['TPF_H'])
-
 
     cube = clip['serve.cube']
     time = clip['serve.time']
