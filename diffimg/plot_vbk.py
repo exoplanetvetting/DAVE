@@ -403,6 +403,7 @@ def PLOT_CENTROID_OFFSETS_VBK(clip):
 ##
 def PLOT_CENTROIDS_TESS(clip):
 
+    out = clip['diffImgCentroids']
     centroids = clip['diffImgCentroids.results']
 
     ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
@@ -436,17 +437,29 @@ def PLOT_CENTROIDS_TESS(clip):
     oot_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
     diff_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
 
+    transit_flags_ = np.zeros(len(transits), dtype = bool)
     for jj in range(len(transits)):
-        cin = transits[jj]
-        plot = False
-        before, after, diff = generateDiffImg(cube, cin, plot=plot)
-        diff_img_[jj,:,:] = diff
-        oot_img_[jj,:,:] = 0.5*(before + after)
+        key = 'transit-%04i' %(jj)
+        if out[key]['errorCode'] < 7:
+            cin = transits[jj]
+            plot = False
+            before, after, diff = generateDiffImg(cube, cin, plot=plot)
+            diff_img_[jj,:,:] = diff
+            oot_img_[jj,:,:] = 0.5*(before + after)
+        else:
+            transit_flags_[jj] = True
 
+    transits = transits[~transit_flags_]
+    diff_img_, oot_img_ = diff_img_[~transit_flags_], oot_img_[~transit_flags_]
+    ootCol_prf, ootRow_prf = ootCol_prf[~transit_flags_], ootRow_prf[~transit_flags_]
+    diffCol_prf, diffRow_prf = diffCol_prf[~transit_flags_], diffRow_prf[~transit_flags_]
+    diffC, diffR = diffC[~transit_flags_], diffR[~transit_flags_]
+
+#    print(oot_img_.shape, oot_img_.shape)
     oot_mean_img_ = np.nanmean(oot_img_, axis = 0)
     diff_mean_img_ = np.nanmean(diff_img_, axis = 0)
-
     itr_mean_img_ = oot_mean_img_
+
 #    print(diff_img_.shape, oot_img_.shape, oot_mean_img_.shape, diff_mean_img_.shape)
 #    xxxx
 
@@ -568,6 +581,7 @@ def PLOT_CENTROIDS_TESS(clip):
 ##
 def PLOT_DIFF_IMG_TESS(clip):
 
+    out = clip['diffImgCentroids']
     centroids = clip['diffImgCentroids.results']
     ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
     diffCol_prf, diffRow_prf = centroids[:,2], centroids[:,3]
@@ -790,6 +804,7 @@ def PLOT_INDIV_IMG_TESS(clip):
 #    itr_mean_img_, oot_mean_img_, diff_mean_img_, cube_itr_mean_, cube_oot_mean_, cube_diff_mean_, transit_number_ = generateImages(clip)
 #    itr_mean_img_, oot_mean_img_, diff_mean_img_ = np.asarray(itr_mean_img_), np.asarray(oot_mean_img_), np.asarray(diff_mean_img_)
 
+    out = clip['diffImgCentroids']
     centroids = clip['diffImgCentroids.results']
 
     ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
@@ -810,23 +825,31 @@ def PLOT_INDIV_IMG_TESS(clip):
     time = time[~isnan]
     cube = cube[~isnan]
 
-
     transits = getIngressEgressCadences(time, period_days, epoch_days, duration_days)
 
     oot_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
     diff_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
 
+    transit_flags_ = np.zeros(len(transits), dtype = bool)
     for jj in range(len(transits)):
-        cin = transits[jj]
-        plot = False
-        before, after, diff = generateDiffImg(cube, cin, plot=plot)
-        diff_img_[jj,:,:] = diff
-        oot_img_[jj,:,:] = 0.5*(before + after)
+        key = 'transit-%04i' %(jj)
+        if out[key]['errorCode'] < 7:
+            cin = transits[jj]
+            plot = False
+            before, after, diff = generateDiffImg(cube, cin, plot=plot)
+            diff_img_[jj,:,:] = diff
+            oot_img_[jj,:,:] = 0.5*(before + after)
+        else:
+            transit_flags_[jj] = True
 
+    transits = transits[~transit_flags_]
+    diff_img_, oot_img_ = diff_img_[~transit_flags_], oot_img_[~transit_flags_]
+    ootCol_prf, ootRow_prf = ootCol_prf[~transit_flags_], ootRow_prf[~transit_flags_]
+    diffCol_prf, diffRow_prf = diffCol_prf[~transit_flags_], diffRow_prf[~transit_flags_]
 
+#    print(oot_img_.shape, oot_img_.shape)
     oot_mean_img_ = np.nanmean(oot_img_, axis = 0)
     diff_mean_img_ = np.nanmean(diff_img_, axis = 0)
-
     itr_mean_img_ = oot_mean_img_
 
     ss_ = itr_mean_img_.shape
@@ -1074,6 +1097,7 @@ def plotCentroidOffsets(centroids):
 ##
 def plotCentroidOffsets_TESS(clip):
 
+    out = clip['diffImgCentroids']
     centroids = clip['diffImgCentroids.results']
 
     ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
@@ -1081,8 +1105,7 @@ def plotCentroidOffsets_TESS(clip):
 
 #    itrCol_psf, itrRow_psf, ootCol_psf, ootRow_psf, diffCol_psf, diffRow_psf = psfCentroids_vbk(clip)
 
-    diffC = (ootCol_prf - diffCol_prf)
-    diffR = (ootRow_prf - diffRow_prf)
+    diffC, diffR = (ootCol_prf - diffCol_prf), (ootRow_prf - diffRow_prf)
 
 #    itr_mean_img_, oot_mean_img_, diff_mean_img_, itr_mean_cube_, oot_mean_cube_, diff_mean_cube_, transit_number_ = generateImages(clip)
 #    itr_mean_img_, oot_mean_img_, diff_mean_img_ = np.asarray(itr_mean_img_), np.asarray(oot_mean_img_), np.asarray(diff_mean_img_)
@@ -1108,17 +1131,26 @@ def plotCentroidOffsets_TESS(clip):
     oot_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
     diff_img_ = np.zeros((len(transits), cube.shape[1], cube.shape[2]))
 
+    transit_flags_ = np.zeros(len(transits), dtype = bool)
     for jj in range(len(transits)):
-        cin = transits[jj]
-        plot = False
-        before, after, diff = generateDiffImg(cube, cin, plot=plot)
-        diff_img_[jj,:,:] = diff
-        oot_img_[jj,:,:] = 0.5*(before + after)
+        key = 'transit-%04i' %(jj)
+        if out[key]['errorCode'] < 7:
+            cin = transits[jj]
+            plot = False
+            before, after, diff = generateDiffImg(cube, cin, plot=plot)
+            diff_img_[jj,:,:] = diff
+            oot_img_[jj,:,:] = 0.5*(before + after)
+        else:
+            transit_flags_[jj] = True
 
+    transits = transits[~transit_flags_]
+    diff_img_, oot_img_ = diff_img_[~transit_flags_], oot_img_[~transit_flags_]
+    ootCol_prf, ootRow_prf = ootCol_prf[~transit_flags_], ootRow_prf[~transit_flags_]
+    diffCol_prf, diffRow_prf = diffCol_prf[~transit_flags_], diffRow_prf[~transit_flags_]
+    diffC, diffR = diffC[~transit_flags_], diffR[~transit_flags_]
 
     oot_mean_img_ = np.nanmean(oot_img_, axis = 0)
     diff_mean_img_ = np.nanmean(diff_img_, axis = 0)
-
     itr_mean_img_ = oot_mean_img_
 
     ss_ = itr_mean_img_.shape
