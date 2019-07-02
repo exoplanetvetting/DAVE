@@ -12,8 +12,9 @@ from __future__ import division
 
 from pdb import set_trace as debug
 
-# from dave.lpp.lppTransform import computeLPPTransitMetric # save for later
+from dave.lpp.lppTransform import computeLPPTransitMetric
 import dave.tessPipeline.tessfunc as tessfunc
+from dave.tessPipeline.pertransitcentroids import getIngressEgressCadences
 import dave.pipeline.clipboard as clipboard
 import dave.vetting.ModShift as ModShift
 from dave.pipeline.task import task
@@ -84,7 +85,7 @@ def serveTask(clip):
     tic = clip['config.tic']
     planNum = clip['config.planetNum']
     localPath = clip['config.dvtLocalPath']
-
+ 
     if source_ == "tess_2min":
 
         dvt, hdr, tpf_, hdr_tpf = tessfunc.serve(sector, tic, planNum, localPath, source_)
@@ -116,7 +117,7 @@ def serveTask(clip):
             out['modelFlux'] = (dvt['PDCSAP_FLUX']/np.nanmedian(dvt['PDCSAP_FLUX'])) - 1.
 
         out['flags'] = np.isnan(flux_tmp)
-
+        
         par = dict()
         par['orbitalPeriod_days'] = clip['config.period']#hdr['TPERIOD']#
         par['epoch_btjd'] = clip['config.tepoch']#hdr['TEPOCH']#
@@ -125,7 +126,7 @@ def serveTask(clip):
 
         clip['serve'] = out
         clip['serve.param'] = par
-
+ 
     #Enforce contract
         clip['serve.time']
         clip['serve.cube']
@@ -172,16 +173,16 @@ def serveTask(clip):
         out['tpfHeader'] = hdr_tpf
         out['detrendFlux'] = lc['PDCSAP_FLUX']
         out['flags'] = np.isnan(lc['PDCSAP_FLUX'])
-
+    
         par = dict()
         par['orbitalPeriod_days'] = clip['config.period']
         par['epoch_btjd'] = clip['config.tepoch']
         par['transitDepth_ppm'] = clip['config.tdepth']
         par['transitDuration_hrs'] = clip['config.tdur']
-
+    	
         clip['serve'] = out
         clip['serve.param'] = par
-
+ 
     #Enforce contract
         clip['serve.time']
         clip['serve.cube']
@@ -242,7 +243,7 @@ def serveTask(clip):
 
         clip['serve'] = out
         clip['serve.param'] = par
-
+ 
     	#Enforce contract
         clip['serve.time']
         clip['serve.cube']
@@ -280,7 +281,7 @@ def serveTask(clip):
                 time = data[:,0]
                 mag_raw = data[:,1]
                 flux = 10**(-0.4*data[:,1])
-
+        
             return time, flux
 #
 #
@@ -315,7 +316,7 @@ def serveTask(clip):
             elif sector == 3:
                 m[(x - np.min(x) >= 11.5) & (x - np.min(x) <= 14.5)] = False
                 m[(x - np.min(x) <= 2.25)] = False
-                m[(x - np.min(x) > 26.5)] = False
+                m[(x - np.min(x) > 26.5)] = False 
             elif sector == 4:
                 m[(x - np.min(x) >= 7.) & (x - np.min(x) <= 15.)] = False
                 m[(x - np.min(x) >= 25.)] = False
@@ -348,7 +349,7 @@ def serveTask(clip):
                 if sector[jj] == 1:
                     time_raw, flux_raw = get_data_(tic, sector[jj])
                     time = time_raw
-                    time_detrend_, flux_detrend_, t0, x_bak_, y_bak_, smooth, m = detrend_data_(time, flux_raw, sector[jj])
+                    time_detrend_, flux_detrend_, t0, x_bak_, y_bak_, smooth, m = detrend_data_(time, flux_raw, sector[jj])  
                     time_detrend_ = time_detrend_ + 0.*t0
                 else:
                     time_, flux_ = get_data_(tic, sector[jj])
@@ -377,7 +378,7 @@ def serveTask(clip):
 
         clip['serve'] = out
         clip['serve.param'] = par
-
+ 
     	#Enforce contract
         clip['serve.time']
         clip['serve.cube']
@@ -423,7 +424,7 @@ def detrendTask(clip):
     x = clip['serve.time']
     y = clip['serve.detrendFlux']/np.nanmedian(clip['serve.detrendFlux'])
     flags = clip['serve.flags']
-
+    
     mu = np.median(y)
     y = (y / mu - 1)
 
@@ -483,11 +484,11 @@ def blsTask(clip):
     if clip['config.detrendType'] != "ryan":
     	flux_norm[flags] = 0
 
-    min_period_ = 0.5
-    max_period_ = int((0.8*(max(time_days) - min(time_days))))
+    min_period_ = 1.#0.5
+    max_period_ = (0.8*(max(time_days) - min(time_days)))
     period_grid = np.exp(np.linspace(np.log(min_period_), np.log(max_period_), 50000))
     durations_ = 0.05+0.05*np.linspace(0,4,5)
-
+  
     time_days_ref_ = min(time_days)
     time_days -= time_days_ref_
 #    print(np.nanmean(flux_norm), max(flux_norm), min(flux_norm))
@@ -550,7 +551,7 @@ def trapezoidFitTask(clip):
 #    print(time_days[0:10], clip['serve.param.epoch_btjd'])
 #    print(flux_norm[0:10])
 #    print(flags[0:10])
-
+    
 #    time_days -= min(time_days)
 
     out = tf.getSnrOfTransit(time_days, flux_norm, unc, flags, \
@@ -576,7 +577,7 @@ def trapezoidFitTask(clip):
 
 @task
 def modshiftTask(clip):
-
+    
     time = clip['serve.time']
 
     if clip['config.detrendType'] == "tess_2min":
@@ -589,7 +590,7 @@ def modshiftTask(clip):
     elif clip['config.detrendType'] == "ryan":
         flux = clip['serve.detrendFlux']
         model = clip['trapFit.bestFitModel']
-
+	
     period_days = clip['trapFit.period_days']#clip['serve.param.orbitalPeriod_days']
     epoch_btjd = clip['trapFit.epoch_bkjd']#clip['serve.param.epoch_btjd']
 
@@ -622,12 +623,12 @@ def modshiftTask(clip):
     return clip
 ######################################
 
-#from dave.lpp.loadLppData import MapInfo # save for later
+from dave.lpp.loadLppData import MapInfo
 @task
 def lppMetricTask(clip):
-
+    
     class clipToLppInputClass(object):
-
+    
         def __init__(self, clip):
             """
             create a TCE class from the clipboard info
@@ -637,8 +638,8 @@ def lppMetricTask(clip):
             self.dur=clip['serve.param.transitDuration_hrs']
             self.period=clip['serve.param.orbitalPeriod_days']
             self.flux=clip['serve.detrendFlux']
-            self.mes = 10.
-
+            self.mes = 10.        
+            
     data=clipToLppInputClass(clip)
     mapInfoFile = clip['config.lppMapFile']
     mapInfoObj = MapInfo(mapInfoFile)
@@ -657,27 +658,27 @@ def lppMetricTask(clip):
 ######################################
 
 from dave.tessPipeline.sweet import runSweetTest
-@task
+@task 
 def sweetTask(clip):
     time = clip['serve.time']
     flux = clip['serve.detrendFlux'] if clip['config.detrendType'] == "tess_2min" else clip['detrend.flux_frac']
     period_days = clip['serve.param.orbitalPeriod_days']
     epoch_btjd = clip['serve.param.epoch_btjd']
-    duration_hrs = clip['serve.param.transitDuration_hrs']
+    duration_hrs = clip['serve.param.transitDuration_hrs']     
 
-    idx = np.isnan(time) | np.isnan(flux)
+    idx = np.isnan(time) | np.isnan(flux) 
     time = time[~idx]
     flux = flux[~idx]
-
+    
     duration_days = duration_hrs / 24.
     result = runSweetTest(time, flux, period_days, epoch_btjd, duration_days)
-
+    
     clip['sweet'] = result
-
+    
     #Enforce contract
     clip['sweet.msg']
     clip['sweet.amp']
-
+    
     return clip
 ######################################
 
@@ -685,19 +686,21 @@ def sweetTask(clip):
 from dave.tessPipeline.pertransitcentroids import measurePerTransitCentroids
 @task
 def centroidsTask(clip):
-
+    
     time = clip['serve.time']
     cube = clip['serve.cube']
     period_days = clip['trapFit.period_days']#clip['serve.param.orbitalPeriod_days']
     epoch_btjd = clip['trapFit.epoch_bkjd']#clip['serve.param.epoch_btjd']
-    duration_hrs = clip['trapFit.duration_hrs']#clip['serve.param.transitDuration_hrs']
+    duration_hrs = clip['trapFit.duration_hrs']#clip['serve.param.transitDuration_hrs']  
 
     duration_days = duration_hrs / 24.
-
+   
 #    print(period_days, epoch_btjd, duration_days)
 #    xxxx
 
     res = measurePerTransitCentroids(time, cube, period_days, epoch_btjd, duration_days, plotFilePattern=None)
+
+#    xxxx
 
     res['method'] = "Fast Gaussian PSF fitting"
     clip['diffImgCentroids'] = res
@@ -755,7 +758,7 @@ def vbkPsfCentroidsTask(clip):
 
     	col_zero_, row_zero_ = int(hdr_['1CRV4P']), int(hdr_['2CRV4P'])
     	epic_Col, epic_Row = col_zero_ + int(hdr_['1CRPX4']), row_zero_ + int(hdr_['2CRPX4'])
-
+    
     if clip['config.detrendType'] == "eleanor":
 
     	col_zero_, row_zero_ = int(hdr_['CRPIX1']), int(hdr_['CRPIX2'])
@@ -776,7 +779,7 @@ def vbkPsfCentroidsTask(clip):
 #
     transit_number_ = 1
     transits_ = [itr_cadence[0]]
-    tmp_idx_, = np.where(oot_cadence < transits_[0])
+    tmp_idx_, = np.where(oot_cadence < transits_[0])  
     no_transits_ = oot_cadence[tmp_idx_[-1]]
 
     for ii in range(1,len(itr_cadence)):
@@ -818,7 +821,7 @@ def vbkPsfCentroidsTask(clip):
             idx_before_, = np.where(oot_cadence < transits_[2*ii])
             idx_before = oot_cadence[idx_before_[-1-number_of_cadences_in_transit_:]]
 
-            idx_after_, = np.where(oot_cadence > transits_[2*ii+1])
+            idx_after_, = np.where(oot_cadence > transits_[2*ii+1])				
             idx_after = oot_cadence[idx_after_[0:number_of_cadences_in_transit_+1]]
 
             itr_mean_img_by_transit_ = np.nanmean(cube[idx_in_transit,:,:], axis = 0)
@@ -829,7 +832,7 @@ def vbkPsfCentroidsTask(clip):
 
             diff_mean_img_by_transit_ = oot_mean_img_by_transit_ - itr_mean_img_by_transit_
 #		diff_mean_img_by_transit_ = diff_mean_img_by_transit_ - np.min(diff_mean_img_by_transit_).flatten()
-
+		
             itrCol_by_transit_, itrRow_by_transit_, itr_cov_by_transit_ = intertial_axis(itr_mean_img_by_transit_)
             ootCol_by_transit_, ootRow_by_transit_, oot_cov_by_transit_ = intertial_axis(oot_mean_img_by_transit_)
             diffCol_by_transit_, diffRow_by_transit_, diff_cov_by_transit_ = intertial_axis(diff_mean_img_by_transit_)
@@ -886,13 +889,30 @@ def dispositionTask(clip):
     minProbForFail = 0.99
     centVet = {'Warning':"None"}
     try:
-    	centroids = clip['diffImgCentroids.results']
+        centroids = clip['diffImgCentroids.results']
+        ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
+        diffCol_prf, diffRow_prf = centroids[:,2], centroids[:,3]
+        diffC, diffR = (ootCol_prf - diffCol_prf), (ootRow_prf - diffRow_prf)
 
-    	ootCol_prf, ootRow_prf = np.mean([centroids[:,0],centroids[:,4]], axis = 0), np.mean([centroids[:,1],centroids[:,5]], axis = 0)
-    	diffCol_prf, diffRow_prf = centroids[:,2], centroids[:,3]
-    	diffC, diffR = (ootCol_prf - diffCol_prf), (ootRow_prf - diffRow_prf)
+        time = clip['serve.time']
+        period_days = clip['trapFit.period_days']
+        epoch_days = clip['trapFit.epoch_bkjd']
+        duration_days = clip['trapFit.duration_hrs']/24.
 
-    	prob, chisq = covar.computeProbabilityOfObservedOffset(diffC, diffR)
+        isnan = np.isnan(time)
+        time = time[~isnan]
+
+        transits = getIngressEgressCadences(time, period_days, epoch_days, duration_days)
+        transit_flags_ = np.zeros(len(transits), dtype = bool)
+
+        for jj in range(len(transits)):
+            key = 'transit-%04i' %(jj)
+            if clip['diffImgCentroids'][key]['errorCode'] == 7:
+                transit_flags_[jj] = True
+
+        diffC, diffR = diffC[~transit_flags_], diffR[~transit_flags_]
+
+        prob, chisq = covar.computeProbabilityOfObservedOffset(diffC, diffR)
     except ValueError as e:
         centVet['Warning'] = "Probability not computed: %s" %(e)
         prob = 0
@@ -924,13 +944,13 @@ def dispositionTask(clip):
         fluxVet['comments'] = 'NO_MODSHIFT'
 
     out['fluxVet'] = fluxVet
-
-    lpp_th = 4  #Threshold for LPP
+    
+    lpp_th = 4  #Threshold for LPP   
     if clip.lpp.TLpp > lpp_th:
         fluxVet['disp'] = 'false positive'
         fluxVet['comments']= fluxVet['comments'] + "-LPP_TOO_HIGH"
         fluxVet['not_trans_like']=1
-
+    
     sweet_th = 3.5
     if (clip.sweet.amp[0,-1] > sweet_th) | \
        (clip.sweet.amp[1,-1] >sweet_th) | \
