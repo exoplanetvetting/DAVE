@@ -495,7 +495,7 @@ def blsTask(clip):
 #    print(min(time_days))
 #    xxxxx
 
-    bls = BoxLeastSquares(time_days, flux_norm)
+    bls = BoxLeastSquares(time_days[~flags], flux_norm[~flags])
     bls_power = bls.power(period_grid, durations_, oversample=20)
 
     index = np.argmax(bls_power.power)
