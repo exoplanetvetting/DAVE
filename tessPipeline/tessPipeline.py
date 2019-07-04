@@ -476,7 +476,7 @@ def detrendTask(clip):
 
 @task
 def blsTask(clip):
-    from astropy.stats import BoxLeastSquares
+    from astropy.timeseries import BoxLeastSquares
 
     time_days = clip['serve.time']
     flux_norm = clip['serve.detrendFlux'] if clip['config.detrendType'] == "tess_2min" else clip['detrend.flux_frac']
