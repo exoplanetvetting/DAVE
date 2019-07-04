@@ -22,7 +22,7 @@ The pipeline performs the following steps:
 ```
 python checkRequirements.py
 ```
-You may also need to pip install the following packages: astropy, pyfits, astroquery, conda install gnuplot (for which you will need Conda-Forge), PyGnuplot, parmap, clipboard, lpproj, and numba. 
+You may also need to pip install the following packages: astropy, metric_learn, sklearn ,pyfits, astroquery, conda install gnuplot (for which you will need Conda-Forge), PyGnuplot, parmap, clipboard, lpproj, and numba. If you get an error when trying to run "from sklearn.utils.extmath import pinvh" in python, you will need to replace this line in file "~/site-packages/metric_learn/sdml.py" with "from scipy.linalg import pinvh".
 
 ## Example use for K2
 from python:
