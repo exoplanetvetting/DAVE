@@ -487,13 +487,15 @@ def blsTask(clip):
     min_period_ = 1.#0.5
     max_period_ = (0.8*(max(time_days) - min(time_days)))
     period_grid = np.exp(np.linspace(np.log(min_period_), np.log(max_period_), 50000))
-    durations_ = 0.05+0.05*np.linspace(0,4,5)
+    durations_ = 0.05+0.05*np.linspace(0,8,9) if clip['config.period'] < 1.5 else 0.05+0.05*np.linspace(0,4,5)
   
     time_days_ref_ = min(time_days)
     time_days -= time_days_ref_
 #    print(np.nanmean(flux_norm), max(flux_norm), min(flux_norm))
 #    print(min(time_days))
 #    xxxxx
+
+#    print(time_days.shape, flux_norm.shape)
 
     bls = BoxLeastSquares(time_days[~flags], flux_norm[~flags])
     bls_power = bls.power(period_grid, durations_, oversample=20)
@@ -913,6 +915,7 @@ def dispositionTask(clip):
         diffC, diffR = diffC[~transit_flags_], diffR[~transit_flags_]
 
         prob, chisq = covar.computeProbabilityOfObservedOffset(diffC, diffR)
+
     except ValueError as e:
         centVet['Warning'] = "Probability not computed: %s" %(e)
         prob = 0
@@ -966,8 +969,6 @@ def dispositionTask(clip):
         if fluxVet['not_trans_like'] > 0:
             out['isSignificantEvent'] = False
 
-#    clip['fluxVet']= fluxVet
-#    clip['disposition']= fluxVet
     clip['disposition'] = out
     clip['disposition.isSignificantEvent']
     clip['disposition.isCandidate']

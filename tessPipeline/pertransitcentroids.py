@@ -60,17 +60,27 @@ def measurePerTransitCentroids(time, cube, period_days, epoch_days, duration_day
 
     out = dict()
     transits = getIngressEgressCadences(time, period_days, epoch_days, duration_days)
+    
+    good_transit_flags_ = []
+    bad_transit_flags_ = np.zeros(len(transits), dtype = bool)
 
-    for i in range(len(transits)):
-        cin = transits[i]
-        res = measureCentroidShift(cube, cin, plot)
-        out['transit-%04i' %(i)] = res
+    for ii in range(len(transits)):
+        cin = transits[ii]
+        res = measureCentroidShift(cube, cin, ii, plot)
+#            if res['errorCode'] < 7:
+        out['transit-%04i' %(ii)] = res
+#                good_transit_flags_.append(ii)
+#            else:
+#                bad_transit_flags_[ii] = True
+#                print('Transit', str(ii), 'bad')
 
         if plotFilePattern is not None:
-             plt.suptitle('%s-trans%02i' %(plotFilePattern , i))   
-             plt.savefig('%s-trans%02i.png' %(plotFilePattern , i))
+#             plt.suptitle('%s-trans%02i' %(plotFilePattern , ii))   
+             plt.savefig('%s-trans%02i.png' %(plotFilePattern , ii))
+#             plt.show()
+             plt.close()
 
-    results = np.zeros( (len(transits), 6) )
+    results = np.zeros((len(transits), 6))#np.zeros((len(good_transit_flags_), 6))#
     for i in range(len(transits)):
         key = 'transit-%04i' %(i)
         results[i,:2] = out[key]['beforeCentroid']
@@ -101,7 +111,7 @@ def getIngressEgressCadences(time, period_days, epoch_btjd, duration_days):
     return transits
 
 
-def measureCentroidShift(cube, cin, plot=True):
+def measureCentroidShift(cube, cin, ii, plot=True):
     """
         
     Todo
@@ -124,10 +134,9 @@ def measureCentroidShift(cube, cin, plot=True):
     guess = pickInitialGuess(after)
     afterSoln = ddf.fastGaussianPrfFit(after, guess)
     
-#    plot = True
+    plot = True
     if plot:
-         fig = plt.figure(figsize=(15,10))
-         generateDiffImgPlot(before, diff, after, beforeSoln, diffSoln, afterSoln)
+         generateDiffImgOnlyPlot(diff, beforeSoln, diffSoln, afterSoln)
         
     out = dict()
     error = 0
@@ -195,6 +204,10 @@ def generateDiffImg(cube, transits, offset_cadences=3, plot=False):
     after = cube[e0:e1].sum(axis=0)
 
     diff = .5 * (before + after) - during
+
+#    print(np.isnan(np.nanmean(before)), np.isnan(np.nanmean(during)), np.isnan(np.nanmean(after)))
+#    if (np.isnan(np.nanmean(before)) == True) or (np.isnan(np.nanmean(after)) == True) or (np.isnan(np.nanmean(diff)) == True):
+#        print('Transit bad')
     return before, after, diff    
 
 
@@ -214,7 +227,6 @@ def pickInitialGuess(img):
 
     guess = [c0+.5, r0+.5, .5, np.max(img), np.median(img)]
     return guess
-
 
 
 def generateDiffImgPlot(before, diff, after, beforeSoln, diffSoln, afterSoln):
@@ -263,6 +275,21 @@ def generateDiffImgPlot(before, diff, after, beforeSoln, diffSoln, afterSoln):
     plt.colorbar()
     plt.pause(1)
 
+
+def generateDiffImgOnlyPlot(diff, beforeSoln, diffSoln, afterSoln):
+    """Generate a difference image plot"""
+#    
+    ss_ = diff.shape
+    kwargs = {'origin':'bottom', 'interpolation':'nearest', 'cmap':plt.cm.YlGnBu_r, 'extent':[0, ss_[1],0, ss_[0]]}
+    plt.imshow(diff, **kwargs)
+    vm = max( np.fabs([np.min(diff), np.max(diff)]) )
+#    plt.clim(-vm, vm)
+ 
+    col, row = diffSoln.x[:2] 
+    plt.plot([col], [row], 'ro', ms=8)
+#    plt.title('Col-Row = ' + str(col) + '-' + str(row))
+#    plt.title(str(diffSoln.success))
+
 def plotCentroidLocation(soln, *args, **kwargs):
     """Add a point to the a plot.
     
@@ -279,7 +306,6 @@ def plotCentroidLocation(soln, *args, **kwargs):
         color='c'
     kwargs['color'] = color
     plt.plot([col], [row], *args, **kwargs)
-
 
 
 def testSmoke():
