@@ -25,8 +25,8 @@ except (ImportError, OSError):
     print("Warn: LPP can't be imported")
 
 import dave.fileio.mastio as mastio
-import dave.tessPipeline.tessmastio as tessmastio
-import dave.tessPipeline.tessfunc as tessfunc
+import dave.fileio.tessmastio as tessmastio
+import dave.pipeline.tessfunc as tessfunc
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
 import dave.pipeline.task as task
@@ -230,7 +230,7 @@ def extractLightcurveTask(clip):
 
     mask = kplrfits.getMaskForBadK2Data()
     flags = (flagValues & mask).astype(bool) if clip.config.detrendType != "tess" else flagValues.astype(bool)
-
+    
     flags |= ~np.isfinite(time)
     flags |= ~np.isfinite(flux)
     #flags[flux<1] = True
@@ -277,7 +277,7 @@ def cotrendDataTask(clip):
 from dave.blsCode import outlier_detection
 import dave.misc.noise as noise
 @task.task
-def detrendDataTask(clip):
+def detrendDataTaskOld(clip):
     """
 
     TODO:
@@ -305,12 +305,84 @@ def detrendDataTask(clip):
     medianDetrend = np.zeros_like(flux)
     medianDetrend[~flags] = flux[~flags] - trend if clip.config.detrendType != "tess" else flux[~flags]
 
-    flags |= (medianDetrend < -1)
+    flags |= (medianDetrend < -1)    
+
+#    print(medianDetrend)
+#    print(medianDetrend[flags])
+#    xxxx
+
+    print(np.isfinite(medianDetrend[~flags]).shape)
+    print(np.isfinite(medianDetrend[flags]).shape)
+    xxxx
+
 
     clip['detrend'] = dict()
     clip['detrend.flux_frac'] = medianDetrend
     clip['detrend.flags'] = flags
     clip['detrend.source'] = "Simple Median detrend"
+    
+    return clip
+
+def detrendDataTask(clip):
+    from scipy.signal import savgol_filter
+
+    flux = clip['cotrend.flux_frac']
+    time = clip['serve.time']
+    flags = clip['cotrend.flags']
+    flags_bak = flags
+
+    x = time
+    y = flux
+
+#    mu = np.nanmedian(y)
+#    y = (y / mu - 1)
+
+# Identify outliers
+    m = np.ones(len(y[~flags]), dtype=bool)
+
+    for i in range(10):
+#        y_prime = np.interp(x, x[m], y[m])
+        smooth = savgol_filter(y[~flags], 51, polyorder=3)
+        resid = y[~flags] - smooth
+        sigma = np.sqrt(np.mean(resid**2))
+        m0 = np.abs(resid) < 3*sigma
+        if m.sum() == m0.sum():
+            m = m0
+            break
+        m = m0
+    
+#    x = np.ascontiguousarray(x[flags], dtype=np.float64)
+#    y = np.ascontiguousarray(y[flags], dtype=np.float64)
+#    smooth = np.ascontiguousarray(smooth[flags], dtype=np.float64)
+
+    y_detrend_ = y.copy()
+    flags = flags_bak
+
+
+#    print(flags_bak.shape, flags.shape)
+#    print(y_detrend_[flags].shape, y[flags].shape, smooth.shape)
+    y_detrend_[~flags] = y[~flags] - smooth
+    y_detrend_[flags] = 0.
+
+#    print(y_detrend_[flags])
+#    print(y_detrend_[~flags])
+#    xxxx
+    
+#    print(np.isfinite(y_detrend_[~flags]).shape)
+#    print(np.isfinite(y_detrend_[flags]).shape)
+#    xxxx
+
+#    assert(np.all(np.isfinite(time[~flags])))
+#    assert(np.all(np.isfinite(y_detrend_[~flags])))
+#    xxxxx
+
+#    print(y_detrend_[flags])
+#    xxxx
+
+    clip['detrend'] = dict()
+    clip['detrend.flux_frac'] = y_detrend_
+    clip['detrend.flags'] = flags
+    clip['detrend.source'] = "Savitsky-Golay"
 
     return clip
 
@@ -454,38 +526,37 @@ def fblsTask(clip):
     clip['bls.duration_hrs']
     return clip
 
-
 #import dave.blsCode.bls_ktwo as bls
 #@task.task
 #def blsTask(clip):
-    #time_days = clip['serve.time']
-    #flux_norm = clip['detrend.flux_frac']
-    #flags = clip['detrend.flags']
-    #minPeriod = clip['config.blsMinPeriod']
-    #maxPeriod = clip['config.blsMaxPeriod']
+#    time_days = clip['serve.time']
+#    flux_norm = clip['detrend.flux_frac']
+#    flags = clip['detrend.flags']
+#    minPeriod = clip['config.blsMinPeriod']
+#    maxPeriod = clip['config.blsMaxPeriod']
 
     ##Zero out the bad data. This crashes BLS
-##    flux_norm[flags] = 0
-##    assert(np.all( np.isfinite(flux_norm)))
+#    flux_norm[flags] = 0
+#    assert(np.all( np.isfinite(flux_norm)))
 
-    #idx = flags == 0
-    #period, epoch, duration, depth, bls_search_periods, convolved_bls = \
-        #bls.doSearch(time_days[idx], flux_norm[idx], minPeriod, maxPeriod)
+#    idx = flags == 0
+#    period, epoch, duration, depth, bls_search_periods, convolved_bls = \
+#        bls.doSearch(time_days[idx], flux_norm[idx], minPeriod, maxPeriod)
 
-    #out = clipboard.Clipboard()
-    #out['period'] = period
-    #out['epoch'] = epoch
-    #out['duration_hrs'] = duration * 24
-    #out['depth'] = depth
-    #out['bls_search_periods'] = bls_search_periods
-    #out['convolved_bls'] = convolved_bls
-    #clip['bls'] = out
+#    out = clipboard.Clipboard()
+#    out['period'] = period
+#    out['epoch'] = epoch
+#    out['duration_hrs'] = duration * 24
+#    out['depth'] = depth
+#    out['bls_search_periods'] = bls_search_periods
+#    out['convolved_bls'] = convolved_bls
+#    clip['bls'] = out
 
     ##Enforce contract
-    #clip['bls.period']
-    #clip['bls.epoch']
-    #clip['bls.duration_hrs']
-    #return clip
+#    clip['bls.period']
+#    clip['bls.epoch']
+#    clip['bls.duration_hrs']
+#    return clip
 
 
 @task.task
@@ -535,6 +606,7 @@ def trapezoidFitTask(clip):
     flags = clip['detrend.flags']
     period_days = clip['bls.period']
     duration_hrs = clip['bls.duration_hrs']
+
     phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
     depth_frac = np.abs(clip['bls.depth'])
 
@@ -542,6 +614,13 @@ def trapezoidFitTask(clip):
     unc = np.ones_like(flux_norm)
     unc[flags] = 1e99
     flux_norm[flags] = 0
+
+#    print(flux_norm[~flags].shape, flux_norm[~flags])
+#    print(time_days[~flags].shape, time_days[~flags])
+#    print(~np.isfinite(time_days[~flags]))
+#    print(~np.isfinite(flux_norm[~flags]))
+#    xxxxx
+
 
     assert(np.all(np.isfinite(time_days[~flags])))
     assert(np.all(np.isfinite(flux_norm[~flags])))
@@ -567,7 +646,7 @@ def trapezoidFitTask(clip):
 import dave.vetting.ModShift as ModShift
 @task.task
 def modshiftTask(clip):
-
+    
     time = clip['serve.time']
     flux = clip['detrend.flux_frac']
     fl = clip['detrend.flags']
@@ -885,7 +964,7 @@ def saveClip(clip):
             else:
                 sh[k] = clip[k]
         sh.close()
-
+    
     except Exception as e:
         print("WARN: Error in saveClip: %s" %(e))
         clip['exception'] = str(e)
@@ -919,10 +998,10 @@ def loadTpfAndLc(k2id, campaign, ar, detrendType):
     #Load lightcurves from a specific detrending, and replace
     #the pdc time series with the new detrending
     key = detrendType.upper()
-
+    
     if key == "PDC":
         pass
-
+    
     elif key == "TESS":
         pass
 
@@ -1134,3 +1213,5 @@ def extractLightcurveFromTpfTask(clip):
     clip['extract.rawLightcurve']
     clip['extract.flags']
     return clip
+
+    
