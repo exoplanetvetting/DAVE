@@ -9,8 +9,8 @@ using data from [NASA's K2](http://keplerscience.arc.nasa.gov), and [TESS](https
 The pipeline performs the following steps:
 
 1. Create a subset of targets for testing
-2. Light Curve Generation, cotrend, detrend. For K2, removing instrumental effects e.g. PDC light curves Dan Foreman-Mackey's method; For TESS using Savitzky-Golay filter
-3. Search for planets -- BLS (WIP)
+2. Light Curve Generation, cotrend, detrend. For K2, removing instrumental effects using Savitzky-Golay filter
+3. Search for planets -- BLS
 4. Fitting a planetary model
 5. Produce vetting Metrics
 6. Output useful data products
@@ -18,11 +18,11 @@ The pipeline performs the following steps:
 
 ## Installation
 
-*dave* depends on a few packages including numpy, scipy, matplotlib, and octave. You will also need to install @dfm's [python-bls](https://github.com/dfm/python-bls) package or the [astropy BLS package](http://docs.astropy.org/en/stable/api/astropy.stats.BoxLeastSquares.html). To check if you have all the dependencies, run:
+*dave* depends on a few packages including numpy, scipy, matplotlib, and octave. For K2, you will also need to install @dfm's [python-bls](https://github.com/dfm/python-bls) package; For TESS, you will need the [astropy BLS package](http://docs.astropy.org/en/stable/api/astropy.stats.BoxLeastSquares.html). To check if you have all the dependencies, run:
 ```
 python checkRequirements.py
 ```
-You may also need to pip install the following packages: astropy, metric_learn, sklearn ,pyfits, astroquery, conda install gnuplot (for which you will need Conda-Forge), PyGnuplot, parmap, clipboard, lpproj, and numba. If you get an error when trying to run "from sklearn.utils.extmath import pinvh" in python, you will need to replace this line in file "~/site-packages/metric_learn/sdml.py" with "from scipy.linalg import pinvh".
+You may also need to pip install the following packages: astropy, metric_learn, sklearn ,pyfits, astroquery, conda install gnuplot (for which you will need Conda-Forge), PyGnuplot, parmap, clipboard, lpproj, and numba. If you are using Python 3+, and get an error when trying to run "from sklearn.utils.extmath import pinvh" in python, you will need to replace this line in file "~/site-packages/metric_learn/sdml.py" with "from scipy.linalg import pinvh".
 
 ## Example use for K2
 from python:
