@@ -30,7 +30,7 @@ import dave.stellar.readStellarTable as stel
 def main():
     """A bare bones main program"""
     
-    print len(sys.argv)
+#    print len(sys.argv)
     if len(sys.argv) < 2:
         usage()
         sys.exit()
@@ -46,27 +46,27 @@ def main():
     ephemFile=""
     output=""
     detrendType="pdc"
-    data=np.zeros((1,5),dtype=float)  
-    print np.shape(data)    
+    data=np.zeros((1,6),dtype=float)  
+#    print np.shape(data)    
         
     for o, a in opts:
         if o in ("-f","--file"):
             ephemFile = a
-            print "Ephemeris File is: %s" % ephemFile
+            print("Ephemeris File is: %s" % ephemFile)
             data=loadEphemFile(ephemFile)
         elif o in ("-h", "--help"):
             usage()
             sys.exit()
         elif o in ("-o", "--output"):
             output = a
-            print "Output File is %s\n" % output
+            print("Output File is %s\n" % output)
         elif o in ("-c", "--config"):
             cfgFile= a
-            print "Config File is: %s\n" % cfgFile
+            print("Config File is: %s\n" % cfgFile)
         elif o in ("-1", "--one"):
             data[0,:]=np.transpose(np.array(a.split(),dtype=float))
         elif o in  ("-l", "--lc"):
-			detrendType=a
+            detrendType=a
         else:
             assert False, "Unhandled option"
             sys.exit()
@@ -96,22 +96,26 @@ def main():
             dep=data[i,4]/1.0e6
         except:
             dep=.00005
+        try:
+            dur = data[i,5]
+        except:
+            dur = 3.0
            
-        clip=runOneEphem(epic,data[i,2],data[i,3],cfg,duration=3.0,depth=dep) 
+        clip=runOneEphem(epic,data[i,2],data[i,3],cfg,duration= dur,depth=dep) 
         
-        print clip.__meta__
+#        print clip.__meta__
         
         if ('exception' not in clip.keys()):
             outfile=runExport(clip,output)
-            print 'Created Outputs %s\n\n' % outfile
+            print('Created Outputs %s\n\n' % outfile)
         else:
-            print "No Outputs\n"
+            print("No Outputs\n")
             fid=open(output,'a') 
             fid.write("%s %f 0   0   0   0   0   0   0   0 \t-1 -1 -1 -1 NO_Analysis\n" % (clip.value,clip.bls.period))
             fid.close()
             #outfile=runExport(clip,output)
-            print clip.exception
-            print clip.backtrace
+            print(clip.exception)
+            print(clip.backtrace)
             
  
 
@@ -119,16 +123,16 @@ def usage():
     """Help message
     """
     
-    print "justVet -f input ephem file -c config file -o output filename\n"
-    print "writes stuff to current directory\n\n"
-    print "Format of the input ephem file is\n"
-    print "epic campaign period_days epoch_bkjd depth_ppm"
-    print "To run just one, use -1 \"epic campaign period epoch depth(ppm)\""
-    print "You still need -c cfg.in and -o output.txt"
-    print "Use -l or --lc to pick your light curve"
-    print "The names of the light curve choices are pdc,everest,sff,agp,varcat (not yet)"
-    print "Default is the PDC light curves."
-    print "Chose the same top directory for onepageBasename and modshiftBasename for all images to end up in same directory."
+    print("justVet -f input ephem file -c config file -o output filename\n")
+    print("writes stuff to current directory\n\n")
+    print("Format of the input ephem file is\n")
+    print("epic campaign period_days epoch_bkjd depth_ppm")
+    print("To run just one, use -1 \"epic campaign period epoch depth(ppm)\"")
+    print("You still need -c cfg.in and -o output.txt")
+    print("Use -l or --lc to pick your light curve")
+    print("The names of the light curve choices are pdc,everest,sff,agp,varcat (not yet)")
+    print("Default is the PDC light curves.")
+    print("Chose the same top directory for onepageBasename and modshiftBasename for all images to end up in same directory.")
 
 
 def loadEphemFile(ephemFile):
@@ -143,7 +147,7 @@ def loadEphemFile(ephemFile):
     """
     
     data=np.loadtxt(ephemFile,dtype=float,comments='#',delimiter=None)
-    print "Loaded %s\n" % ephemFile
+#    print "Loaded %s\n" % ephemFile
 
     return data    
     
@@ -183,7 +187,7 @@ def suppConfiguration(cfg):
         
     tasks = """dpp.checkDirExistTask dpp.serveTask dpp.extractLightcurveTask
         dpp.computeCentroidsTask dpp.rollPhaseTask dpp.cotrendDataTask
-        dpp.detrendDataTask dpp.trapezoidFitTask dpp.lppMetricTask 
+        dpp.detrendDataTask dpp.blsTask dpp.trapezoidFitTask 
         dpp.modshiftTask dpp.measureDiffImgCentroidsTask dpp.dispositionTask
         dpp.saveClip""".split()
      
@@ -231,8 +235,6 @@ def runOneEphem(k2id,period,epoch,config,duration=3.5,depth=.0001):
     out['duration_hrs'] = duration
     out['depth'] = depth
     clip['bls'] = out
-            
-    
 
     #Check that all the tasks are properly defined
     for t in taskList:
@@ -258,7 +260,7 @@ def runExport(clip,output):
         clip=stel.addStellarToClip(clip)
         clip=stel.estimatePlanetProp(clip)
     except:
-        print 'No Stellar Values'
+        print('No Stellar Values')
         
     outstr,header=ex.createExportString(clip, delimiter=" ", badValue="nan")
 
@@ -274,7 +276,8 @@ def runExport(clip,output):
     try:
         os.mkdir(thedir)
     except OSError:
-        print "Cannot create directory " + thedir
+        donothing = -999.
+#        print "Cannot create directory " + thedir
     #print thedir
     
     date=datetime.datetime.now()
