@@ -22,20 +22,20 @@ import dave.fileio.kplrfits as kplrfits
 try:
     import dave.lpp.calcLPPoctave as lpp
 except (ImportError, OSError):
-    print "Warn: LPP can't be imported"
+    print("Warn: LPP can't be imported")
 
 import dave.fileio.mastio as mastio
 import dave.fileio.tessmastio as tessmastio
 import dave.pipeline.tessfunc as tessfunc
 import dave.fileio.tpf as tpf
 import dave.fileio.nca as nca
-import task
+import dave.pipeline.task as task
 import os
 
 
 def runOne(k2id, config):
 
-    print "WARN: This function is deprecated. See main.py instead."
+    print("WARN: This function is deprecated. See main.py instead.")
     taskList = config['taskList']
 
     clip = clipboard.Clipboard()
@@ -62,7 +62,7 @@ def runOne(k2id, config):
                     f = eval(t)
                     clip = f(clip)
 
-    print "WARN: This function is deprecated. See main.py instead."
+    print("WARN: This function is deprecated. See main.py instead.")
     return clip
 
 
@@ -277,7 +277,7 @@ def cotrendDataTask(clip):
 from dave.blsCode import outlier_detection
 import dave.misc.noise as noise
 @task.task
-def detrendDataTask(clip):
+def detrendDataTaskOld(clip):
     """
 
     TODO:
@@ -312,6 +312,49 @@ def detrendDataTask(clip):
     clip['detrend.flags'] = flags
     clip['detrend.source'] = "Simple Median detrend"
     
+    return clip
+
+def detrendDataTask(clip):
+    from scipy.signal import savgol_filter
+
+    flux = clip['cotrend.flux_frac']
+    time = clip['serve.time']
+    flags = clip['cotrend.flags']
+    flags_bak = flags
+
+    x = time
+    y = flux
+
+#    mu = np.nanmedian(y)
+#    y = (y / mu - 1)
+
+# Identify outliers
+    m = np.ones(len(y[~flags]), dtype=bool)
+
+    n_points_ = 51# if clip['value'] != 201160662 else 21
+
+    for i in range(10):
+#        y_prime = np.interp(x, x[m], y[m])
+        smooth = savgol_filter(y[~flags], n_points_, polyorder=3)
+        resid = y[~flags] - smooth
+        sigma = np.sqrt(np.mean(resid**2))
+        m0 = np.abs(resid) < 3*sigma
+        if m.sum() == m0.sum():
+            m = m0
+            break
+        m = m0
+
+    y_detrend_ = y.copy()
+#    flags = flags_bak
+
+    y_detrend_[~flags] = y[~flags] - smooth
+    y_detrend_[flags] = 0.
+
+    clip['detrend'] = dict()
+    clip['detrend.flux_frac'] = y_detrend_
+    clip['detrend.flags'] = flags
+    clip['detrend.source'] = "Savitsky-Golay"
+
     return clip
 
 @task.task
@@ -394,7 +437,6 @@ def searchForEvent(clip):
     for k in newKeys:
         out[k] = subClip[k]
 
-
     #Mark all locations for this event as data not to be used.
     time = subClip['serve.time']
     period_days = subClip['trapFit.period_days']
@@ -409,7 +451,6 @@ def searchForEvent(clip):
     out['flags'] = flags | idx
 
     return out
-
 
 import dave.blsCode.fbls as fbls
 import dave.misc.noise as noise
@@ -454,38 +495,38 @@ def fblsTask(clip):
     clip['bls.duration_hrs']
     return clip
 
+import dave.blsCode.bls_ktwo as bls
+@task.task
+def blsTask(clip):
 
-#import dave.blsCode.bls_ktwo as bls
-#@task.task
-#def blsTask(clip):
-    #time_days = clip['serve.time']
-    #flux_norm = clip['detrend.flux_frac']
-    #flags = clip['detrend.flags']
-    #minPeriod = clip['config.blsMinPeriod']
-    #maxPeriod = clip['config.blsMaxPeriod']
+    time_days = clip['serve.time']
+    flux_norm = clip['detrend.flux_frac']
+    flags = clip['detrend.flags']
+    minPeriod = 0.95*clip['bls.period']#clip['config.blsMinPeriod']
+    maxPeriod = 1.05*clip['bls.period']#clip['config.blsMaxPeriod']
 
     ##Zero out the bad data. This crashes BLS
-##    flux_norm[flags] = 0
-##    assert(np.all( np.isfinite(flux_norm)))
+    flux_norm[flags] = 0
+    assert(np.all(np.isfinite(flux_norm)))
 
-    #idx = flags == 0
-    #period, epoch, duration, depth, bls_search_periods, convolved_bls = \
-        #bls.doSearch(time_days[idx], flux_norm[idx], minPeriod, maxPeriod)
+    idx = flags == 0
+    period, epoch, duration, depth, bls_search_periods, convolved_bls = \
+        bls.doSearch(time_days[idx], flux_norm[idx], minPeriod, maxPeriod)
 
-    #out = clipboard.Clipboard()
-    #out['period'] = period
-    #out['epoch'] = epoch
-    #out['duration_hrs'] = duration * 24
-    #out['depth'] = depth
-    #out['bls_search_periods'] = bls_search_periods
-    #out['convolved_bls'] = convolved_bls
-    #clip['bls'] = out
+    out = clipboard.Clipboard()
+    out['period'] = period
+    out['epoch'] = epoch
+    out['duration_hrs'] = duration * 24
+    out['depth'] = depth
+    out['bls_search_periods'] = bls_search_periods
+    out['convolved_bls'] = convolved_bls
+    clip['bls'] = out
 
     ##Enforce contract
-    #clip['bls.period']
-    #clip['bls.epoch']
-    #clip['bls.duration_hrs']
-    #return clip
+    clip['bls.period']
+    clip['bls.epoch']
+    clip['bls.duration_hrs']
+    return clip
 
 
 @task.task
@@ -535,6 +576,7 @@ def trapezoidFitTask(clip):
     flags = clip['detrend.flags']
     period_days = clip['bls.period']
     duration_hrs = clip['bls.duration_hrs']
+
     phase_bkjd = clip['bls.epoch']  #Check this what BLS returns
     depth_frac = np.abs(clip['bls.depth'])
 
@@ -542,9 +584,23 @@ def trapezoidFitTask(clip):
     unc = np.ones_like(flux_norm)
     unc[flags] = 1e99
     flux_norm[flags] = 0
+ 
+#    if phase_bkjd < time_days[0]:
+#        delta_t = time_days[0] - phase_bkjd
+#        delta_per = 1 + delta_t/period_days // 1
+#        print(phase_bkjd , time_days[0], delta_t , period_days , delta_per, duration_hrs)
+#        phase_bkjd += delta_per* period_days
+#        print(phase_bkjd , time_days[0], delta_t , period_days , delta_per, duration_hrs)
+
+#    print(flux_norm[~flags].shape, flux_norm[~flags])
+#    print(time_days[~flags].shape, time_days[~flags])
+#    print(~np.isfinite(time_days[~flags]))
+#    print(~np.isfinite(flux_norm[~flags]))
+#    xxxxx
 
     assert(np.all(np.isfinite(time_days[~flags])))
     assert(np.all(np.isfinite(flux_norm[~flags])))
+
     out = tf.getSnrOfTransit(time_days, flux_norm,\
         unc, flags, \
         period_days, phase_bkjd, duration_hrs, depth_frac)
@@ -559,15 +615,19 @@ def trapezoidFitTask(clip):
     clip['trapFit.depth_frac']
     clip['trapFit.bestFitModel']
     clip['trapFit.snr']
+
+#    print(phase_bkjd, clip['trapFit.epoch_bkjd'])
+
     return clip
-
-
 
 #import dave.trapezoidFit.trapfit as trapFit
 import dave.vetting.ModShift as ModShift
 @task.task
 def modshiftTask(clip):
     
+#    print(clip['value'], clip['bls.period'], clip['bls.epoch'], clip['bls.duration_hrs'])
+#    print(clip['value'], clip['trapFit.period_days'], clip['trapFit.epoch_bkjd'], clip['trapFit.duration_hrs'])
+
     time = clip['serve.time']
     flux = clip['detrend.flux_frac']
     fl = clip['detrend.flags']
@@ -593,6 +653,10 @@ def modshiftTask(clip):
 #    model = ioBlock.modellc -1   #Want mean of zero
 #    #model *= -1  #Invert for testing
     model = clip['trapFit.bestFitModel']
+
+#    ff_ = np.isfinite(time) & np.isfinite(flux)
+#    fl = ~ff_
+    
     modplotint=int(1)  # Change to 0 or anything besides 1 to not have modshift produce plot
     plotname = "%s-%02i-%04i-%s" % (basename,np.round(clip.bls.period*10),np.round(clip.bls.epoch),clip.config.detrendType)
     out = ModShift.runModShift(time[~fl], flux[~fl], model[~fl], \
@@ -657,7 +721,7 @@ def measureDiffImgCentroidsTask(clip):
 @task.task
 def vetTask(clip):
 
-    print "WARN: vetTask is deprecated. Use dispostionTask instead"
+    print("WARN: vetTask is deprecated. Use dispostionTask instead")
 
     snr = clip['trapFit.snr']
     snrThreshold = clip['config.minSnrForDetection']
@@ -752,7 +816,7 @@ def dispositionTask(clip):
     	centVet = {'Warning':"None"}
     	try:
         	prob, chisq = cent.measureOffsetProbabilityInTimeseries(centroidArray)
-    	except ValueError, e:
+    	except ValueError as e:
         	centVet['Warning'] = "Probability not computed: %s" %(e)
         	prob = 0
         	chisq = 0
@@ -847,8 +911,8 @@ def saveOnError(clip):
     an exception is raised"""
 
     if 'exception' in clip.keys():
-        print "Error found, saving clip..."
-        print clip['exception']
+        print("Error found, saving clip...")
+        print(clip['exception'])
         saveClip(clip)
     return clip
 
@@ -886,8 +950,8 @@ def saveClip(clip):
                 sh[k] = clip[k]
         sh.close()
     
-    except Exception, e:
-        print "WARN: Error in saveClip: %s" %(e)
+    except Exception as e:
+        print("WARN: Error in saveClip: %s" %(e))
         clip['exception'] = str(e)
 
     return clip
