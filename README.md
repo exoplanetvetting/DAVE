@@ -1,5 +1,5 @@
 # DAVE™
-**D**iscovery **A**nd **V**etting of K2 **E**xoplanets™ ([Kostov, V. B., Mullaly, S. E., Quintana , E. V. et al. 2019, AJ, 157, 3](https://arxiv.org/abs/1901.07459))
+**D**iscovery **A**nd **V**etting of K2 **E**xoplanets™ ([Kostov, V. B., Mullally, S. E., Quintana , E. V. et al. 2019, AJ, 157, 3](https://arxiv.org/abs/1901.07459))
 
 ## Summary
 
