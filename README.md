@@ -48,8 +48,8 @@ Currently supported "detrendType" are "tess_2min" and "eleanor", where "tess_2mi
 ## Additional requirements
 To get DAVE to work for K2, you will have to create a directory called `.mastio/k2` in your home directory.
 
-For K2, you will also need to download and extract
-[kplr2011265_prf.tar.gz](https://archive.stsci.edu/pub/kepler/fpc/kplr2011265_prf.tar.gz)
+For K2, you will also need to download and add
+[Kepler's PRF files](https://archive.stsci.edu/missions/kepler/fpc/prf/)
 into `.mastio/keplerprf`. 
 
 For TESS, you will also need to download the TESS PRF Matlab files (https://archive.stsci.edu/tess/all_products.html). For more information, see designnote.pdf (Copyright Fergal Mullally).
