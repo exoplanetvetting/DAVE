@@ -61,3 +61,5 @@ target/
 vetting/modshift
 vetting/jktebop
 vetting/jktld
+
+.DS_Store
